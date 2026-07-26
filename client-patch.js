@@ -8,7 +8,7 @@
    the model, optimiser and ticker need no changes at all.
    ========================================================================== */
 
-const API_BASE = 'https://fpl-engine-api.YOUR-SUBDOMAIN.workers.dev';
+const API_BASE = 'https://fpl-engine-api.blackpharoahisking.workers.dev';
 
 /** API rows use tenths for cost, same as FPL. Rebuild the shape applyBootstrap expects. */
 function apiToBootstrap(state) {
