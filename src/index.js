@@ -1,5 +1,5 @@
 /**
- * FPL Engine API — Cloudflare Worker
+ * FPL Engine API — Cloudflare Worker 
  *
  * Two jobs:
  *   scheduled()  cron pulls the FPL API, diffs against stored state, logs changes
@@ -393,3 +393,4 @@ export default {
     }
   },
 };
+
