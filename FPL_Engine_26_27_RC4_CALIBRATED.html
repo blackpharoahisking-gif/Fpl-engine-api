@@ -135,7 +135,7 @@ const LIMITS={GK:2,DEF:5,MID:5,FWD:3},GOALPTS={GK:6,DEF:6,MID:5,FWD:4},CSPTS={GK
 const PROFILE={GK:{app:.50,cs:.27,atk:.02,bon:.10,oth:.11},DEF:{app:.42,cs:.22,atk:.20,bon:.10,oth:.06},MID:{app:.36,cs:.04,atk:.45,bon:.10,oth:.05},FWD:{app:.36,cs:0,atk:.49,bon:.10,oth:.05}};
 const S={squad:[],cap:null,vice:null,start:new Set(),gw:1,horizon:2,risk:'mean',w:{fix:.30,home:.08,cs:1,dc:1,official:.15,form:.10},chips:{WC1:'',FH1:'',TC1:'',BB1:'',WC2:'',FH2:'',TC2:'',BB2:''},locks:new Set(),budget:100,overrides:{},inspect:null};
 const DATA={mode:'SEED',lastUpdated:null,error:'',nextEvent:1,teamPlayed:{},auto:true};
-const API_BASE='https://fantasy.premierleague.com/api',CACHE_KEY='fpl-engine-rc3-live-cache-v1',STATE_KEY='fpl-engine-rc3-user-v1';
+cons API_BASE='https://fpl-engine-api.blackpharoahisking.workers.dev'',CACHE_KEY='fpl-engine-rc3-live-cache-v1',STATE_KEY='fpl-engine-rc3-user-v1';
 let DEADLINE=Date.UTC(2026,7,21,17,30),PROJ_CACHE={},HORIZON_CACHE={};
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),num=(x,d=0)=>Number.isFinite(Number(x))?Number(x):d,normalName=x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,''),sumParts=p=>Object.values(p).reduce((a,v)=>a+num(v),0);
 function nameKey(p){return'p:'+normalName(p.n)+'|'+p.p}
