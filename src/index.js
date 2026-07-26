@@ -1,5 +1,5 @@
 /**
- * FPL Engine API — Cloudflare Worker 
+ * FPL Engine API — Cloudflare Worker
  *
  * Two jobs:
  *   scheduled()  cron pulls the FPL API, diffs against stored state, logs changes
@@ -98,6 +98,161 @@ function diffPlayer(prev, e, teamMap) {
     out.push({ kind, old_value: before === null ? null : String(before), new_value: next === null ? null : String(next) });
   }
   return out;
+}
+
+/* ------------------------------------------------------------------ *
+ * Season-history backfill                                             *
+ *                                                                      *
+ * bootstrap-static only carries the CURRENT season's running totals. *
+ * Before 2026/27 kicks off those are all zero. Last season's real    *
+ * numbers live in element-summary/{id}/ under history_past — one     *
+ * request per player. This runs in small batches and resumes from a  *
+ * stored cursor, since Cloudflare caps subrequests per invocation.   *
+ * ------------------------------------------------------------------ */
+
+const BACKFILL_BATCH = 30;
+const TARGET_SEASON = '2025/26';
+
+async function fetchPlayerHistory(apiId, code, webName) {
+  const data = await fplGet(`/element-summary/${apiId}/`);
+  const past = Array.isArray(data?.history_past) ? data.history_past : [];
+  if (!past.length) return null;
+  const row = past.find((h) => h.season_name === TARGET_SEASON) || past[past.length - 1];
+  if (!row) return null;
+  return {
+    code,
+    season_name: row.season_name,
+    api_id: apiId,
+    web_name: webName,
+    total_points: num(row.total_points),
+    minutes: num(row.minutes),
+    starts: num(row.starts),
+    goals: num(row.goals_scored),
+    assists: num(row.assists),
+    clean_sheets: num(row.clean_sheets),
+    goals_conceded: num(row.goals_conceded),
+    saves: num(row.saves),
+    bonus: num(row.bonus),
+    bps: num(row.bps),
+    yellow_cards: num(row.yellow_cards),
+    red_cards: num(row.red_cards),
+    xg: num(row.expected_goals),
+    xa: num(row.expected_assists),
+    xgc: num(row.expected_goals_conceded),
+    defcon: num(row.defensive_contribution ?? row.defensive_contributions),
+    start_cost: row.start_cost ?? null,
+    end_cost: row.end_cost ?? null,
+  };
+}
+
+async function backfillHistory(env) {
+  const startedAt = now();
+  const boot = await fplGet('/bootstrap-static/');
+  const problems = validateBootstrap(boot);
+  if (problems.length) throw new Error(`schema guard tripped: ${problems.join(' | ')}`);
+
+  const all = boot.elements.filter((e) => e.id != null && e.code != null).sort((a, b) => a.id - b.id);
+
+  const cur = await env.DB.prepare("SELECT value FROM meta WHERE key='backfill_cursor'").first();
+  const cursor = Math.max(0, num(cur?.value));
+
+  if (cursor >= all.length) {
+    const done = await env.DB.prepare(
+      'SELECT COUNT(*) AS n FROM player_history WHERE season_name = ?1'
+    ).bind(TARGET_SEASON).first();
+    return {
+      ok: true,
+      complete: true,
+      stored: num(done?.n),
+      total_players: all.length,
+      message: 'Backfill already complete. Reset with /api/backfill?key=…&reset=1',
+    };
+  }
+
+  const slice = all.slice(cursor, cursor + BACKFILL_BATCH);
+  const stmts = [];
+  let fetched = 0;
+  let skipped = 0;
+
+  for (const e of slice) {
+    let row = null;
+    try {
+      row = await fetchPlayerHistory(e.id, e.code, e.web_name);
+    } catch (err) {
+      skipped++;
+      continue;
+    }
+    if (!row) { skipped++; continue; }
+    fetched++;
+    stmts.push(
+      env.DB.prepare(
+        `INSERT INTO player_history (
+           code, season_name, api_id, web_name, total_points, minutes, starts,
+           goals, assists, clean_sheets, goals_conceded, saves, bonus, bps,
+           yellow_cards, red_cards, xg, xa, xgc, defcon, start_cost, end_cost, updated_at)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23)
+         ON CONFLICT(code, season_name) DO UPDATE SET
+           api_id=?3, web_name=?4, total_points=?5, minutes=?6, starts=?7,
+           goals=?8, assists=?9, clean_sheets=?10, goals_conceded=?11, saves=?12,
+           bonus=?13, bps=?14, yellow_cards=?15, red_cards=?16, xg=?17, xa=?18,
+           xgc=?19, defcon=?20, start_cost=?21, end_cost=?22, updated_at=?23`
+      ).bind(
+        row.code, row.season_name, row.api_id, row.web_name, row.total_points,
+        row.minutes, row.starts, row.goals, row.assists, row.clean_sheets,
+        row.goals_conceded, row.saves, row.bonus, row.bps, row.yellow_cards,
+        row.red_cards, row.xg, row.xa, row.xgc, row.defcon,
+        row.start_cost, row.end_cost, startedAt
+      )
+    );
+  }
+
+  const nextCursor = cursor + slice.length;
+  stmts.push(
+    env.DB.prepare(
+      `INSERT INTO meta (key,value,updated_at) VALUES ('backfill_cursor',?1,?2)
+       ON CONFLICT(key) DO UPDATE SET value=?1, updated_at=?2`
+    ).bind(String(nextCursor), startedAt)
+  );
+  for (let i = 0; i < stmts.length; i += 60) await env.DB.batch(stmts.slice(i, i + 60));
+
+  const complete = nextCursor >= all.length;
+  return {
+    ok: true,
+    complete,
+    fetched,
+    skipped,
+    processed: nextCursor,
+    total_players: all.length,
+    percent: Math.round((nextCursor / all.length) * 100),
+    message: complete ? 'Backfill complete.' : `Call this URL again to continue from player ${nextCursor}.`,
+  };
+}
+
+async function handleBootstrapEnriched(env) {
+  const boot = await fplGet('/bootstrap-static/');
+  try {
+    const rows = await env.DB.prepare(
+      `SELECT code, total_points, minutes, starts, goals, assists,
+              clean_sheets, bonus, bps, xg, xa, defcon
+       FROM player_history WHERE season_name = ?1`
+    ).bind(TARGET_SEASON).all();
+    const byCode = new Map(rows.results.map((r) => [r.code, r]));
+    let matched = 0;
+    for (const e of boot.elements) {
+      const h = byCode.get(e.code);
+      if (!h) continue;
+      matched++;
+      e.hist_prev = {
+        season: TARGET_SEASON, total_points: h.total_points, minutes: h.minutes, starts: h.starts,
+        goals: h.goals, assists: h.assists, clean_sheets: h.clean_sheets, bonus: h.bonus,
+        bps: h.bps, xg: h.xg, xa: h.xa, defcon: h.defcon,
+      };
+    }
+    boot.hist_meta = { season: TARGET_SEASON, matched, available: rows.results.length };
+  } catch (err) {
+    boot.hist_meta = { season: TARGET_SEASON, matched: 0, error: String(err.message || err) };
+  }
+  return json(boot);
 }
 
 /* ------------------------------------------------------------------ *
@@ -375,7 +530,7 @@ export default {
       switch (url.pathname) {
         case '/bootstrap-static/':
         case '/bootstrap-static':
-          return json(await fplGet('/bootstrap-static/'));
+          return await handleBootstrapEnriched(env);
         case '/fixtures/':
         case '/fixtures':
           return json(await fplGet('/fixtures/'));
@@ -388,10 +543,33 @@ export default {
           if (url.searchParams.get('key') !== env.ADMIN_KEY) return json({ error: 'unauthorised' }, 401);
           return json(await poll(env, { sampleTransfers: true }));
         }
+        case '/api/backfill': {
+          if (url.searchParams.get('key') !== env.ADMIN_KEY) return json({ error: 'unauthorised' }, 401);
+          if (url.searchParams.get('reset') === '1') {
+            await env.DB.prepare(
+              `INSERT INTO meta (key,value,updated_at) VALUES ('backfill_cursor','0',?1)
+               ON CONFLICT(key) DO UPDATE SET value='0', updated_at=?1`
+            ).bind(now()).run();
+            return json({ ok: true, message: 'Cursor reset to 0. Call again without reset=1 to start.' });
+          }
+          return json(await backfillHistory(env));
+        }
+        case '/api/history': {
+          const rows = await env.DB.prepare(
+            `SELECT code, web_name, total_points, defcon, minutes, starts
+             FROM player_history WHERE season_name = ?1
+             ORDER BY total_points DESC LIMIT 800`
+          ).bind(TARGET_SEASON).all();
+          return json({ season: TARGET_SEASON, count: rows.results.length, players: rows.results });
+        }
         default:
           return json({
             service: 'FPL Engine API',
-            routes: ['/api/state', '/api/deltas?hours=24&kind=price', '/api/watchlist?hours=24', '/api/health'],
+            routes: [
+              '/bootstrap-static/', '/fixtures/', '/api/state',
+              '/api/deltas?hours=24&kind=price', '/api/watchlist?hours=24',
+              '/api/health', '/api/backfill?key=…', '/api/history',
+            ],
           });
       }
     } catch (err) {
@@ -399,4 +577,3 @@ export default {
     }
   },
 };
-
