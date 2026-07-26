@@ -14,8 +14,8 @@ crons = [
 [[d1_databases]]
 binding = "DB"
 database_name = "fpl-engine"
-database_id = "PASTE_YOUR_DATABASE_ID_HERE"
+database_id = "be2f1cb8-fe11-406e-8029-e269d52c9fb2"
 
 [vars]
 # Override with: wrangler secret put ADMIN_KEY
-ADMIN_KEY = "change-me"
+ADMIN_KEY = "123.Izaiyah"
