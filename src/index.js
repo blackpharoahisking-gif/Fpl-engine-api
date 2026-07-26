@@ -373,6 +373,12 @@ export default {
 
     try {
       switch (url.pathname) {
+        case '/bootstrap-static/':
+        case '/bootstrap-static':
+          return json(await fplGet('/bootstrap-static/'));
+        case '/fixtures/':
+        case '/fixtures':
+          return json(await fplGet('/fixtures/'));
         case '/api/state':     return await handleState(env);
         case '/api/deltas':    return await handleDeltas(env, url);
         case '/api/watchlist': return await handleWatchlist(env, url);
