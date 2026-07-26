@@ -1,0 +1,21 @@
+name = "fpl-engine-api"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+
+# Cron is UTC. FPL changes prices at roughly 01:30 UK time, which is 00:30 UTC
+# in summer (BST) and 01:30 UTC in winter (GMT) — so cover 00:00–02:59 tightly
+# and poll every 30 minutes the rest of the day for injuries and news.
+[triggers]
+crons = [
+  "*/5 0-2 * * *",
+  "*/30 * * * *"
+]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "fpl-engine"
+database_id = "PASTE_YOUR_DATABASE_ID_HERE"
+
+[vars]
+# Override with: wrangler secret put ADMIN_KEY
+ADMIN_KEY = "change-me"
