@@ -1,16 +1,16 @@
 /**
  * FPL Engine API — Cloudflare Worker
- * RC2.1.4 Quota and Reliability Repair
+ * RC2.2A Model Evaluation Capture Layer
  *
  * Preserves the existing state, watchlist, history and backfill APIs while
  * adding the News Intelligence contract required by the RC2.0.1 frontend.
  */
 
 const FPL = 'https://fantasy.premierleague.com/api';
-const UA = 'FPLEngine/2.1 (personal fantasy tool)';
+const UA = 'FPLEngine/2.2A (personal fantasy tool)';
 
 const POS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
-const WORKER_SCHEMA_VERSION = 5;
+const WORKER_SCHEMA_VERSION = 6;
 const DEFAULT_SEASON = '2026/27';
 const PUBLIC_SYNC_COOLDOWN_MS = 35 * 60 * 1000;
 const PIPELINE_LOCK_TTL_MS = 15 * 60 * 1000;
@@ -18,6 +18,19 @@ const BACKFILL_BATCH = 30;
 const DEFAULT_PREVIOUS_SEASON = '2025/26';
 const PRICE_WINDOWS = [6, 12, 24, 48, 168];
 const CHECKPOINT_RETENTION_DAYS = 9;
+const EVALUATION_SCHEMA_VERSION = 2;
+const EVALUATION_CAPTURE_WINDOW_HOURS = 96;
+const EVALUATION_CAPTURE_MIN_COOLDOWN_MS = 20 * 60 * 1000;
+const EVALUATION_BASELINE_WINDOW_MS = 35 * 60 * 1000;
+const EVALUATION_MIN_PLAYERS = 300;
+const EVALUATION_MAX_PLAYERS = 800;
+
+function evaluationCaptureCooldownMs(hoursUntil) {
+  if (hoursUntil > 24) return 12 * 3600e3;
+  if (hoursUntil > 6) return 6 * 3600e3;
+  if (hoursUntil > 2) return 2 * 3600e3;
+  return EVALUATION_CAPTURE_MIN_COOLDOWN_MS;
+}
 
 const json = (body, status = 200, extra = {}) => {
   const noBody = status === 204 || status === 205 || status === 304;
@@ -25,7 +38,7 @@ const json = (body, status = 200, extra = {}) => {
     'content-type': 'application/json; charset=utf-8',
     'access-control-allow-origin': '*',
     'access-control-allow-methods': 'GET, POST, OPTIONS',
-    'access-control-allow-headers': 'content-type, authorization, x-admin-key',
+    'access-control-allow-headers': 'content-type, authorization, x-admin-key, x-evaluation-key',
     'cache-control': status >= 400 ? 'no-store' : 'public, max-age=60',
     ...extra,
   };
@@ -61,6 +74,13 @@ function suppliedAdminKey(request, url, env) {
 
 function adminAuthorised(request, url, env) {
   return Boolean(env.ADMIN_KEY) && suppliedAdminKey(request, url, env) === String(env.ADMIN_KEY);
+}
+
+function evaluationWriteAuthorised(request, env) {
+  const expected=String(env.EVALUATION_KEY||'');
+  if(!expected)return {ok:false,configured:false};
+  const supplied=String(request.headers.get('x-evaluation-key')||'');
+  return {ok:supplied===expected,configured:true};
 }
 
 async function fplGet(path) {
@@ -369,6 +389,522 @@ function metaUpsert(env, key, value, timestamp) {
 }
 
 
+let EVALUATION_SCHEMA_READY = false;
+
+async function ensureEvaluationSchema(env) {
+  if (EVALUATION_SCHEMA_READY) return;
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS evaluation_predictions (
+       season TEXT NOT NULL,
+       gw INTEGER NOT NULL,
+       model_version TEXT NOT NULL,
+       weights_hash TEXT NOT NULL,
+       snapshot_id TEXT NOT NULL,
+       formula_revision TEXT,
+       player_id INTEGER NOT NULL,
+       web_name TEXT NOT NULL,
+       team_code TEXT NOT NULL,
+       position INTEGER NOT NULL,
+       price INTEGER NOT NULL,
+       ownership REAL,
+       status TEXT,
+       chance REAL,
+       ep_next REAL,
+       current_ppg REAL,
+       prior_points REAL,
+       prior_minutes REAL,
+       prior_starts REAL,
+       prior_points_per_start REAL,
+       fixture_json TEXT NOT NULL DEFAULT '[]',
+       client_source_hash TEXT,
+       server_source_hash TEXT,
+       xpts REAL,
+       low REAL,
+       high REAL,
+       sd REAL,
+       confidence REAL,
+       expected_minutes REAL,
+       availability REAL,
+       capture_source TEXT NOT NULL,
+       server_received_at TEXT NOT NULL,
+       deadline_time TEXT NOT NULL,
+       PRIMARY KEY (season, gw, model_version, weights_hash, player_id)
+     )`
+  ).run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS evaluation_models (
+       season TEXT NOT NULL,
+       model_version TEXT NOT NULL,
+       weights_hash TEXT NOT NULL,
+       formula_revision TEXT NOT NULL,
+       config_json TEXT NOT NULL,
+       first_seen_at TEXT NOT NULL,
+       last_seen_at TEXT NOT NULL,
+       PRIMARY KEY (season, model_version, weights_hash)
+     )`
+  ).run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS evaluation_actuals (
+       season TEXT NOT NULL,
+       gw INTEGER NOT NULL,
+       player_id INTEGER NOT NULL,
+       actual_points REAL NOT NULL,
+       minutes REAL NOT NULL,
+       goals REAL NOT NULL,
+       assists REAL NOT NULL,
+       clean_sheets REAL NOT NULL,
+       goals_conceded REAL NOT NULL,
+       saves REAL NOT NULL,
+       bonus REAL NOT NULL,
+       bps REAL NOT NULL,
+       defensive_contribution REAL NOT NULL,
+       yellow_cards REAL NOT NULL,
+       red_cards REAL NOT NULL,
+       captured_at TEXT NOT NULL,
+       data_checked INTEGER NOT NULL,
+       PRIMARY KEY (season, gw, player_id)
+     )`
+  ).run();
+  EVALUATION_SCHEMA_READY = true;
+}
+
+function stableValue(value) {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (value && typeof value === 'object') {
+    return Object.keys(value).sort().reduce((out, key) => {
+      out[key] = stableValue(value[key]);
+      return out;
+    }, {});
+  }
+  return value;
+}
+
+function stableJson(value) {
+  return JSON.stringify(stableValue(value));
+}
+
+function evaluationFixtureContext(fixtures, teamMap, gw) {
+  const out = new Map();
+  const add = (code, row) => {
+    if (!out.has(code)) out.set(code, []);
+    out.get(code).push(row);
+  };
+  for (const f of fixtures || []) {
+    if (num(f.event ?? f.event_id, -1) !== num(gw, -2)) continue;
+    const home = f.home_code || teamMap?.[f.team_h];
+    const away = f.away_code || teamMap?.[f.team_a];
+    if (!home || !away) continue;
+    add(home, {
+      opponent: away,
+      home: true,
+      difficulty: num(f.team_h_difficulty ?? f.home_diff, 3),
+      kickoff: f.kickoff_time ?? null,
+      fixture_id: f.id,
+    });
+    add(away, {
+      opponent: home,
+      home: false,
+      difficulty: num(f.team_a_difficulty ?? f.away_diff, 3),
+      kickoff: f.kickoff_time ?? null,
+      fixture_id: f.id,
+    });
+  }
+  return out;
+}
+
+function priorPointsPerStart(history) {
+  if (!history) return 0;
+  const starts = num(history.starts);
+  return starts > 0 ? num(history.total_points) / starts : 0;
+}
+
+async function acquireEvaluationLock(env, ttlMs = 2 * 60 * 1000) {
+  const token = crypto.randomUUID();
+  const acquiredAt = now();
+  const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+  const result = await env.DB.prepare(
+    `INSERT INTO meta (key,value,updated_at) VALUES ('evaluation_capture_lock',?1,?2)
+     ON CONFLICT(key) DO UPDATE SET value=?1,updated_at=?2
+     WHERE meta.updated_at < ?3`
+  ).bind(token,expiresAt,acquiredAt).run();
+  return num(result?.meta?.changes)>0?token:null;
+}
+
+async function releaseEvaluationLock(env, token) {
+  if(!token)return;
+  await env.DB.prepare("DELETE FROM meta WHERE key='evaluation_capture_lock' AND value=?1").bind(token).run();
+}
+
+function evaluationModelUpsert(env, row) {
+  return env.DB.prepare(
+    `INSERT INTO evaluation_models
+       (season,model_version,weights_hash,formula_revision,config_json,first_seen_at,last_seen_at)
+     VALUES (?1,?2,?3,?4,?5,?6,?6)
+     ON CONFLICT(season,model_version,weights_hash) DO UPDATE SET
+       formula_revision=excluded.formula_revision,config_json=excluded.config_json,
+       last_seen_at=excluded.last_seen_at`
+  ).bind(row.season,row.model_version,row.weights_hash,row.formula_revision,row.config_json,row.at);
+}
+
+function evaluationPredictionUpsert(env, row) {
+  return env.DB.prepare(
+    `INSERT INTO evaluation_predictions (
+       season,gw,model_version,weights_hash,snapshot_id,formula_revision,
+       player_id,web_name,team_code,position,price,ownership,status,chance,
+       ep_next,current_ppg,prior_points,prior_minutes,prior_starts,prior_points_per_start,
+       fixture_json,client_source_hash,server_source_hash,xpts,low,high,sd,confidence,
+       expected_minutes,availability,capture_source,server_received_at,deadline_time)
+     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28,?29,?30,?31,?32,?33)
+     ON CONFLICT(season,gw,model_version,weights_hash,player_id) DO UPDATE SET
+       snapshot_id=excluded.snapshot_id,formula_revision=excluded.formula_revision,
+       web_name=excluded.web_name,team_code=excluded.team_code,position=excluded.position,
+       price=excluded.price,ownership=excluded.ownership,status=excluded.status,chance=excluded.chance,
+       ep_next=excluded.ep_next,current_ppg=excluded.current_ppg,
+       prior_points=excluded.prior_points,prior_minutes=excluded.prior_minutes,
+       prior_starts=excluded.prior_starts,prior_points_per_start=excluded.prior_points_per_start,
+       fixture_json=excluded.fixture_json,client_source_hash=excluded.client_source_hash,
+       server_source_hash=excluded.server_source_hash,xpts=excluded.xpts,low=excluded.low,
+       high=excluded.high,sd=excluded.sd,confidence=excluded.confidence,
+       expected_minutes=excluded.expected_minutes,availability=excluded.availability,
+       capture_source=excluded.capture_source,server_received_at=excluded.server_received_at,
+       deadline_time=excluded.deadline_time`
+  ).bind(
+    row.season,row.gw,row.model_version,row.weights_hash,row.snapshot_id,row.formula_revision,
+    row.player_id,row.web_name,row.team_code,row.position,row.price,row.ownership,row.status,row.chance,
+    row.ep_next,row.current_ppg,row.prior_points,row.prior_minutes,row.prior_starts,row.prior_points_per_start,
+    row.fixture_json,row.client_source_hash,row.server_source_hash,row.xpts,row.low,row.high,row.sd,row.confidence,
+    row.expected_minutes,row.availability,row.capture_source,row.server_received_at,row.deadline_time
+  );
+}
+
+function evaluationActualUpsert(env, row) {
+  return env.DB.prepare(
+    `INSERT INTO evaluation_actuals (
+       season,gw,player_id,actual_points,minutes,goals,assists,clean_sheets,
+       goals_conceded,saves,bonus,bps,defensive_contribution,yellow_cards,red_cards,
+       captured_at,data_checked)
+     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17)
+     ON CONFLICT(season,gw,player_id) DO UPDATE SET
+       actual_points=excluded.actual_points,minutes=excluded.minutes,goals=excluded.goals,
+       assists=excluded.assists,clean_sheets=excluded.clean_sheets,
+       goals_conceded=excluded.goals_conceded,saves=excluded.saves,bonus=excluded.bonus,
+       bps=excluded.bps,defensive_contribution=excluded.defensive_contribution,
+       yellow_cards=excluded.yellow_cards,red_cards=excluded.red_cards,
+       captured_at=excluded.captured_at,data_checked=excluded.data_checked`
+  ).bind(
+    row.season,row.gw,row.player_id,row.actual_points,row.minutes,row.goals,row.assists,
+    row.clean_sheets,row.goals_conceded,row.saves,row.bonus,row.bps,row.defensive_contribution,
+    row.yellow_cards,row.red_cards,row.captured_at,row.data_checked
+  );
+}
+
+async function captureOfficialBaselineIfDue(env, boot, fixtures, serverHash, timestamp) {
+  await ensureEvaluationSchema(env);
+  const season = seasonFromBootstrap(boot);
+  const event = (boot.events || [])
+    .filter((e) => !e.finished && Number.isFinite(Date.parse(e.deadline_time || '')))
+    .sort((a, b) => Date.parse(a.deadline_time) - Date.parse(b.deadline_time))[0];
+  if (!event) return { ok: true, skipped: true, reason: 'No future deadline' };
+  const deadlineMs = Date.parse(event.deadline_time);
+  const until = deadlineMs - Date.now();
+  if (until <= 0 || until > EVALUATION_BASELINE_WINDOW_MS) {
+    return { ok: true, skipped: true, reason: 'Baseline window is not open', gw: event.id };
+  }
+  const existing = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM evaluation_predictions
+     WHERE season=?1 AND gw=?2 AND model_version='BASELINE' AND weights_hash='OFFICIAL'`
+  ).bind(season, event.id).first();
+  const baselineRequired = Math.max(EVALUATION_MIN_PLAYERS, Math.floor((boot.elements || []).length * .9));
+  if (num(existing?.n) >= baselineRequired) {
+    return { ok: true, skipped: true, reason: 'Official baseline already captured', gw: event.id };
+  }
+  const targetSeason = previousSeasonName(season);
+  const historyRows = await env.DB.prepare(
+    `SELECT api_id,total_points,minutes,starts FROM player_history WHERE season_name=?1`
+  ).bind(targetSeason).all();
+  const history = new Map(historyRows.results.map((r) => [num(r.api_id), r]));
+  const teamMap = Object.fromEntries((boot.teams || []).map((t) => [t.id, t.short_name]));
+  const fixtureMap = evaluationFixtureContext(fixtures, teamMap, event.id);
+  const snapshotId = crypto.randomUUID();
+  const statements = [evaluationModelUpsert(env,{
+    season,model_version:'BASELINE',weights_hash:'OFFICIAL',formula_revision:'official-fpl-baselines-v1',
+    config_json:JSON.stringify({baselines:['ep_next','current_ppg','prior_points','prior_minutes','prior_starts','prior_points_per_start']}),at:timestamp,
+  })];
+  for (const e of boot.elements || []) {
+    const teamCode = teamMap[e.team];
+    if (!teamCode || !Number.isInteger(e.id)) continue;
+    statements.push(evaluationPredictionUpsert(env, {
+      season,gw:event.id,model_version:'BASELINE',weights_hash:'OFFICIAL',snapshot_id:snapshotId,
+      formula_revision:'official-fpl-baselines-v1',player_id:e.id,web_name:e.web_name || '',
+      team_code:teamCode,position:num(e.element_type),price:num(e.now_cost),
+      ownership:num(e.selected_by_percent),status:e.status || 'a',
+      chance:e.chance_of_playing_next_round ?? null,ep_next:num(e.ep_next),
+      current_ppg:num(e.points_per_game),prior_points:num(history.get(e.id)?.total_points),
+      prior_minutes:num(history.get(e.id)?.minutes),prior_starts:num(history.get(e.id)?.starts),
+      prior_points_per_start:priorPointsPerStart(history.get(e.id)),fixture_json:JSON.stringify(fixtureMap.get(teamCode) || []),client_source_hash:'',
+      server_source_hash:serverHash || '',xpts:null,low:null,high:null,sd:null,confidence:null,
+      expected_minutes:null,availability:null,capture_source:'worker-baseline',
+      server_received_at:timestamp,deadline_time:event.deadline_time,
+    }));
+  }
+  for (let i = 0; i < statements.length; i += 80) await env.DB.batch(statements.slice(i, i + 80));
+  await env.DB.batch([
+    metaUpsert(env,'evaluation_last_baseline_at',timestamp,timestamp),
+    metaUpsert(env,'evaluation_last_baseline_gw',event.id,timestamp),
+    metaUpsert(env,'evaluation_schema_version',EVALUATION_SCHEMA_VERSION,timestamp),
+  ]);
+  return { ok: true, captured: Math.max(0,statements.length-1), gw: event.id, snapshotId };
+}
+
+async function captureCheckedActuals(env, boot, timestamp) {
+  await ensureEvaluationSchema(env);
+  const season = seasonFromBootstrap(boot);
+  const checked = (boot.events || []).filter((e) => e.finished && e.data_checked).map((e) => e.id);
+  if (!checked.length) return { ok: true, skipped: true, reason: 'No checked gameweeks' };
+  const existingRows = await env.DB.prepare(
+    `SELECT gw,COUNT(*) AS n FROM evaluation_actuals WHERE season=?1 GROUP BY gw`
+  ).bind(season).all();
+  const required = Math.max(EVALUATION_MIN_PLAYERS,Math.floor((boot.elements||[]).length*.9));
+  const complete = new Set(existingRows.results.filter((r)=>num(r.n)>=required).map((r) => num(r.gw)));
+  const missing = checked.filter((gw) => !complete.has(gw)).slice(0, 2);
+  if (!missing.length) return { ok: true, skipped: true, reason: 'Checked actuals already captured' };
+  let captured = 0;
+  const gameweeks = [];
+  for (const gw of missing) {
+    const live = await fplGet(`/event/${gw}/live/`);
+    const elements = Array.isArray(live?.elements) ? live.elements : [];
+    if (elements.length < EVALUATION_MIN_PLAYERS) throw new Error(`GW${gw} live payload has only ${elements.length} players`);
+    const statements = [];
+    for (const item of elements) {
+      const st = item?.stats || {};
+      statements.push(evaluationActualUpsert(env, {
+        season,gw,player_id:num(item.id),actual_points:num(st.total_points),minutes:num(st.minutes),
+        goals:num(st.goals_scored),assists:num(st.assists),clean_sheets:num(st.clean_sheets),
+        goals_conceded:num(st.goals_conceded),saves:num(st.saves),bonus:num(st.bonus),bps:num(st.bps),
+        defensive_contribution:num(st.defensive_contribution ?? st.defensive_contributions),
+        yellow_cards:num(st.yellow_cards),red_cards:num(st.red_cards),captured_at:timestamp,data_checked:1,
+      }));
+    }
+    for (let i = 0; i < statements.length; i += 80) await env.DB.batch(statements.slice(i, i + 80));
+    captured += statements.length;
+    gameweeks.push(gw);
+    await metaUpsert(env,`evaluation_actual_gw_${gw}`,timestamp,timestamp).run();
+  }
+  await env.DB.batch([
+    metaUpsert(env,'evaluation_last_actual_at',timestamp,timestamp),
+    metaUpsert(env,'evaluation_last_actual_gw',Math.max(...gameweeks),timestamp),
+    metaUpsert(env,'evaluation_schema_version',EVALUATION_SCHEMA_VERSION,timestamp),
+  ]);
+  return { ok: true, captured, gameweeks };
+}
+
+async function evaluationServerContext(env, gw, season) {
+  const targetSeason = previousSeasonName(season);
+  const [players, fixtures, meta] = await Promise.all([
+    env.DB.prepare(
+      `SELECT p.id,p.web_name,p.team_code,p.element_type,p.now_cost,p.selected_by,p.status,
+              p.chance_next,p.ep_next,p.points_per_game,
+              h.total_points AS prior_points,h.minutes AS prior_minutes,h.starts AS prior_starts
+       FROM players p
+       LEFT JOIN player_history h ON h.api_id=p.id AND h.season_name=?1
+       ORDER BY p.id`
+    ).bind(targetSeason).all(),
+    env.DB.prepare(
+      `SELECT id,event_id,kickoff_time,home_code,away_code,home_diff,away_diff
+       FROM fixtures WHERE event_id=?1 ORDER BY kickoff_time,id`
+    ).bind(gw).all(),
+    env.DB.prepare("SELECT key,value FROM meta WHERE key IN ('data_hash','last_official_fetch')").all(),
+  ]);
+  const m = Object.fromEntries(meta.results.map((r) => [r.key, r.value]));
+  return { players: players.results, fixtures: fixtures.results, meta: m };
+}
+
+async function handleEvaluationProjection(request, env) {
+  if (request.method !== 'POST') return json({ error: 'POST required' }, 405);
+  const allowedOrigin = String(env.EVALUATION_ALLOWED_ORIGIN || env.ALLOWED_ORIGIN || '').trim();
+  const origin = request.headers.get('origin') || '';
+  if (allowedOrigin && origin !== allowedOrigin) return json({ error: 'origin not allowed' }, 403);
+  const evaluationAuth=evaluationWriteAuthorised(request,env);
+  if(!evaluationAuth.configured)return json({error:'EVALUATION_KEY is not configured on the Worker'},503);
+  if(!evaluationAuth.ok)return json({error:'evaluation capture key is invalid'},401);
+  await ensureEvaluationSchema(env);
+  let body;
+  try { body = await request.json(); }
+  catch { return json({ error: 'invalid JSON body' }, 400); }
+  const season = String(body?.season || '');
+  const expectedSeason = configuredSeason(env);
+  const gw = num(body?.gw, NaN);
+  const modelVersion = String(body?.modelVersion || '').trim();
+  const formulaRevision = String(body?.formulaRevision || '').trim().slice(0, 100);
+  const weights = body?.weights;
+  const weightsHash = String(body?.weightsHash || '').trim().toLowerCase();
+  const clientSourceHash = String(body?.clientSourceHash || '').trim().slice(0, 128);
+  const projections = Array.isArray(body?.projections) ? body.projections : [];
+  if (season !== expectedSeason) return json({ error: `season ${season || 'missing'} does not match ${expectedSeason}` }, 409);
+  if (!Number.isInteger(gw) || gw < 1 || gw > 38) return json({ error: 'invalid gameweek' }, 400);
+  if (!/^[A-Za-z0-9._-]{2,60}$/.test(modelVersion)) return json({ error: 'invalid modelVersion' }, 400);
+  if (!formulaRevision) return json({ error: 'formulaRevision is required' }, 400);
+  if (!weights || typeof weights !== 'object' || Array.isArray(weights)) return json({ error: 'weights object is required' }, 400);
+  const computedHash = await sha256(stableJson({ version:modelVersion, formulaRevision, weights }));
+  if (weightsHash !== computedHash) return json({ error: 'weightsHash does not match the supplied model configuration' }, 400);
+  if (projections.length < EVALUATION_MIN_PLAYERS || projections.length > EVALUATION_MAX_PLAYERS) {
+    return json({ error: `projection vector must contain ${EVALUATION_MIN_PLAYERS}-${EVALUATION_MAX_PLAYERS} players` }, 400);
+  }
+  const ids = new Set();
+  const projectionMap = new Map();
+  for (const raw of projections) {
+    const id = num(raw?.playerId, NaN);
+    const xpts = num(raw?.xpts, NaN), low = num(raw?.low, NaN), high = num(raw?.high, NaN);
+    const sd = num(raw?.sd, NaN), confidence = num(raw?.confidence, NaN);
+    const expectedMinutes = num(raw?.expectedMinutes, NaN), availability = num(raw?.availability, NaN);
+    if (!Number.isInteger(id) || ids.has(id)) return json({ error: `duplicate or invalid playerId ${raw?.playerId}` }, 400);
+    if (![xpts,low,high,sd,confidence,expectedMinutes,availability].every(Number.isFinite)) return json({ error: `non-finite projection for player ${id}` }, 400);
+    if (low > xpts || high < xpts || sd < 0 || confidence < 0 || confidence > 100 || expectedMinutes < 0 || expectedMinutes > 300 || availability < 0 || availability > 1 || xpts < -20 || xpts > 100) {
+      return json({ error: `projection bounds are invalid for player ${id}` }, 400);
+    }
+    ids.add(id);
+    projectionMap.set(id,{xpts,low,high,sd,confidence,expectedMinutes,availability});
+  }
+  let event = await env.DB.prepare('SELECT id,deadline_time FROM events WHERE id=?1').bind(gw).first();
+  if (!event?.deadline_time) {
+    const boot = await fplGet('/bootstrap-static/');
+    event = (boot.events || []).find((e) => e.id === gw) || null;
+  }
+  const deadlineMs = Date.parse(event?.deadline_time || '');
+  if (!Number.isFinite(deadlineMs)) return json({ error: 'deadline is unavailable' }, 503);
+  const nowMs = Date.now();
+  if (nowMs >= deadlineMs) return json({ error: `GW${gw} projection capture is closed` }, 409);
+  const hoursUntil = (deadlineMs - nowMs) / 3600e3;
+  if (hoursUntil > EVALUATION_CAPTURE_WINDOW_HOURS) {
+    return json({ ok:true, skipped:true, reason:`Capture window opens ${EVALUATION_CAPTURE_WINDOW_HOURS} hours before the deadline`, gw, deadline:event.deadline_time }, 202);
+  }
+  const evaluationLock=await acquireEvaluationLock(env);
+  if(!evaluationLock)return json({error:'Another evaluation capture is already running'},409);
+  try {
+  const last = await env.DB.prepare(
+    `SELECT MAX(server_received_at) AS at FROM evaluation_predictions
+     WHERE season=?1 AND gw=?2 AND model_version=?3 AND weights_hash=?4`
+  ).bind(season,gw,modelVersion,weightsHash).first();
+  const lastMs = Date.parse(last?.at || '');
+  const captureCooldownMs=evaluationCaptureCooldownMs(hoursUntil);
+  if (Number.isFinite(lastMs) && nowMs - lastMs < captureCooldownMs) {
+    const nextEligibleAt=new Date(lastMs+captureCooldownMs).toISOString();
+    return json({ ok:true, skipped:true, reason:'This model configuration is already current for this deadline phase', gw, lastCapturedAt:last.at, nextEligibleAt, deadline:event.deadline_time });
+  }
+  const context = await evaluationServerContext(env,gw,season);
+  if (context.players.length < EVALUATION_MIN_PLAYERS) return json({ error:'server player context is incomplete' },503);
+  const fixtureMap = evaluationFixtureContext(context.fixtures,null,gw);
+  const snapshotId = crypto.randomUUID();
+  const receivedAt = now();
+  const statements = [evaluationModelUpsert(env,{
+    season,model_version:modelVersion,weights_hash:weightsHash,formula_revision:formulaRevision,
+    config_json:stableJson(weights),at:receivedAt,
+  })];
+  let matched = 0;
+  for (const p of context.players) {
+    const projection = projectionMap.get(num(p.id));
+    if (!projection) continue;
+    matched++;
+    statements.push(evaluationPredictionUpsert(env, {
+      season,gw,model_version:modelVersion,weights_hash:weightsHash,snapshot_id:snapshotId,
+      formula_revision:formulaRevision,player_id:num(p.id),web_name:p.web_name || '',
+      team_code:p.team_code || '?',position:num(p.element_type),price:num(p.now_cost),
+      ownership:num(p.selected_by),status:p.status || 'a',chance:p.chance_next ?? null,
+      ep_next:num(p.ep_next),current_ppg:num(p.points_per_game),prior_points:num(p.prior_points),
+      prior_minutes:num(p.prior_minutes),prior_starts:num(p.prior_starts),
+      prior_points_per_start:priorPointsPerStart({total_points:p.prior_points,starts:p.prior_starts}),
+      fixture_json:JSON.stringify(fixtureMap.get(p.team_code) || []),
+      client_source_hash:clientSourceHash,server_source_hash:context.meta.data_hash || '',
+      xpts:projection.xpts,low:projection.low,high:projection.high,sd:projection.sd,
+      confidence:projection.confidence,expected_minutes:projection.expectedMinutes,
+      availability:projection.availability,capture_source:'frontend',
+      server_received_at:receivedAt,deadline_time:event.deadline_time,
+    }));
+  }
+  const required = Math.max(EVALUATION_MIN_PLAYERS,Math.floor(context.players.length*.9));
+  if (matched < required) return json({ error:`only ${matched} of ${context.players.length} server players matched the projection vector` },400);
+  for (let i=0;i<statements.length;i+=80) await env.DB.batch(statements.slice(i,i+80));
+  await env.DB.batch([
+    metaUpsert(env,'evaluation_last_projection_at',receivedAt,receivedAt),
+    metaUpsert(env,'evaluation_last_projection_gw',gw,receivedAt),
+    metaUpsert(env,'evaluation_last_model_version',modelVersion,receivedAt),
+    metaUpsert(env,'evaluation_last_weights_hash',weightsHash,receivedAt),
+    metaUpsert(env,'evaluation_schema_version',EVALUATION_SCHEMA_VERSION,receivedAt),
+  ]);
+  return json({ ok:true,captured:matched,season,gw,modelVersion,weightsHash,snapshotId,serverReceivedAt:receivedAt,deadline:event.deadline_time,hoursUntilDeadline:hoursUntil });
+  } finally {
+    await releaseEvaluationLock(env,evaluationLock).catch(()=>{});
+  }
+}
+
+async function handleEvaluationStatus(env, url) {
+  await ensureEvaluationSchema(env);
+  const season = configuredSeason(env);
+  let gw = num(url.searchParams.get('gw'), NaN);
+  if (!Number.isInteger(gw)) {
+    const ev = await env.DB.prepare('SELECT id FROM events WHERE is_next=1 ORDER BY id LIMIT 1').first();
+    gw = num(ev?.id, 1);
+  }
+  const modelVersion = String(url.searchParams.get('model_version') || '').trim();
+  const weightsHash = String(url.searchParams.get('weights_hash') || '').trim().toLowerCase();
+  const event = await env.DB.prepare('SELECT id,deadline_time,finished FROM events WHERE id=?1').bind(gw).first();
+  const deadlineMs = Date.parse(event?.deadline_time || '');
+  const filters = ['season=?1','gw=?2'];
+  const binds = [season,gw];
+  if (modelVersion) { filters.push(`model_version=?${binds.length+1}`); binds.push(modelVersion); }
+  if (weightsHash) { filters.push(`weights_hash=?${binds.length+1}`); binds.push(weightsHash); }
+  const query = `SELECT model_version,weights_hash,snapshot_id,COUNT(*) AS player_count,
+                        MAX(server_received_at) AS captured_at,MAX(deadline_time) AS deadline_time,
+                        MAX(capture_source) AS capture_source
+                 FROM evaluation_predictions WHERE ${filters.join(' AND ')}
+                 GROUP BY model_version,weights_hash,snapshot_id
+                 ORDER BY captured_at DESC LIMIT 12`;
+  const [snapshots,baseline,actual] = await Promise.all([
+    env.DB.prepare(query).bind(...binds).all(),
+    env.DB.prepare(
+      `SELECT model_version,weights_hash,snapshot_id,COUNT(*) AS player_count,
+              MAX(server_received_at) AS captured_at,MAX(deadline_time) AS deadline_time,
+              MAX(capture_source) AS capture_source
+       FROM evaluation_predictions
+       WHERE season=?1 AND gw=?2 AND model_version='BASELINE' AND weights_hash='OFFICIAL'
+       GROUP BY model_version,weights_hash,snapshot_id
+       ORDER BY captured_at DESC LIMIT 1`
+    ).bind(season,gw).first(),
+    env.DB.prepare(
+      `SELECT COUNT(*) AS player_count,MAX(captured_at) AS captured_at
+       FROM evaluation_actuals WHERE season=?1 AND gw=?2`
+    ).bind(season,gw).first(),
+  ]);
+  const projection = snapshots.results.find((r) => r.model_version !== 'BASELINE') || null;
+  return json({
+    season,gw,generatedAt:now(),deadline:event?.deadline_time || null,finished:Boolean(event?.finished),
+    captureOpen:Number.isFinite(deadlineMs) && Date.now()<deadlineMs && (deadlineMs-Date.now())<=EVALUATION_CAPTURE_WINDOW_HOURS*3600e3,
+    captureClosed:Number.isFinite(deadlineMs) && Date.now()>=deadlineMs,
+    baseline,projection,snapshots:snapshots.results,
+    actuals:{player_count:num(actual?.player_count),captured_at:actual?.captured_at || null},
+    schemaVersion:EVALUATION_SCHEMA_VERSION,
+  });
+}
+
+async function handleEvaluationExport(request, env, url) {
+  if (!adminAuthorised(request,url,env)) return json({error:'unauthorised'},401,{'cache-control':'no-store'});
+  await ensureEvaluationSchema(env);
+  const season=configuredSeason(env),gw=num(url.searchParams.get('gw'),NaN);
+  if(!Number.isInteger(gw)||gw<1||gw>38) return json({error:'valid gw is required'},400,{'cache-control':'no-store'});
+  const modelVersion=String(url.searchParams.get('model_version')||'').trim();
+  const weightsHash=String(url.searchParams.get('weights_hash')||'').trim();
+  const filters=['season=?1','gw=?2']; const binds=[season,gw];
+  if(modelVersion){filters.push(`model_version=?${binds.length+1}`);binds.push(modelVersion)}
+  if(weightsHash){filters.push(`weights_hash=?${binds.length+1}`);binds.push(weightsHash)}
+  const [predictions,actuals,models]=await Promise.all([
+    env.DB.prepare(`SELECT * FROM evaluation_predictions WHERE ${filters.join(' AND ')} ORDER BY model_version,weights_hash,player_id`).bind(...binds).all(),
+    env.DB.prepare('SELECT * FROM evaluation_actuals WHERE season=?1 AND gw=?2 ORDER BY player_id').bind(season,gw).all(),
+    env.DB.prepare('SELECT * FROM evaluation_models WHERE season=?1 ORDER BY model_version,weights_hash').bind(season).all(),
+  ]);
+  return json({season,gw,models:models.results,predictions:predictions.results,actuals:actuals.results},200,{'cache-control':'no-store'});
+}
+
+
 const PLAYER_MATERIAL_FIELDS = [
   'web_name','full_name','team_code','element_type','now_cost','cost_change_event','cost_change_start',
   'status','chance_next','news','news_added','minutes','starts','total_points','goals','assists',
@@ -573,6 +1109,15 @@ async function poll(env, { sampleTransfers = false } = {}) {
         ]);
       }
       if(sampleTransfers) await saveTransferCheckpoint(env,boot,startedAt);
+      let evaluation={baseline:null,actuals:null,error:null};
+      try {
+        evaluation.baseline=await captureOfficialBaselineIfDue(env,boot,fixtures,hash,startedAt);
+        evaluation.actuals=await captureCheckedActuals(env,boot,startedAt);
+        await metaUpsert(env,'evaluation_last_error','',startedAt).run();
+      } catch(evalErr) {
+        evaluation.error=String(evalErr.message||evalErr);
+        await metaUpsert(env,'evaluation_last_error',evaluation.error,startedAt).run().catch(()=>{});
+      }
       await maybePruneOperationalHistory(env,season,startedAt);
       await env.DB.batch([
         metaUpsert(env,'last_poll',startedAt,startedAt), metaUpsert(env,'last_official_fetch',startedAt,startedAt),
@@ -583,7 +1128,7 @@ async function poll(env, { sampleTransfers = false } = {}) {
         env.DB.prepare(`INSERT INTO poll_log (started_at,ok,duration_ms,players_seen,changes,error)
           VALUES (?1,1,?2,?3,?4,NULL)`).bind(startedAt,Date.now()-t0,seen,changes),
       ]);
-      return {ok:true,season,seen,fixtures:fixtures.length,changes,dataHash:hash,scheduleChanged,playerWrites,resultWrites,ms:Date.now()-t0};
+      return {ok:true,season,seen,fixtures:fixtures.length,changes,dataHash:hash,scheduleChanged,playerWrites,resultWrites,evaluation,ms:Date.now()-t0};
     } catch(err) {
       try { await env.DB.prepare(`INSERT INTO poll_log (started_at,ok,duration_ms,players_seen,changes,error)
         VALUES (?1,0,?2,?3,?4,?5)`).bind(startedAt,Date.now()-t0,seen,changes,String(err.message||err)).run(); } catch {}
@@ -738,12 +1283,20 @@ async function healthData(env) {
     lastMarketSampleAt: m.last_market_sample || null,
     lastMarketError: m.last_market_error || null,
     recentPolls: recent.results,
+    evaluationLastProjectionAt: m.evaluation_last_projection_at || null,
+    evaluationLastProjectionGw: num(m.evaluation_last_projection_gw, null),
+    evaluationLastBaselineAt: m.evaluation_last_baseline_at || null,
+    evaluationLastBaselineGw: num(m.evaluation_last_baseline_gw, null),
+    evaluationLastActualAt: m.evaluation_last_actual_at || null,
+    evaluationLastActualGw: num(m.evaluation_last_actual_gw, null),
+    evaluationLastError: m.evaluation_last_error || null,
+    evaluationWriteProtected: Boolean(env.EVALUATION_KEY),
   };
 
   return {
     status,
     service: 'FPL Engine API',
-    release: 'RC2.1.4-quota-reliability-repair',
+    release: 'RC2.2A-model-evaluation-capture',
     season: m.season || configuredSeason(env),
     schemaVersion: WORKER_SCHEMA_VERSION,
     storedSchemaVersion: num(m.schema_version, 0),
@@ -1018,6 +1571,12 @@ export default {
           return await handleDeltas(env, url);
         case '/api/price-intelligence':
           return await handlePriceIntelligence(request, env, url);
+        case '/api/evaluation/projections':
+          return await handleEvaluationProjection(request, env);
+        case '/api/evaluation/status':
+          return await handleEvaluationStatus(env, url);
+        case '/api/evaluation/export':
+          return await handleEvaluationExport(request, env, url);
         case '/api/watchlist':
           return await handleWatchlist(env, url);
         case '/api/health':
@@ -1060,16 +1619,17 @@ export default {
         default:
           return json({
             service: 'FPL Engine API',
-            release: 'RC2.1.4-quota-reliability-repair',
+            release: 'RC2.2A-model-evaluation-capture',
             frontendRoutes: [
               '/bootstrap-static/', '/fixtures/', '/api/news?hours=72',
               '/api/deltas?hours=24', '/api/price-intelligence?hours=24',
+              '/api/evaluation/status?gw=1', '/api/evaluation/projections (POST)',
               '/api/health', '/api/metadata', '/api/sync',
             ],
             advancedRoutes: [
               '/api/state', '/api/current-alerts', '/api/watchlist?hours=24',
-              '/api/history', '/api/refresh (Bearer or x-admin-key)',
-              '/api/backfill (Bearer or x-admin-key)',
+              '/api/history', '/api/evaluation/export?gw=1 (Bearer or x-admin-key)',
+              '/api/refresh (Bearer or x-admin-key)', '/api/backfill (Bearer or x-admin-key)',
             ],
           });
       }
