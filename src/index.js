@@ -1,6 +1,6 @@
 /**
  * FPL Engine API — Cloudflare Worker
- * RC2.1 Price Change Intelligence
+ * RC2.1.3 Audit Repair
  *
  * Preserves the existing state, watchlist, history and backfill APIs while
  * adding the News Intelligence contract required by the RC2.0.1 frontend.
@@ -10,28 +10,41 @@ const FPL = 'https://fantasy.premierleague.com/api';
 const UA = 'FPLEngine/2.1 (personal fantasy tool)';
 
 const POS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
-const WORKER_SCHEMA_VERSION = 3;
+const WORKER_SCHEMA_VERSION = 4;
 const EXPECTED_SEASON = '2026/27';
-const PUBLIC_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
+const PUBLIC_SYNC_COOLDOWN_MS = 35 * 60 * 1000;
+const PIPELINE_LOCK_TTL_MS = 5 * 60 * 1000;
 const BACKFILL_BATCH = 30;
 const TARGET_SEASON = '2025/26';
 
-const json = (body, status = 200, extra = {}) =>
-  new Response(JSON.stringify(body), {
+const json = (body, status = 200, extra = {}) => {
+  const noBody = status === 204 || status === 205 || status === 304;
+  return new Response(noBody ? null : JSON.stringify(body), {
     status,
     headers: {
       'content-type': 'application/json; charset=utf-8',
       'access-control-allow-origin': '*',
       'access-control-allow-methods': 'GET, POST, OPTIONS',
-      'access-control-allow-headers': 'content-type',
+      'access-control-allow-headers': 'content-type, authorization, x-admin-key',
       'cache-control': 'public, max-age=60',
       ...extra,
     },
   });
+};
 
 const now = () => new Date().toISOString();
 const num = (v, d = 0) =>
   v === null || v === undefined || v === '' || Number.isNaN(+v) ? d : +v;
+
+function suppliedAdminKey(request, url) {
+  const bearer = String(request.headers.get('authorization') || '');
+  if (/^Bearer\s+/i.test(bearer)) return bearer.replace(/^Bearer\s+/i, '').trim();
+  return String(request.headers.get('x-admin-key') || url.searchParams.get('key') || '');
+}
+
+function adminAuthorised(request, url, env) {
+  return Boolean(env.ADMIN_KEY) && suppliedAdminKey(request, url) === String(env.ADMIN_KEY);
+}
 
 async function fplGet(path) {
   const res = await fetch(`${FPL}${path}`, {
@@ -57,6 +70,60 @@ function validateBootstrap(b) {
   const missing = required.filter((k) => !(k in sample));
   if (missing.length) problems.push(`element is missing fields: ${missing.join(', ')}`);
   return problems;
+}
+
+function validateFixtures(fixtures, boot) {
+  const problems = [];
+  if (!Array.isArray(fixtures)) return ['fixtures payload was not an array'];
+  if (fixtures.length !== 380) problems.push(`expected 380 fixtures, saw ${fixtures.length}`);
+  const teamIds = new Set((boot?.teams || []).map((t) => t.id));
+  const ids = new Set();
+  const counts = new Map([...teamIds].map((id) => [id, { home: 0, away: 0, total: 0 }]));
+  const directed = new Set();
+  for (const f of fixtures) {
+    if (!Number.isInteger(f?.id) || ids.has(f.id)) problems.push(`duplicate or invalid fixture id ${f?.id}`);
+    ids.add(f?.id);
+    if (!teamIds.has(f?.team_h) || !teamIds.has(f?.team_a) || f.team_h === f.team_a) {
+      problems.push(`fixture ${f?.id} has invalid teams`);
+      continue;
+    }
+    const key = `${f.team_h}>${f.team_a}`;
+    if (directed.has(key)) problems.push(`repeated home/away pairing ${key}`);
+    directed.add(key);
+    const h = counts.get(f.team_h), a = counts.get(f.team_a);
+    h.home++; h.total++; a.away++; a.total++;
+  }
+  for (const [id, c] of counts) {
+    if (c.total !== 38 || c.home !== 19 || c.away !== 19) {
+      problems.push(`team ${id} has ${c.total} fixtures (${c.home} home, ${c.away} away)`);
+    }
+  }
+  return [...new Set(problems)].slice(0, 25);
+}
+
+async function scheduleDataHash(boot, fixtures) {
+  return sha256(JSON.stringify({
+    teams: (boot.teams || []).map((t) => [t.id, t.short_name, t.name, t.strength_attack_home, t.strength_attack_away, t.strength_defence_home, t.strength_defence_away]),
+    events: (boot.events || []).map((e) => [e.id, e.deadline_time, Boolean(e.finished), Boolean(e.is_current), Boolean(e.is_next)]),
+    fixtures: (fixtures || []).map((f) => [f.id, f.event ?? null, f.team_h, f.team_a, f.kickoff_time ?? null, f.team_h_difficulty, f.team_a_difficulty, Boolean(f.finished), f.team_h_score ?? null, f.team_a_score ?? null]),
+  }));
+}
+
+async function acquirePipelineLock(env, ttlMs = PIPELINE_LOCK_TTL_MS) {
+  const token = crypto.randomUUID();
+  const acquiredAt = now();
+  const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+  const result = await env.DB.prepare(
+    `INSERT INTO meta (key,value,updated_at) VALUES ('pipeline_lock',?1,?2)
+     ON CONFLICT(key) DO UPDATE SET value=?1, updated_at=?2
+     WHERE meta.updated_at < ?3`
+  ).bind(token, expiresAt, acquiredAt).run();
+  return num(result?.meta?.changes) > 0 ? token : null;
+}
+
+async function releasePipelineLock(env, token) {
+  if (!token) return;
+  await env.DB.prepare("DELETE FROM meta WHERE key='pipeline_lock' AND value=?1").bind(token).run();
 }
 
 function seasonFromBootstrap(boot) {
@@ -334,18 +401,27 @@ async function poll(env, { sampleTransfers = false } = {}) {
   const startedAt = now();
   let changes = 0;
   let seen = 0;
+  const lockToken = await acquirePipelineLock(env);
+  if (!lockToken) return { ok: true, skipped: true, reason: 'Another pipeline job is already running' };
 
   try {
+    try {
     const [boot, fixtures] = await Promise.all([
       fplGet('/bootstrap-static/'),
       fplGet('/fixtures/'),
     ]);
 
-    const problems = validateBootstrap(boot);
+    const problems = [...validateBootstrap(boot), ...validateFixtures(fixtures, boot)];
     if (problems.length) throw new Error(`schema guard tripped: ${problems.join(' | ')}`);
 
     const season = seasonFromBootstrap(boot);
-    const hash = await dataHash(boot, fixtures);
+    if (season !== EXPECTED_SEASON) throw new Error(`upstream season ${season} does not match ${EXPECTED_SEASON}`);
+    const [hash, scheduleHash, previousSchedule] = await Promise.all([
+      dataHash(boot, fixtures),
+      scheduleDataHash(boot, fixtures),
+      env.DB.prepare("SELECT value FROM meta WHERE key='schedule_hash'").first(),
+    ]);
+    const scheduleChanged = previousSchedule?.value !== scheduleHash;
     const teamMap = {};
     for (const t of boot.teams) teamMap[t.id] = t.short_name;
 
@@ -360,72 +436,75 @@ async function poll(env, { sampleTransfers = false } = {}) {
     const prev = new Map(prevRows.results.map((r) => [r.id, r]));
     const stmts = [];
 
-    for (const t of boot.teams) {
-      stmts.push(
-        env.DB.prepare(
-          `INSERT INTO teams (code, fpl_id, name, strength, atk_home, atk_away, def_home, def_away, updated_at)
-           VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)
-           ON CONFLICT(code) DO UPDATE SET
-             fpl_id=?2, name=?3, strength=?4, atk_home=?5, atk_away=?6,
-             def_home=?7, def_away=?8, updated_at=?9`
-        ).bind(
-          t.short_name,
-          t.id,
-          t.name,
-          num(t.strength, 3),
-          num(t.strength_attack_home),
-          num(t.strength_attack_away),
-          num(t.strength_defence_home),
-          num(t.strength_defence_away),
-          startedAt
-        )
-      );
-    }
+    if (scheduleChanged) {
+      for (const t of boot.teams) {
+        stmts.push(
+          env.DB.prepare(
+            `INSERT INTO teams (code, fpl_id, name, strength, atk_home, atk_away, def_home, def_away, updated_at)
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)
+             ON CONFLICT(code) DO UPDATE SET
+               fpl_id=?2, name=?3, strength=?4, atk_home=?5, atk_away=?6,
+               def_home=?7, def_away=?8, updated_at=?9`
+          ).bind(
+            t.short_name,
+            t.id,
+            t.name,
+            num(t.strength, 3),
+            num(t.strength_attack_home),
+            num(t.strength_attack_away),
+            num(t.strength_defence_home),
+            num(t.strength_defence_away),
+            startedAt
+          )
+        );
+      }
 
-    for (const ev of boot.events) {
-      stmts.push(
-        env.DB.prepare(
-          `INSERT INTO events (id, name, deadline_time, finished, is_current, is_next, updated_at)
-           VALUES (?1,?2,?3,?4,?5,?6,?7)
-           ON CONFLICT(id) DO UPDATE SET
-             name=?2, deadline_time=?3, finished=?4, is_current=?5, is_next=?6, updated_at=?7`
-        ).bind(
-          ev.id,
-          ev.name,
-          ev.deadline_time,
-          ev.finished ? 1 : 0,
-          ev.is_current ? 1 : 0,
-          ev.is_next ? 1 : 0,
-          startedAt
-        )
-      );
-    }
+      for (const ev of boot.events) {
+        stmts.push(
+          env.DB.prepare(
+            `INSERT INTO events (id, name, deadline_time, finished, is_current, is_next, updated_at)
+             VALUES (?1,?2,?3,?4,?5,?6,?7)
+             ON CONFLICT(id) DO UPDATE SET
+               name=?2, deadline_time=?3, finished=?4, is_current=?5, is_next=?6, updated_at=?7`
+          ).bind(
+            ev.id,
+            ev.name,
+            ev.deadline_time,
+            ev.finished ? 1 : 0,
+            ev.is_current ? 1 : 0,
+            ev.is_next ? 1 : 0,
+            startedAt
+          )
+        );
+      }
 
-    for (const f of fixtures) {
-      const h = teamMap[f.team_h];
-      const a = teamMap[f.team_a];
-      if (!h || !a) continue;
-      stmts.push(
-        env.DB.prepare(
-          `INSERT INTO fixtures (id, event_id, kickoff_time, home_code, away_code, home_diff, away_diff, finished, home_score, away_score, updated_at)
-           VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)
-           ON CONFLICT(id) DO UPDATE SET
-             event_id=?2, kickoff_time=?3, home_code=?4, away_code=?5,
-             home_diff=?6, away_diff=?7, finished=?8, home_score=?9, away_score=?10, updated_at=?11`
-        ).bind(
-          f.id,
-          f.event ?? null,
-          f.kickoff_time ?? null,
-          h,
-          a,
-          num(f.team_h_difficulty, 3),
-          num(f.team_a_difficulty, 3),
-          f.finished ? 1 : 0,
-          f.team_h_score ?? null,
-          f.team_a_score ?? null,
-          startedAt
-        )
-      );
+      for (const f of fixtures) {
+        const h = teamMap[f.team_h];
+        const a = teamMap[f.team_a];
+        if (!h || !a) continue;
+        stmts.push(
+          env.DB.prepare(
+            `INSERT INTO fixtures (id, event_id, kickoff_time, home_code, away_code, home_diff, away_diff, finished, home_score, away_score, updated_at)
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)
+             ON CONFLICT(id) DO UPDATE SET
+               event_id=?2, kickoff_time=?3, home_code=?4, away_code=?5,
+               home_diff=?6, away_diff=?7, finished=?8, home_score=?9, away_score=?10, updated_at=?11`
+          ).bind(
+            f.id,
+            f.event ?? null,
+            f.kickoff_time ?? null,
+            h,
+            a,
+            num(f.team_h_difficulty, 3),
+            num(f.team_a_difficulty, 3),
+            f.finished ? 1 : 0,
+            f.team_h_score ?? null,
+            f.team_a_score ?? null,
+            startedAt
+          )
+        );
+      }
+
     }
 
     for (const e of boot.elements) {
@@ -527,14 +606,16 @@ async function poll(env, { sampleTransfers = false } = {}) {
       await env.DB.batch(stmts.slice(i, i + 80));
     }
 
-    // Remove records that were not present in this successful current payload.
-    // This is the critical season-rollover fix for stale players/news/fixtures.
-    await env.DB.batch([
-      env.DB.prepare('DELETE FROM players WHERE updated_at <> ?1').bind(startedAt),
-      env.DB.prepare('DELETE FROM teams WHERE updated_at <> ?1').bind(startedAt),
-      env.DB.prepare('DELETE FROM fixtures WHERE updated_at <> ?1').bind(startedAt),
-      env.DB.prepare('DELETE FROM events WHERE updated_at <> ?1').bind(startedAt),
-    ]);
+    // Remove records not present in this successful payload. The pipeline lock
+    // prevents a concurrent poll from racing this generation-based cleanup.
+    await env.DB.prepare('DELETE FROM players WHERE updated_at <> ?1').bind(startedAt).run();
+    if (scheduleChanged) {
+      await env.DB.batch([
+        env.DB.prepare('DELETE FROM teams WHERE updated_at <> ?1').bind(startedAt),
+        env.DB.prepare('DELETE FROM fixtures WHERE updated_at <> ?1').bind(startedAt),
+        env.DB.prepare('DELETE FROM events WHERE updated_at <> ?1').bind(startedAt),
+      ]);
+    }
 
     const sampleRetention = new Date(Date.now() - 8 * 86400e3).toISOString();
     await env.DB.prepare('DELETE FROM transfer_samples WHERE sampled_at < ?1').bind(sampleRetention).run();
@@ -546,6 +627,7 @@ async function poll(env, { sampleTransfers = false } = {}) {
       metaUpsert(env, 'season', season, startedAt),
       metaUpsert(env, 'schema_version', WORKER_SCHEMA_VERSION, startedAt),
       metaUpsert(env, 'data_hash', hash, startedAt),
+      metaUpsert(env, 'schedule_hash', scheduleHash, startedAt),
       metaUpsert(env, 'bootstrap_players', seen, startedAt),
       metaUpsert(env, 'fixture_count', fixtures.length, startedAt),
       metaUpsert(env, 'total_managers', num(boot.total_players), startedAt),
@@ -562,18 +644,60 @@ async function poll(env, { sampleTransfers = false } = {}) {
       fixtures: fixtures.length,
       changes,
       dataHash: hash,
+      scheduleChanged,
       ms: Date.now() - t0,
     };
-  } catch (err) {
-    try {
-      await env.DB.prepare(
-        `INSERT INTO poll_log (started_at, ok, duration_ms, players_seen, changes, error)
-         VALUES (?1,0,?2,?3,?4,?5)`
-      ).bind(startedAt, Date.now() - t0, seen, changes, String(err.message || err)).run();
-    } catch {
-      // Preserve the original failure when the logging table itself is unavailable.
+    } catch (err) {
+      try {
+        await env.DB.prepare(
+          `INSERT INTO poll_log (started_at, ok, duration_ms, players_seen, changes, error)
+           VALUES (?1,0,?2,?3,?4,?5)`
+        ).bind(startedAt, Date.now() - t0, seen, changes, String(err.message || err)).run();
+      } catch {
+        // Preserve the original failure when the logging table itself is unavailable.
+      }
+      return { ok: false, error: String(err.message || err) };
     }
-    return { ok: false, error: String(err.message || err) };
+  } finally {
+    await releasePipelineLock(env, lockToken).catch(() => {});
+  }
+}
+
+async function sampleTransferMarket(env) {
+  const startedAt = now();
+  const lockToken = await acquirePipelineLock(env, 2 * 60 * 1000);
+  if (!lockToken) return { ok: true, skipped: true, reason: 'Another pipeline job is already running' };
+  try {
+    try {
+      const boot = await fplGet('/bootstrap-static/');
+      const problems = validateBootstrap(boot);
+      if (problems.length) throw new Error(`schema guard tripped: ${problems.join(' | ')}`);
+      const season = seasonFromBootstrap(boot);
+      if (season !== EXPECTED_SEASON) throw new Error(`upstream season ${season} does not match ${EXPECTED_SEASON}`);
+      const stmts = [];
+      for (const e of boot.elements) {
+        stmts.push(env.DB.prepare(
+          `INSERT OR REPLACE INTO transfer_samples
+           (player_id, sampled_at, now_cost, transfers_in_event, transfers_out_event, selected_by)
+           VALUES (?1,?2,?3,?4,?5,?6)`
+        ).bind(e.id, startedAt, num(e.now_cost), num(e.transfers_in_event), num(e.transfers_out_event), num(e.selected_by_percent)));
+      }
+      for (let i = 0; i < stmts.length; i += 80) await env.DB.batch(stmts.slice(i, i + 80));
+      const sampleRetention = new Date(Date.now() - 8 * 86400e3).toISOString();
+      await env.DB.batch([
+        metaUpsert(env, 'last_market_sample', startedAt, startedAt),
+        metaUpsert(env, 'last_market_error', '', startedAt),
+        metaUpsert(env, 'total_managers', num(boot.total_players), startedAt),
+        env.DB.prepare('DELETE FROM transfer_samples WHERE sampled_at < ?1').bind(sampleRetention),
+      ]);
+      return { ok: true, sampled: stmts.length, season, at: startedAt };
+    } catch (err) {
+      const message = String(err.message || err);
+      await metaUpsert(env, 'last_market_error', message, startedAt).run().catch(() => {});
+      return { ok: false, error: message, at: startedAt };
+    }
+  } finally {
+    await releasePipelineLock(env, lockToken).catch(() => {});
   }
 }
 
@@ -697,13 +821,15 @@ async function healthData(env) {
     alertCount: num(alertCount?.n),
     database: 'D1 connected',
     lastError: lastFailure?.error || null,
+    lastMarketSampleAt: m.last_market_sample || null,
+    lastMarketError: m.last_market_error || null,
     recentPolls: recent.results,
   };
 
   return {
     status,
     service: 'FPL Engine API',
-    release: 'RC2.1-price-change-intelligence',
+    release: 'RC2.1.3-audit-repair',
     season: m.season || EXPECTED_SEASON,
     schemaVersion: num(m.schema_version, WORKER_SCHEMA_VERSION),
     generatedAt: now(),
@@ -794,31 +920,33 @@ async function priceLockState(env) {
 
 async function priceIntelligenceData(env, url) {
   const hours = Math.min(168, Math.max(2, +(url.searchParams.get('hours') || 24)));
-  const limit = Math.min(300, Math.max(20, +(url.searchParams.get('limit') || 160)));
+  const limit = Math.min(800, Math.max(20, +(url.searchParams.get('limit') || 800)));
   const since = new Date(Date.now() - hours * 3600e3).toISOString();
 
   const [metaRows, samples, lock] = await Promise.all([
     env.DB.prepare('SELECT key, value FROM meta').all(),
     env.DB.prepare(
-      `WITH bounds AS (
-         SELECT player_id, MIN(sampled_at) AS first_at, MAX(sampled_at) AS last_at,
-                COUNT(*) AS sample_count
+      `WITH ordered AS (
+         SELECT player_id, sampled_at, now_cost, transfers_in_event, transfers_out_event, selected_by,
+                LAG(transfers_in_event) OVER (PARTITION BY player_id ORDER BY sampled_at) AS prev_in,
+                LAG(transfers_out_event) OVER (PARTITION BY player_id ORDER BY sampled_at) AS prev_out
          FROM transfer_samples
          WHERE sampled_at >= ?1
-         GROUP BY player_id
+       ), bounds AS (
+         SELECT player_id, MIN(sampled_at) AS first_at, MAX(sampled_at) AS last_at,
+                COUNT(*) AS sample_count,
+                SUM(CASE WHEN prev_in IS NULL THEN 0 WHEN transfers_in_event >= prev_in
+                         THEN transfers_in_event - prev_in ELSE transfers_in_event END) AS in_delta,
+                SUM(CASE WHEN prev_out IS NULL THEN 0 WHEN transfers_out_event >= prev_out
+                         THEN transfers_out_event - prev_out ELSE transfers_out_event END) AS out_delta
+         FROM ordered GROUP BY player_id
        )
        SELECT p.id, p.web_name, p.team_code, p.element_type, p.now_cost,
               p.cost_change_event, p.cost_change_start, p.selected_by, p.status,
               p.chance_next, p.news,
-              b.first_at, b.last_at, b.sample_count,
-              s1.now_cost AS first_cost,
-              s1.transfers_in_event AS first_in,
-              s1.transfers_out_event AS first_out,
-              s1.selected_by AS first_selected,
-              s2.now_cost AS last_cost,
-              s2.transfers_in_event AS last_in,
-              s2.transfers_out_event AS last_out,
-              s2.selected_by AS last_selected
+              b.first_at, b.last_at, b.sample_count, b.in_delta, b.out_delta,
+              s1.now_cost AS first_cost, s1.selected_by AS first_selected,
+              s2.now_cost AS last_cost, s2.selected_by AS last_selected
        FROM bounds b
        JOIN transfer_samples s1
          ON s1.player_id = b.player_id AND s1.sampled_at = b.first_at
@@ -835,8 +963,8 @@ async function priceIntelligenceData(env, url) {
   const totalManagers = Math.max(0, num(meta.total_managers));
   const rows = samples.results.map((r) => {
     const durationHours = Math.max(0.01, (Date.parse(r.last_at) - Date.parse(r.first_at)) / 3600e3);
-    const inDelta = counterDelta(r.first_in, r.last_in);
-    const outDelta = counterDelta(r.first_out, r.last_out);
+    const inDelta = Math.max(0, num(r.in_delta));
+    const outDelta = Math.max(0, num(r.out_delta));
     const netDelta = inDelta - outDelta;
     const velocityPerHour = netDelta / durationHours;
     const selected = num(r.last_selected, num(r.selected_by));
@@ -943,7 +1071,7 @@ async function handlePublicSync(request, env) {
 
   const allowedOrigin = String(env.ALLOWED_ORIGIN || '').trim();
   const origin = request.headers.get('origin') || '';
-  if (allowedOrigin && origin && origin !== allowedOrigin) {
+  if (allowedOrigin && origin !== allowedOrigin) {
     return json({ error: 'origin not allowed' }, 403);
   }
 
@@ -953,7 +1081,7 @@ async function handlePublicSync(request, env) {
     return json({
       ok: true,
       skipped: true,
-      reason: 'A successful poll ran less than ten minutes ago',
+      reason: 'A successful poll ran less than 35 minutes ago',
       pipeline: (await healthData(env)).pipeline,
     });
   }
@@ -964,8 +1092,16 @@ async function handlePublicSync(request, env) {
 
 export default {
   async scheduled(event, env, ctx) {
-    // The configured cron runs every 30 minutes, with five-minute sampling in
-    // the overnight price window. Keep every scheduled snapshot for RC2.1.
+    // Multiple Cron Triggers call this same handler. Use the exact cron string
+    // to keep five-minute overnight runs lightweight and avoid duplicate work
+    // when the five-minute and thirty-minute schedules coincide.
+    const cron = String(event?.cron || '');
+    const scheduled = new Date(Number(event?.scheduledTime) || Date.now());
+    if (cron === '*/5 0-2 * * *') {
+      if (scheduled.getUTCMinutes() % 30 === 0) return;
+      ctx.waitUntil(sampleTransferMarket(env));
+      return;
+    }
     ctx.waitUntil(poll(env, { sampleTransfers: true }));
   },
 
@@ -1004,14 +1140,14 @@ export default {
         case '/api/sync':
           return await handlePublicSync(request, env);
         case '/api/refresh': {
-          if (url.searchParams.get('key') !== env.ADMIN_KEY) {
-            return json({ error: 'unauthorised' }, 401);
+          if (!adminAuthorised(request, url, env)) {
+            return json({ error: 'unauthorised' }, 401, { 'cache-control': 'no-store' });
           }
-          return json(await poll(env, { sampleTransfers: true }));
+          return json(await poll(env, { sampleTransfers: true }), 200, { 'cache-control': 'no-store' });
         }
         case '/api/backfill': {
-          if (url.searchParams.get('key') !== env.ADMIN_KEY) {
-            return json({ error: 'unauthorised' }, 401);
+          if (!adminAuthorised(request, url, env)) {
+            return json({ error: 'unauthorised' }, 401, { 'cache-control': 'no-store' });
           }
           if (url.searchParams.get('reset') === '1') {
             await env.DB.prepare(
@@ -1021,9 +1157,9 @@ export default {
             return json({
               ok: true,
               message: 'Cursor reset to 0. Call again without reset=1 to start.',
-            });
+            }, 200, { 'cache-control': 'no-store' });
           }
-          return json(await backfillHistory(env));
+          return json(await backfillHistory(env), 200, { 'cache-control': 'no-store' });
         }
         case '/api/history': {
           const rows = await env.DB.prepare(
@@ -1040,7 +1176,7 @@ export default {
         default:
           return json({
             service: 'FPL Engine API',
-            release: 'RC2.1-price-change-intelligence',
+            release: 'RC2.1.3-audit-repair',
             routes: [
               '/bootstrap-static/',
               '/fixtures/',
@@ -1053,8 +1189,8 @@ export default {
               '/api/health',
               '/api/metadata',
               '/api/sync',
-              '/api/refresh?key=…',
-              '/api/backfill?key=…',
+              '/api/refresh (Bearer or x-admin-key)',
+              '/api/backfill (Bearer or x-admin-key)',
               '/api/history',
             ],
           });
