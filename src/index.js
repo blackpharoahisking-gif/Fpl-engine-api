@@ -1,16 +1,16 @@
 /**
  * FPL Engine API — Cloudflare Worker
- * RC2.2A Model Evaluation Capture Layer
+ * RC2.2B Predictive Variance Calibration
  *
  * Preserves the existing state, watchlist, history and backfill APIs while
  * adding the News Intelligence contract required by the RC2.0.1 frontend.
  */
 
 const FPL = 'https://fantasy.premierleague.com/api';
-const UA = 'FPLEngine/2.2A (personal fantasy tool)';
+const UA = 'FPLEngine/2.2B (personal fantasy tool)';
 
 const POS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
-const WORKER_SCHEMA_VERSION = 6;
+const WORKER_SCHEMA_VERSION = 7;
 const DEFAULT_SEASON = '2026/27';
 const PUBLIC_SYNC_COOLDOWN_MS = 35 * 60 * 1000;
 const PIPELINE_LOCK_TTL_MS = 15 * 60 * 1000;
@@ -837,6 +837,94 @@ async function handleEvaluationProjection(request, env) {
   }
 }
 
+
+function conformalQuantile(values, alpha = 0.2) {
+  const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+  if (!sorted.length) return 1.2815515655446004;
+  const k = Math.ceil((1 - alpha) * (sorted.length + 1));
+  return sorted[Math.min(k, sorted.length) - 1];
+}
+
+function evaluationCoverageSummary(rows) {
+  const groups = { ALL: rows, GK: [], DEF: [], MID: [], FWD: [] };
+  for (const row of rows) {
+    const pos = POS[num(row.position)] || String(row.position || '?');
+    if (groups[pos]) groups[pos].push(row);
+  }
+  const summarize = (list) => {
+    const valid = list.filter((r) => [r.xpts, r.low, r.high, r.sd, r.actual_points].every((v) => Number.isFinite(num(v, NaN))) && num(r.sd) > 0);
+    const n = valid.length;
+    const gws = new Set(valid.map((r) => num(r.gw))).size;
+    const covered = valid.filter((r) => num(r.actual_points) >= num(r.low) && num(r.actual_points) <= num(r.high)).length;
+    const below = valid.filter((r) => num(r.actual_points) < num(r.xpts)).map((r) => (num(r.xpts) - num(r.actual_points)) / num(r.sd));
+    const above = valid.filter((r) => num(r.actual_points) > num(r.xpts)).map((r) => (num(r.actual_points) - num(r.xpts)) / num(r.sd));
+    const mae = n ? valid.reduce((a, r) => a + Math.abs(num(r.actual_points) - num(r.xpts)), 0) / n : null;
+    return {
+      n,
+      gameweeks: gws,
+      coverage: n ? covered / n : null,
+      mae,
+      qLo: conformalQuantile(below, 0.1),
+      qHi: conformalQuantile(above, 0.1),
+      belowN: below.length,
+      aboveN: above.length,
+    };
+  };
+  const pooled = summarize(groups.ALL);
+  const positions = Object.fromEntries(['GK', 'DEF', 'MID', 'FWD'].map((p) => [p, summarize(groups[p])]));
+  const calibrationReady = pooled.n >= 200 && pooled.gameweeks >= 8;
+  return {
+    nominalCoverage: 0.8,
+    tolerance: [0.75, 0.85],
+    calibrationReady,
+    calibrationApplied: false,
+    reason: calibrationReady ? 'Enough data to review conformal multipliers; RC2.2B does not apply them automatically.' : 'Collect at least 200 player-gameweeks across eight completed gameweeks.',
+    pooled,
+    positions,
+  };
+}
+
+async function handleEvaluationCoverage(env, url) {
+  await ensureEvaluationSchema(env);
+  const season = configuredSeason(env);
+  const modelVersion = String(url.searchParams.get('model_version') || '').trim();
+  const weightsHash = String(url.searchParams.get('weights_hash') || '').trim().toLowerCase();
+  const filters = ["p.season=?1", "p.model_version<>'BASELINE'"];
+  const binds = [season];
+  if (modelVersion) { filters.push(`p.model_version=?${binds.length + 1}`); binds.push(modelVersion); }
+  if (weightsHash) { filters.push(`p.weights_hash=?${binds.length + 1}`); binds.push(weightsHash); }
+  const maxGwRow = await env.DB.prepare('SELECT MAX(gw) AS gw FROM evaluation_actuals WHERE season=?1').bind(season).first();
+  const maxGw = num(maxGwRow?.gw, 0);
+  if (maxGw > 0) { filters.push(`p.gw>=?${binds.length + 1}`); binds.push(Math.max(1, maxGw - 9)); }
+  const rows = await env.DB.prepare(
+    `SELECT p.gw,p.position,p.price,p.ownership,p.expected_minutes,p.xpts,p.low,p.high,p.sd,a.actual_points
+     FROM evaluation_predictions p
+     JOIN evaluation_actuals a ON a.season=p.season AND a.gw=p.gw AND a.player_id=p.player_id
+     WHERE ${filters.join(' AND ')}
+     ORDER BY p.gw,p.position,p.player_id`
+  ).bind(...binds).all();
+  const all = evaluationCoverageSummary(rows.results);
+  const decisionRows = rows.results.filter((r) => num(r.expected_minutes) >= 30 || num(r.ownership) >= 1 || num(r.price) > 45);
+  const decision = evaluationCoverageSummary(decisionRows);
+  const calibrationReady = decision.pooled.n >= 200 && decision.pooled.gameweeks >= 8 && Object.values(decision.positions).every((z) => z.n >= 40);
+  return json({
+    season,
+    modelVersion: modelVersion || null,
+    weightsHash: weightsHash || null,
+    generatedAt: now(),
+    rollingWindowGameweeks: 10,
+    calibrationReady,
+    calibrationApplied: false,
+    nominalCoverage: 0.8,
+    tolerance: [0.75, 0.85],
+    reason: calibrationReady ? 'Decision-set coverage is ready for review; RC2.2B does not apply conformal multipliers automatically.' : 'Collect at least 200 decision-set player-gameweeks across eight completed gameweeks, with adequate position coverage.',
+    pooled: all.pooled,
+    decisionSet: decision.pooled,
+    positions: decision.positions,
+    schemaVersion: WORKER_SCHEMA_VERSION,
+  }, 200, { 'cache-control': 'public, max-age=300' });
+}
+
 async function handleEvaluationStatus(env, url) {
   await ensureEvaluationSchema(env);
   const season = configuredSeason(env);
@@ -1296,7 +1384,7 @@ async function healthData(env) {
   return {
     status,
     service: 'FPL Engine API',
-    release: 'RC2.2A-model-evaluation-capture',
+    release: 'RC2.2B-predictive-variance-calibration',
     season: m.season || configuredSeason(env),
     schemaVersion: WORKER_SCHEMA_VERSION,
     storedSchemaVersion: num(m.schema_version, 0),
@@ -1575,6 +1663,8 @@ export default {
           return await handleEvaluationProjection(request, env);
         case '/api/evaluation/status':
           return await handleEvaluationStatus(env, url);
+        case '/api/evaluation/coverage':
+          return await handleEvaluationCoverage(env, url);
         case '/api/evaluation/export':
           return await handleEvaluationExport(request, env, url);
         case '/api/watchlist':
@@ -1619,11 +1709,11 @@ export default {
         default:
           return json({
             service: 'FPL Engine API',
-            release: 'RC2.2A-model-evaluation-capture',
+            release: 'RC2.2B-predictive-variance-calibration',
             frontendRoutes: [
               '/bootstrap-static/', '/fixtures/', '/api/news?hours=72',
               '/api/deltas?hours=24', '/api/price-intelligence?hours=24',
-              '/api/evaluation/status?gw=1', '/api/evaluation/projections (POST)',
+              '/api/evaluation/status?gw=1', '/api/evaluation/coverage?model_version=…', '/api/evaluation/projections (POST)',
               '/api/health', '/api/metadata', '/api/sync',
             ],
             advancedRoutes: [
