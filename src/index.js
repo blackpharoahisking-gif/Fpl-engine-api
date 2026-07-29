@@ -1,16 +1,16 @@
 /**
  * FPL Engine API — Cloudflare Worker
- * RC2.0.1 merged News Pipeline Repair
+ * RC2.1 Price Change Intelligence
  *
  * Preserves the existing state, watchlist, history and backfill APIs while
  * adding the News Intelligence contract required by the RC2.0.1 frontend.
  */
 
 const FPL = 'https://fantasy.premierleague.com/api';
-const UA = 'FPLEngine/2.0.1 (personal fantasy tool)';
+const UA = 'FPLEngine/2.1 (personal fantasy tool)';
 
 const POS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
-const WORKER_SCHEMA_VERSION = 2;
+const WORKER_SCHEMA_VERSION = 3;
 const EXPECTED_SEASON = '2026/27';
 const PUBLIC_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
 const BACKFILL_BATCH = 30;
@@ -95,6 +95,11 @@ async function dataHash(boot, fixtures) {
       e.chance_of_playing_next_round ?? null,
       (e.news || '').trim(),
       e.total_points,
+      e.selected_by_percent,
+      e.transfers_in_event,
+      e.transfers_out_event,
+      e.cost_change_event,
+      e.cost_change_start,
     ]),
     fixtures: (fixtures || []).map((f) => [
       f.id,
@@ -531,6 +536,9 @@ async function poll(env, { sampleTransfers = false } = {}) {
       env.DB.prepare('DELETE FROM events WHERE updated_at <> ?1').bind(startedAt),
     ]);
 
+    const sampleRetention = new Date(Date.now() - 8 * 86400e3).toISOString();
+    await env.DB.prepare('DELETE FROM transfer_samples WHERE sampled_at < ?1').bind(sampleRetention).run();
+
     await env.DB.batch([
       metaUpsert(env, 'last_poll', startedAt, startedAt),
       metaUpsert(env, 'last_official_fetch', startedAt, startedAt),
@@ -540,6 +548,7 @@ async function poll(env, { sampleTransfers = false } = {}) {
       metaUpsert(env, 'data_hash', hash, startedAt),
       metaUpsert(env, 'bootstrap_players', seen, startedAt),
       metaUpsert(env, 'fixture_count', fixtures.length, startedAt),
+      metaUpsert(env, 'total_managers', num(boot.total_players), startedAt),
       env.DB.prepare(
         `INSERT INTO poll_log (started_at, ok, duration_ms, players_seen, changes, error)
          VALUES (?1,1,?2,?3,?4,NULL)`
@@ -574,7 +583,8 @@ async function handleState(env) {
       `SELECT id, web_name, full_name, team_code, element_type, now_cost, cost_change_event,
               status, chance_next, news, minutes, starts, total_points, goals, assists,
               clean_sheets, saves, bonus, bps, xg, xa, xgc, dc_per_90, form, points_per_game,
-              ep_next, selected_by, transfers_in_event, transfers_out_event, penalties_order
+              ep_next, selected_by, transfers_in_event, transfers_out_event, penalties_order,
+              cost_change_start, updated_at
        FROM players ORDER BY total_points DESC`
     ).all(),
     env.DB.prepare('SELECT * FROM teams').all(),
@@ -693,7 +703,7 @@ async function healthData(env) {
   return {
     status,
     service: 'FPL Engine API',
-    release: 'RC2.0.1-news-pipeline-merged',
+    release: 'RC2.1-price-change-intelligence',
     season: m.season || EXPECTED_SEASON,
     schemaVersion: num(m.schema_version, WORKER_SCHEMA_VERSION),
     generatedAt: now(),
@@ -736,33 +746,191 @@ async function handleNews(env, url) {
   });
 }
 
-async function handleWatchlist(env, url) {
-  const hours = Math.min(48, Math.max(1, +(url.searchParams.get('hours') || 24)));
+
+function counterDelta(firstValue, lastValue) {
+  const first = Math.max(0, num(firstValue));
+  const last = Math.max(0, num(lastValue));
+  // FPL resets event counters at a deadline. Treat the post-reset value as the
+  // new-window movement instead of returning a misleading negative delta.
+  return last >= first ? last - first : last;
+}
+
+function priceDirection(index, locked) {
+  if (locked) return 'LOCKED';
+  const a = Math.abs(index);
+  if (a < 20) return 'QUIET';
+  const side = index > 0 ? 'RISE' : 'FALL';
+  if (a >= 90) return `VERY STRONG ${side}`;
+  if (a >= 70) return `STRONG ${side}`;
+  if (a >= 45) return `MODERATE ${side}`;
+  return `MILD ${side}`;
+}
+
+function confidenceLabel(samples, durationHours) {
+  if (samples >= 10 && durationHours >= 6) return 'HIGH';
+  if (samples >= 4 && durationHours >= 2) return 'MEDIUM';
+  return 'LOW';
+}
+
+async function priceLockState(env) {
+  const [first, started] = await Promise.all([
+    env.DB.prepare(
+      `SELECT deadline_time FROM events WHERE id = 1 LIMIT 1`
+    ).first(),
+    env.DB.prepare(
+      `SELECT MAX(CASE WHEN finished = 1 OR is_current = 1 THEN 1 ELSE 0 END) AS started
+       FROM events`
+    ).first(),
+  ]);
+  const firstDeadline = first?.deadline_time || null;
+  const deadlineMs = Date.parse(firstDeadline || '');
+  const seasonStarted = num(started?.started) === 1 || (Number.isFinite(deadlineMs) && Date.now() >= deadlineMs);
+  return {
+    pricesLocked: !seasonStarted,
+    firstDeadline,
+    status: seasonStarted ? 'ACTIVE' : 'LOCKED UNTIL GW1',
+  };
+}
+
+async function priceIntelligenceData(env, url) {
+  const hours = Math.min(168, Math.max(2, +(url.searchParams.get('hours') || 24)));
+  const limit = Math.min(300, Math.max(20, +(url.searchParams.get('limit') || 160)));
   const since = new Date(Date.now() - hours * 3600e3).toISOString();
 
-  const rows = await env.DB.prepare(
-    `WITH bounds AS (
-       SELECT player_id, MIN(sampled_at) AS first_at, MAX(sampled_at) AS last_at
-       FROM transfer_samples WHERE sampled_at >= ?1 GROUP BY player_id
-     )
-     SELECT p.id, p.web_name, p.team_code, p.now_cost, p.selected_by, p.status,
-            (b_last.transfers_in_event - b_first.transfers_in_event) AS in_delta,
-            (b_last.transfers_out_event - b_first.transfers_out_event) AS out_delta,
-            (b_last.transfers_in_event - b_first.transfers_in_event)
-              - (b_last.transfers_out_event - b_first.transfers_out_event) AS net_delta
-     FROM bounds
-     JOIN transfer_samples b_first
-       ON b_first.player_id = bounds.player_id AND b_first.sampled_at = bounds.first_at
-     JOIN transfer_samples b_last
-       ON b_last.player_id = bounds.player_id AND b_last.sampled_at = bounds.last_at
-     JOIN players p ON p.id = bounds.player_id
-     ORDER BY ABS(net_delta) DESC LIMIT 60`
-  ).bind(since).all();
+  const [metaRows, samples, lock] = await Promise.all([
+    env.DB.prepare('SELECT key, value FROM meta').all(),
+    env.DB.prepare(
+      `WITH bounds AS (
+         SELECT player_id, MIN(sampled_at) AS first_at, MAX(sampled_at) AS last_at,
+                COUNT(*) AS sample_count
+         FROM transfer_samples
+         WHERE sampled_at >= ?1
+         GROUP BY player_id
+       )
+       SELECT p.id, p.web_name, p.team_code, p.element_type, p.now_cost,
+              p.cost_change_event, p.cost_change_start, p.selected_by, p.status,
+              p.chance_next, p.news,
+              b.first_at, b.last_at, b.sample_count,
+              s1.now_cost AS first_cost,
+              s1.transfers_in_event AS first_in,
+              s1.transfers_out_event AS first_out,
+              s1.selected_by AS first_selected,
+              s2.now_cost AS last_cost,
+              s2.transfers_in_event AS last_in,
+              s2.transfers_out_event AS last_out,
+              s2.selected_by AS last_selected
+       FROM bounds b
+       JOIN transfer_samples s1
+         ON s1.player_id = b.player_id AND s1.sampled_at = b.first_at
+       JOIN transfer_samples s2
+         ON s2.player_id = b.player_id AND s2.sampled_at = b.last_at
+       JOIN players p ON p.id = b.player_id
+       WHERE b.sample_count >= 2
+       LIMIT 800`
+    ).bind(since).all(),
+    priceLockState(env),
+  ]);
 
+  const meta = Object.fromEntries(metaRows.results.map((r) => [r.key, r.value]));
+  const totalManagers = Math.max(0, num(meta.total_managers));
+  const rows = samples.results.map((r) => {
+    const durationHours = Math.max(0.01, (Date.parse(r.last_at) - Date.parse(r.first_at)) / 3600e3);
+    const inDelta = counterDelta(r.first_in, r.last_in);
+    const outDelta = counterDelta(r.first_out, r.last_out);
+    const netDelta = inDelta - outDelta;
+    const velocityPerHour = netDelta / durationHours;
+    const selected = num(r.last_selected, num(r.selected_by));
+    const firstSelected = num(r.first_selected, selected);
+    const ownershipDelta = selected - firstSelected;
+    const estimatedOwners = totalManagers > 0 ? totalManagers * selected / 100 : null;
+    const turnoverPct = estimatedOwners && estimatedOwners > 0
+      ? 100 * Math.abs(netDelta) / estimatedOwners
+      : null;
+    return {
+      id: r.id,
+      web_name: r.web_name,
+      team_code: r.team_code,
+      element_type: r.element_type,
+      now_cost: r.now_cost,
+      first_cost: r.first_cost,
+      cost_change_event: r.cost_change_event,
+      cost_change_start: r.cost_change_start,
+      selected_by: selected,
+      ownership_delta: ownershipDelta,
+      status: r.status,
+      chance: r.chance_next,
+      news: r.news,
+      first_at: r.first_at,
+      last_at: r.last_at,
+      sample_count: num(r.sample_count),
+      duration_hours: durationHours,
+      transfers_in_delta: inDelta,
+      transfers_out_delta: outDelta,
+      net_delta: netDelta,
+      velocity_per_hour: velocityPerHour,
+      estimated_owners: estimatedOwners,
+      turnover_pct: turnoverPct,
+      confidence: confidenceLabel(num(r.sample_count), durationHours),
+    };
+  });
+
+  const positives = rows.filter((r) => r.velocity_per_hour > 0).sort((a, b) => b.velocity_per_hour - a.velocity_per_hour);
+  const negatives = rows.filter((r) => r.velocity_per_hour < 0).sort((a, b) => a.velocity_per_hour - b.velocity_per_hour);
+  const assign = (list, sign) => list.forEach((r, i) => {
+    const pct = list.length <= 1 ? 100 : Math.round(100 * (1 - i / (list.length - 1)));
+    r.pressure_index = sign * Math.max(1, pct);
+  });
+  assign(positives, 1);
+  assign(negatives, -1);
+  rows.filter((r) => !r.pressure_index).forEach((r) => { r.pressure_index = 0; });
+  rows.forEach((r) => { r.direction = priceDirection(r.pressure_index, lock.pricesLocked); });
+
+  rows.sort((a, b) => Math.abs(b.pressure_index) - Math.abs(a.pressure_index));
+  const sampleTimes = rows.flatMap((r) => [Date.parse(r.first_at), Date.parse(r.last_at)]).filter(Number.isFinite);
+
+  return {
+    season: meta.season || EXPECTED_SEASON,
+    generatedAt: now(),
+    windowHours: hours,
+    sampleStart: sampleTimes.length ? new Date(Math.min(...sampleTimes)).toISOString() : null,
+    sampleEnd: sampleTimes.length ? new Date(Math.max(...sampleTimes)).toISOString() : null,
+    sampledPlayers: rows.length,
+    totalManagers: totalManagers || null,
+    pricesLocked: lock.pricesLocked,
+    priceStatus: lock.status,
+    firstDeadline: lock.firstDeadline,
+    officialFormulaKnown: false,
+    note: 'OTB pressure is a relative directional index derived from official transfer counters and ownership snapshots. It is not the undisclosed official price-change threshold or a guaranteed prediction.',
+    players: rows.slice(0, limit),
+  };
+}
+
+async function handlePriceIntelligence(env, url) {
+  return json(await priceIntelligenceData(env, url));
+}
+
+async function handleWatchlist(env, url) {
+  const data = await priceIntelligenceData(env, url);
   return json({
-    since,
-    note: 'net_delta is net transfers over the window. Positive is rise pressure, negative is fall pressure. This is directional evidence, not a threshold model.',
-    players: rows.results,
+    since: data.sampleStart,
+    note: data.note,
+    priceStatus: data.priceStatus,
+    pricesLocked: data.pricesLocked,
+    players: data.players.map((p) => ({
+      id: p.id,
+      web_name: p.web_name,
+      team_code: p.team_code,
+      now_cost: p.now_cost,
+      selected_by: p.selected_by,
+      status: p.status,
+      in_delta: p.transfers_in_delta,
+      out_delta: p.transfers_out_delta,
+      net_delta: p.net_delta,
+      pressure_index: p.pressure_index,
+      direction: p.direction,
+      velocity_per_hour: p.velocity_per_hour,
+      confidence: p.confidence,
+    })),
   });
 }
 
@@ -796,10 +964,9 @@ async function handlePublicSync(request, env) {
 
 export default {
   async scheduled(event, env, ctx) {
-    const h = new Date().getUTCHours();
-    const mm = new Date().getUTCMinutes();
-    const sampleTransfers = (h >= 0 && h < 3) || mm < 5;
-    ctx.waitUntil(poll(env, { sampleTransfers }));
+    // The configured cron runs every 30 minutes, with five-minute sampling in
+    // the overnight price window. Keep every scheduled snapshot for RC2.1.
+    ctx.waitUntil(poll(env, { sampleTransfers: true }));
   },
 
   async fetch(request, env) {
@@ -826,6 +993,8 @@ export default {
           });
         case '/api/deltas':
           return await handleDeltas(env, url);
+        case '/api/price-intelligence':
+          return await handlePriceIntelligence(env, url);
         case '/api/watchlist':
           return await handleWatchlist(env, url);
         case '/api/health':
@@ -871,7 +1040,7 @@ export default {
         default:
           return json({
             service: 'FPL Engine API',
-            release: 'RC2.0.1-news-pipeline-merged',
+            release: 'RC2.1-price-change-intelligence',
             routes: [
               '/bootstrap-static/',
               '/fixtures/',
@@ -879,6 +1048,7 @@ export default {
               '/api/news?hours=72',
               '/api/current-alerts',
               '/api/deltas?hours=24&kind=price',
+              '/api/price-intelligence?hours=24',
               '/api/watchlist?hours=24',
               '/api/health',
               '/api/metadata',
