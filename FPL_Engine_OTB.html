@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%2337003C%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2720%27 fill=%27%2300FF87%27/%3E%3Cpath d=%27M32 17l9 7-3 11H26l-3-11zM26 35l-7 7 8 5 5-6 5 6 8-5-7-7%27 fill=%27%23160019%27/%3E%3C/svg%3E"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="OTB"><meta name="theme-color" content="#37003C">
-<title>FPL Engine — OTB 26/27 · RC4.5.2 Assurance & Team Import</title>
+<title>FPL Engine — OTB 26/27 · RC4.5.3 Chip Advisor Repair</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
-<!-- RC4.5.2 Assurance & Team Import: strategy-specific player valuation retained; manual advanced overrides remain authoritative until a new strategy preset is selected. -->
+<!-- RC4.5.3 Chip Advisor Repair: strategy-specific player valuation retained; manual advanced overrides remain authoritative until a new strategy preset is selected. -->
 <style>
 :root{--pl-purple:#37003C;--pl-deep:#24002A;--pl-ink:#160019;--mint:#00FF87;--cyan:#04F5FF;--mag:#E90052;--paper:#EAEAF2;--muted:#9B85A2;--line:rgba(234,234,242,.14)}
 *{box-sizing:border-box;margin:0;padding:0}html,body{min-height:100%}body{background:var(--pl-ink);color:var(--paper);font-family:Barlow,system-ui,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}.display{font-family:Archivo,sans-serif;font-variation-settings:'wdth' 118,'wght' 800;text-transform:uppercase;letter-spacing:.01em;line-height:.95}.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}input,select{font-family:inherit;color:inherit}:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
@@ -866,23 +866,43 @@ function renderDataStatus(){
 }
 
 
-/* RC3.3 Foundation Stabilization */
-function renderChipAdvisor(){
-  const host=document.getElementById('chipAdvisor')||document.getElementById('chipAI')||document.getElementById('chipAdvisorHost');
-  if(!host)return;
-  if(!S||!Array.isArray(S.squad)||S.squad.length<15){
-    host.innerHTML='<div class="chip-ai-loading">Complete a legal 15-player squad to activate chip guidance.</div>';
-    return;
-  }
-  if(!host.innerHTML.trim())host.innerHTML='<div class="chip-ai-loading">Chip guidance is available after schedule and squad analysis are complete.</div>';
+/* RC4.5.3 — Chip Intelligence repair: restore the missing host binding, Worker execution and one-tap plan application. */
+let CHIP_ADVISOR_TIMER=0,ACTIVE_CHIP_WORKER=null,CHIP_ADVISOR_RUN=0,CHIP_ADVISOR_LAST=null;
+function chipAdvisorHost(){return document.getElementById('chipAdvisorOut')||document.getElementById('chipAdvisor')||document.getElementById('chipAI')||document.getElementById('chipAdvisorHost')}
+function createChipAdvisorWorker(){const source=combinedWorkerSource('chipAdvisorWorkerSource');if(!source||typeof Worker!=='function')return null;const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'})),w=new Worker(url);w.__url=url;return w}
+function stopChipAdvisor(){if(ACTIVE_CHIP_WORKER){try{ACTIVE_CHIP_WORKER.terminate()}catch(e){}if(ACTIVE_CHIP_WORKER.__url)URL.revokeObjectURL(ACTIVE_CHIP_WORKER.__url);ACTIVE_CHIP_WORKER=null}}
+function chipAdvisorPayload(){
+  const gws=Array.from({length:38},(_,i)=>i+1).filter(g=>g>=Math.max(1,Number(S.gw)||1));
+  const players=POOL.filter(p=>TEAMS[p.t]).map(p=>({id:p.id,n:p.n,p:p.p,t:p.t,c:p.c,gw:Object.fromEntries(gws.map(g=>{const r=project(p,g),md=minuteDetail(p);return[g,{mean:r.x,utility:gwUtility(r),pAppear:md.pAppear,sd:r.sd,confidence:r.confidence||0}]}))}));
+  const shapes=Object.fromEntries(gws.map(g=>[g,gwFixtureShape(g)]));
+  return{players,gws,currentIds:[...S.squad],currentGw:Math.max(1,Number(S.gw)||1),budget:Math.max(Number(S.budget)||100,moneyTotal(squadPlayers())+Math.max(0,bank())),shapes};
 }
-let CHIP_ADVISOR_TIMER=0;
-function scheduleChipAdvisor(delay=120){
-  clearTimeout(CHIP_ADVISOR_TIMER);
-  CHIP_ADVISOR_TIMER=setTimeout(()=>{
-    try{renderChipAdvisor()}catch(err){console.warn('OTB optional chip advisor render skipped:',err)}
-  },Math.max(0,Number(delay)||0));
+function chipAdvisorLabel(k){return({WC1:'Wildcard 1',FH1:'Free Hit 1',TC1:'Triple Captain 1',BB1:'Bench Boost 1',WC2:'Wildcard 2',FH2:'Free Hit 2',TC2:'Triple Captain 2',BB2:'Bench Boost 2'})[k]||k}
+function renderChipAdvisorResult(result){
+  const host=chipAdvisorHost(),recs=result?.recommendations||{};if(!host)return;
+  CHIP_ADVISOR_LAST=result;
+  const order=['WC1','FH1','TC1','BB1','WC2','FH2','TC2','BB2'];
+  const cards=order.map(k=>{const r=recs[k]||{},hold=!r.gw;return`<div class="chip-ai-card ${hold?'hold':''}"><div class="ca-top"><span class="ca-name">${esc(chipAdvisorLabel(k))}</span><span class="ca-value">${hold?'HOLD':esc(r.confidence||'—')+' · +'+num(r.score).toFixed(1)}</span></div><div class="ca-gw">${hold?'WAIT':`GW${r.gw}`}</div><div class="ca-reason">${esc(r.reason||'No recommendation available.')}</div></div>`}).join('');
+  const actionable=order.filter(k=>recs[k]?.gw).length;
+  host.innerHTML=`<div class="chip-ai-head"><b>Automated Chip Plan</b><span>${actionable}/8 windows recommended</span></div><div class="chip-ai-grid">${cards}</div><button class="btn" id="btnApplyChipAdvice" ${actionable?'':'disabled'}>Apply automated plan</button><button class="btn ghost" id="btnRefreshChipAdvice">Recalculate advice</button><div class="chip-ai-note">Recommendations use your current legal squad, fixture shape, projected minutes, captaincy and bench value. Manual selectors remain authoritative after application.</div>`;
+  const apply=document.getElementById('btnApplyChipAdvice');if(apply)apply.onclick=()=>{for(const k of order)S.chips[k]=recs[k]?.gw?String(recs[k].gw):'';renderChips();saveUserState();renderChipAdvisorResult(result);flash('Automated chip plan applied. You can still override any week manually.')};
+  const refresh=document.getElementById('btnRefreshChipAdvice');if(refresh)refresh.onclick=()=>runChipAdvisor(true);
 }
+function runChipAdvisor(force=false){
+  const host=chipAdvisorHost();if(!host)return;
+  const full=Array.isArray(S.squad)&&S.squad.length===15&&legal(squadPlayers());
+  if(!full){stopChipAdvisor();host.innerHTML='<div class="chip-ai-loading">The squad contains 15 players but is not yet legal. Check position limits, club limits and budget to activate automated chip advice.</div>';return}
+  if(!productionDataReady()){host.innerHTML='<div class="chip-ai-loading">Automated chip advice is waiting for validated fixture and player data.</div>';return}
+  if(CHIP_ADVISOR_LAST&&!force){renderChipAdvisorResult(CHIP_ADVISOR_LAST);return}
+  stopChipAdvisor();const run=++CHIP_ADVISOR_RUN,w=createChipAdvisorWorker();if(!w){host.innerHTML='<div class="chip-ai-loading">This browser cannot start the background chip adviser.</div>';return}
+  ACTIVE_CHIP_WORKER=w;host.innerHTML='<div class="optimiser-progress"><b>Calculating chip windows…</b><div class="progress-track"><div class="progress-fill" id="chipProgress"></div></div><div class="progress-meta"><span id="chipDetail">Preparing season projections</span><span id="chipPct">0%</span></div></div>';
+  const timer=setTimeout(()=>{if(run===CHIP_ADVISOR_RUN){stopChipAdvisor();host.innerHTML='<div class="chip-ai-loading">Chip analysis took too long and was stopped. Tap Recalculate after data finishes loading.</div>'}},45000);
+  w.onmessage=e=>{if(run!==CHIP_ADVISOR_RUN)return;const d=e.data||{};if(d.type==='progress'){const pct=Math.round(100*num(d.progress)),bar=document.getElementById('chipProgress'),label=document.getElementById('chipPct'),detail=document.getElementById('chipDetail');if(bar)bar.style.width=pct+'%';if(label)label.textContent=pct+'%';if(detail)detail.textContent=d.detail||'Analysing';return}clearTimeout(timer);stopChipAdvisor();if(d.type==='result')renderChipAdvisorResult(d.result);else host.innerHTML=`<div class="chip-ai-loading">Chip adviser error: ${esc(d.error||'Unknown error')}</div><button class="btn ghost" id="btnRetryChipAdvice">Try again</button>`,document.getElementById('btnRetryChipAdvice')&&(document.getElementById('btnRetryChipAdvice').onclick=()=>runChipAdvisor(true))};
+  w.onerror=e=>{if(run!==CHIP_ADVISOR_RUN)return;clearTimeout(timer);stopChipAdvisor();host.innerHTML=`<div class="chip-ai-loading">Chip adviser failed to start: ${esc(e.message||'Worker error')}</div>`};
+  w.postMessage({type:'run',payload:chipAdvisorPayload()});
+}
+function renderChipAdvisor(){runChipAdvisor(false)}
+function scheduleChipAdvisor(delay=120){clearTimeout(CHIP_ADVISOR_TIMER);CHIP_ADVISOR_TIMER=setTimeout(()=>{try{renderChipAdvisor()}catch(err){console.warn('OTB chip advisor render skipped:',err)}},Math.max(0,Number(delay)||0))}
 function safeUIRender(label,fn){
   try{return fn()}catch(err){
     console.error('OTB UI render failed ['+label+']:',err);
