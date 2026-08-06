@@ -704,7 +704,84 @@ function fixtureListFor(team,gw){const out=[];(FIX[gw]||[]).forEach(([h,a],i)=>{
 function ratingValue(code,type,home){const t=TEAMS[code]||{s:3};const v=type==='atk'?(home?t.atkH:t.atkA):(home?t.defH:t.defA);const n=(v===null||v===undefined||v===''||!isFinite(+v))?NaN:+v;if(!isFinite(n)||n<=0){const ss=num(t.s,3);return 1000+(ss-3)*110}return n}
 function ratingAverage(type){const vals=[];for(const code of Object.keys(TEAMS)){vals.push(ratingValue(code,type,true),ratingValue(code,type,false))}return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:3}
 function scaleToFive(v,type){const vals=[];for(const code of Object.keys(TEAMS)){vals.push(ratingValue(code,type,true),ratingValue(code,type,false))}const lo=Math.min(...vals),hi=Math.max(...vals);return hi>lo?1+4*(v-lo)/(hi-lo):3}
-function fixtureContext(team,fx){const opp=fx.opp,home=fx.home,ownAtk=ratingValue(team,'atk',home),oppDef=ratingValue(opp,'def',!home),oppAtk=ratingValue(opp,'atk',!home),ownDef=ratingValue(team,'def',home),avgAtk=ratingAverage('atk'),avgDef=ratingAverage('def');const venueFor=home?1+S.w.home:1-S.w.home,venueAgainst=home?1-S.w.home:1+S.w.home;const ratioFor=clamp((avgDef/Math.max(.1,oppDef))*venueFor,.55,1.65),ratioAgainst=clamp((oppAtk/Math.max(.1,avgAtk))*(avgDef/Math.max(.1,ownDef))*venueAgainst,.35,2.2);const official=num(fx.difficulty,0);let dAtk=official||scaleToFive(oppDef,'def'),dCS=scaleToFive(oppAtk,'atk');dAtk=clamp(dAtk+(home?-.25:.25),1,5);dCS=clamp(dCS+(home?-.25:.25),1,5);const rawAttack=1+(ratioFor-1)*(S.w.fix/.30);const fdrAttack=1+S.w.fix*((3-dAtk)/2);const attackM=clamp(.55*rawAttack+.45*fdrAttack,.40,1.75);const lambdaAgainst=clamp(1.45*ratioAgainst,.30,3.30),pCS=Math.exp(-lambdaAgainst),csM=clamp(Math.pow(pCS/.235,S.w.cs),.28,2.35);return{attackM,lambdaAgainst,pCS,csM,dAtk,dCS}}
+/* ---------------- MARKET BLEND ----------------------------------------
+   Betting markets price team-level outcomes with real money and already
+   contain team news, so they are a stronger estimate of how many goals a
+   fixture will produce than any public model. The worker converts exchange
+   prices into goal expectations and clean-sheet probabilities; this blends
+   them into the engine's own fixture context.
+
+   It BLENDS rather than replaces. The engine's downstream constants are
+   calibrated against its own strength scale, so swapping in a foreign
+   scale wholesale would silently decalibrate everything after it. A
+   bounded, weighted correction keeps that calibration intact.
+
+   MARKET_WEIGHT is NOT calibrated. 0.5 says "trust the market about as
+   much as ourselves", which is conservative given markets generally beat
+   public models at team level. Set MARKET_BLEND=false to revert exactly. */
+const MARKET_BLEND=true;
+const MARKET_WEIGHT=.5;
+const MARKET_MAX_AGE_MIN=720;      // ignore data older than 12h
+const MARKET_LEAGUE_XG=1.45;       // matches the engine's own base lambda
+const MARKET={loaded:false,ageMinutes:null,byKey:new Map(),fixtures:0,unmatched:0,error:''};
+
+function marketKey(team,opp,home){return `${team}|${opp}|${home?'H':'A'}`}
+
+/** Look up this exact fixture. Keyed on both clubs and venue, so no date
+    matching is needed and a wrong-week match is impossible. */
+function marketFor(team,fx){
+  if(!MARKET_BLEND||!MARKET.loaded)return null;
+  if(MARKET.ageMinutes!=null&&MARKET.ageMinutes>MARKET_MAX_AGE_MIN)return null;
+  return MARKET.byKey.get(marketKey(team,fx.opp,fx.home))||null;
+}
+
+async function loadMarketData(){
+  try{
+    const r=await fetch(SCOUT_API_BASE+'/api/market/teams',{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    MARKET.byKey.clear();
+    MARKET.loaded=!!d.available;
+    MARKET.ageMinutes=Number.isFinite(d.ageMinutes)?d.ageMinutes:null;
+    MARKET.fixtures=(d.fixtures||[]).length;
+    MARKET.unmatched=(d.unmatched||[]).length;
+    MARKET.error='';
+    for(const f of d.fixtures||[]){
+      // Same fixture indexed from both clubs' point of view.
+      MARKET.byKey.set(marketKey(f.home,f.away,true),
+        {xgFor:f.xgHome,xgAgainst:f.xgAway,pCS:f.csHome});
+      MARKET.byKey.set(marketKey(f.away,f.home,false),
+        {xgFor:f.xgAway,xgAgainst:f.xgHome,pCS:f.csAway});
+    }
+    if(typeof pipelineEvent==='function')
+      pipelineEvent('MARKET',MARKET.loaded?'OK':'SKIP',
+        `${MARKET.fixtures} fixtures, age ${MARKET.ageMinutes ?? '?'}min, ${MARKET.unmatched} unmatched`);
+    bumpCache();
+  }catch(err){
+    MARKET.loaded=false;MARKET.error=err&&err.message?err.message:String(err);
+    if(typeof pipelineEvent==='function')pipelineEvent('MARKET','WARN',MARKET.error);
+  }
+  return MARKET.loaded;
+}
+
+function fixtureContext(team,fx){const opp=fx.opp,home=fx.home,ownAtk=ratingValue(team,'atk',home),oppDef=ratingValue(opp,'def',!home),oppAtk=ratingValue(opp,'atk',!home),ownDef=ratingValue(team,'def',home),avgAtk=ratingAverage('atk'),avgDef=ratingAverage('def');const venueFor=home?1+S.w.home:1-S.w.home,venueAgainst=home?1-S.w.home:1+S.w.home;const ratioFor=clamp((avgDef/Math.max(.1,oppDef))*venueFor,.55,1.65),ratioAgainst=clamp((oppAtk/Math.max(.1,avgAtk))*(avgDef/Math.max(.1,ownDef))*venueAgainst,.35,2.2);const official=num(fx.difficulty,0);let dAtk=official||scaleToFive(oppDef,'def'),dCS=scaleToFive(oppAtk,'atk');dAtk=clamp(dAtk+(home?-.25:.25),1,5);dCS=clamp(dCS+(home?-.25:.25),1,5);const rawAttack=1+(ratioFor-1)*(S.w.fix/.30);const fdrAttack=1+S.w.fix*((3-dAtk)/2);let attackM=clamp(.55*rawAttack+.45*fdrAttack,.40,1.75);let lambdaAgainst=clamp(1.45*ratioAgainst,.30,3.30),pCS=Math.exp(-lambdaAgainst);
+  const mkt=marketFor(team,fx);
+  let marketApplied=false;
+  if(mkt&&Number.isFinite(mkt.xgFor)&&Number.isFinite(mkt.xgAgainst)&&Number.isFinite(mkt.pCS)){
+    const w=clamp(MARKET_WEIGHT,0,1);
+    // Attack: express the market's goal expectation on the engine's own
+    // multiplier scale, then blend and re-clamp to the existing bounds.
+    const mktAttackM=clamp(mkt.xgFor/MARKET_LEAGUE_XG,.40,1.75);
+    attackM=clamp((1-w)*attackM+w*mktAttackM,.40,1.75);
+    lambdaAgainst=clamp((1-w)*lambdaAgainst+w*mkt.xgAgainst,.30,3.30);
+    // Prefer the market's clean-sheet number over exp(-lambda): it carries
+    // the Dixon-Coles low-score correction, which plain Poisson does not.
+    pCS=clamp((1-w)*pCS+w*mkt.pCS,.002,.998);
+    marketApplied=true;
+  }
+  const csM=clamp(Math.pow(pCS/.235,S.w.cs),.28,2.35);
+  return{attackM,lambdaAgainst,pCS,csM,dAtk,dCS,marketApplied};
+}
 function pricePrior(pl){const c=num(pl.c);let x=2.3;if(pl.p==='GK')x=2.55+.52*(c-4);if(pl.p==='DEF')x=2.25+.68*(c-4);if(pl.p==='MID')x=2.10+.56*(c-4.5);if(pl.p==='FWD')x=2.10+.60*(c-4.5);return clamp(x,1.6,8.0)}
 function baselineParts(pl){const hist=num(pl.histPts)/38,market=pricePrior(pl),base=hist>0?.88*hist+.12*market:market,dc=hist>0?clamp(num(pl.histDcPts)/38,0,base*.45):0,rem=Math.max(0,base-dc),pr=PROFILE[pl.p]||PROFILE.MID,z=pr.app+pr.cs+pr.atk+pr.bon+pr.oth;const APPFLOOR=2.0,app=Math.min(APPFLOOR,base*0.92),rem2=Math.max(0,base-app-dc),z2=pr.cs+pr.atk+pr.bon+pr.oth;return{app,cs:rem2*pr.cs/z2,dc,atk:rem2*pr.atk/z2,bon:rem2*pr.bon/z2,oth:rem2*pr.oth/z2,base,source:hist>0?'historical + price prior':'price/position prior'}}
 function availability(pl){const o=playerOverride(pl);if(o.availability!==undefined&&o.availability!=='')return clamp(num(o.availability)/100,0,1);const l=pl.live||{},chance=l.chance;if(chance!==null&&chance!==undefined)return clamp(num(chance)/100,0,1);return{a:1,d:.72,i:.06,s:0,u:.20,n:.03}[l.status]??1}
@@ -1862,6 +1939,11 @@ function runRC4HealthCheck(){
  return{ok,missing,dom};
 }
 function scheduleRC4HealthCheck(){const run=()=>runRC4HealthCheck();if('requestIdleCallback'in window)requestIdleCallback(run,{timeout:1800});else setTimeout(run,900)}
-document.documentElement.dataset.release=APP_RELEASE_SLUG;pipelineEvent('APP','ok','RC4.7.2 JavaScript initialised');scheduleRC4HealthCheck();loadExternalCalendar();loadAccuracyLedger();renderExternalCalendarStatus();renderStrengths();populateTeamFilter();applyShotMode();render();syncMobile();tick();setInterval(tick,30000);const hadCache=loadCachedData();render();maybeAutoCaptureProjection();scheduleSelfTests(1400);if(navigator.onLine!==false)setTimeout(()=>maybeAutoSyncAccuracyActuals(),1800);if(DATA.auto&&navigator.onLine!==false)setTimeout(()=>refreshLiveData(false),250);setInterval(()=>{if(DATA.auto&&navigator.onLine!==false&&document.visibilityState==='visible')refreshLiveData(false)},30*60*1000);
+document.documentElement.dataset.release=APP_RELEASE_SLUG;pipelineEvent('APP','ok','RC4.7.2 JavaScript initialised');scheduleRC4HealthCheck();loadExternalCalendar();loadAccuracyLedger();renderExternalCalendarStatus();renderStrengths();populateTeamFilter();applyShotMode();render();syncMobile();tick();setInterval(tick,30000);const hadCache=loadCachedData();render();maybeAutoCaptureProjection();scheduleSelfTests(1400);if(navigator.onLine!==false)setTimeout(()=>maybeAutoSyncAccuracyActuals(),1800);/* Market data is optional: the engine renders immediately and re-renders
+   if it arrives. loadMarketData() calls bumpCache() itself, so projections
+   recompute with the blend applied. Refreshed hourly; the worker serves a
+   cache so this costs no credits. */
+if(navigator.onLine!==false)setTimeout(()=>{loadMarketData().then(ok=>{if(ok)render()})},600);
+setInterval(()=>{if(navigator.onLine!==false&&document.visibilityState==='visible')loadMarketData().then(ok=>{if(ok)render()})},60*60*1000);if(DATA.auto&&navigator.onLine!==false)setTimeout(()=>refreshLiveData(false),250);setInterval(()=>{if(DATA.auto&&navigator.onLine!==false&&document.visibilityState==='visible')refreshLiveData(false)},30*60*1000);
 </script>
 </body></html>
