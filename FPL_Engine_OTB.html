@@ -366,7 +366,7 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
   </div>
   <div class="pane hide" id="pData">
     <div class="livebar"><span class="status-pill offline" id="livePill"><i class="status-dot"></i><span id="liveMode">SEED</span></span><span class="source-note" id="lastUpdated">No live refresh yet</span><br><span class="source-note" id="histMetaNote" style="color:var(--muted);font-size:10px"></span></div><div id="releaseSummary" class="readiness-grid" aria-label="Release readiness summary"></div><div class="source-note" id="validationNote" style="margin-bottom:10px"></div>
-    <button class="btn" id="btnRefresh">Refresh official FPL data now</button><div class="pipeline-audit" id="pipelineAudit"><div class="pipeline-audit-head"><b>Live Data Pipeline</b><span id="pipelineRunId">NOT TESTED</span></div><div class="pipeline-actions"><button class="btn ghost" id="btnTestWorker" type="button">Test Worker connection</button><button class="btn ghost" id="btnCopyPipeline" type="button">Copy diagnostic report</button></div><div class="pipeline-summary" id="pipelineSummary">OTB has not tested the Worker during this session.</div><div class="pipeline-log" id="pipelineLog"><div class="pipeline-empty">No pipeline events recorded yet.</div></div><div class="pipeline-endpoint" id="pipelineEndpoint"></div></div>
+    <button class="btn" id="btnRefresh">Refresh official FPL data now</button><div class="pipeline-audit" id="pipelineAudit"><div class="pipeline-audit-head"><b>Live Data Pipeline</b><span id="pipelineRunId">NOT TESTED</span></div><div class="pipeline-actions"><button class="btn ghost" id="btnTestWorker" type="button">Test Worker connection</button><button class="btn ghost" id="btnCopyPipeline" type="button">Copy diagnostic report</button></div><div class="pipeline-summary" id="pipelineSummary">OTB has not tested the Worker during this session.</div><div class="pipeline-summary" id="marketStatus">Market blend: no data yet</div><div class="pipeline-log" id="pipelineLog"><div class="pipeline-empty">No pipeline events recorded yet.</div></div><div class="pipeline-endpoint" id="pipelineEndpoint"></div></div>
     <div class="field"><label style="justify-content:flex-start;gap:8px"><input type="checkbox" id="autoRefresh" checked style="width:auto"> Auto-refresh every 30 minutes while open</label></div>
     <div class="help">The engine fetches the public FPL <b>bootstrap-static</b> and <b>fixtures</b> endpoints, updates prices, injuries, availability, form, underlying statistics, team strengths, fixture changes and deadlines, then stores the last valid response locally for offline use. A browser may block cross-origin requests from a local file; manual JSON import remains the fallback.</div>
     <textarea id="importBox" placeholder='Fallback: paste the full bootstrap-static JSON here. You may paste an object containing both bootstrap and fixtures.'></textarea><button class="btn ghost" id="btnImport">Load pasted data</button><button class="btn ghost" id="btnExport">Copy squad as text</button><button class="btn ghost" id="btnClear">Clear squad</button><div class="help" id="importMsg"></div>
@@ -680,7 +680,25 @@ function pipelineReset(label='Live refresh'){PIPELINE.run++;PIPELINE.startedAt=p
 function pipelineEvent(step,state,detail='',ms=null){PIPELINE.events.push({step:String(step),state:String(state),detail:String(detail||''),ms:Number.isFinite(ms)?Math.round(ms):null,at:new Date().toISOString()});if(PIPELINE.events.length>40)PIPELINE.events.shift();renderPipelineAudit();}
 function pipelineFinish(state,detail){PIPELINE.status=state;pipelineEvent('END',state==='OK'?'ok':state==='WARN'?'warn':'fail',detail,performance.now()-PIPELINE.startedAt);PIPELINE.lastReport=pipelineReport();renderPipelineAudit();}
 function pipelineReport(){return [`OTB ${APP_RELEASE} Live Data Pipeline Audit`,`Page: ${location.href}`,`Worker: ${API_BASE}`,`Online: ${navigator.onLine!==false}`,`Run: ${PIPELINE.run}`,`Status: ${PIPELINE.status}`,...PIPELINE.events.map((e,i)=>`${i+1}. ${e.step} [${e.state.toUpperCase()}] ${e.detail}${e.ms!=null?' · '+e.ms+'ms':''}`)].join('\n');}
-function renderPipelineAudit(){const log=document.getElementById('pipelineLog'),summary=document.getElementById('pipelineSummary'),rid=document.getElementById('pipelineRunId'),ep=document.getElementById('pipelineEndpoint');if(!log||!summary)return;rid.textContent=PIPELINE.run?`RUN ${PIPELINE.run} · ${PIPELINE.status}`:'NOT TESTED';ep.textContent=`Endpoint: ${API_BASE}`;if(!PIPELINE.events.length){log.innerHTML='<div class="pipeline-empty">No pipeline events recorded yet.</div>';return}log.innerHTML=PIPELINE.events.map((e,i)=>`<div class="pipeline-row"><span class="pipeline-step">${i+1}</span><span class="pipeline-state ${esc(e.state)}">${esc(e.state.toUpperCase())}</span><span class="pipeline-detail">${esc(e.step)} · ${esc(e.detail)}</span><span class="pipeline-ms">${e.ms==null?'':e.ms+'ms'}</span></div>`).join('');const last=PIPELINE.events[PIPELINE.events.length-1];summary.className='pipeline-summary '+(PIPELINE.status==='OK'?'good':PIPELINE.status==='WARN'?'warn':PIPELINE.status==='FAIL'?'bad':'');summary.textContent=PIPELINE.status==='RUN'?`Testing: ${last.step} — ${last.detail}`:PIPELINE.status==='OK'?'Worker and official data routes responded successfully.':PIPELINE.status==='WARN'?last.detail:`Pipeline failed at ${last.step}: ${last.detail}`;}
+/* An invisible feature that fails silently is a liability: if the key
+   expires, the quota runs out, or a club name stops matching, projections
+   quietly revert with no signal at all. This is the signal. */
+function renderMarketStatus(){
+  const el=document.getElementById('marketStatus');
+  if(!el)return;
+  if(!MARKET_BLEND){el.textContent='Market blend: disabled in build';return}
+  if(MARKET.error){el.innerHTML='Market blend: <b>unavailable</b> — '+esc(MARKET.error);return}
+  if(!MARKET.loaded){el.textContent='Market blend: no data yet';return}
+  const stale=MARKET.ageMinutes!=null&&MARKET.ageMinutes>MARKET_MAX_AGE_MIN;
+  const age=MARKET.ageMinutes==null?'unknown age'
+    :MARKET.ageMinutes<90?MARKET.ageMinutes+'m old'
+    :(MARKET.ageMinutes/60).toFixed(1)+'h old';
+  el.innerHTML='Market blend: <b>'+(stale?'STALE — ignored':'active')+'</b> · '
+    +MARKET.fixtures+' fixtures · '+age+' · weight '+Math.round(MARKET_WEIGHT*100)+'%'
+    +(MARKET.unmatched?' · <b>'+MARKET.unmatched+' club(s) unmatched</b>':'');
+}
+
+function renderPipelineAudit(){renderMarketStatus();const log=document.getElementById('pipelineLog'),summary=document.getElementById('pipelineSummary'),rid=document.getElementById('pipelineRunId'),ep=document.getElementById('pipelineEndpoint');if(!log||!summary)return;rid.textContent=PIPELINE.run?`RUN ${PIPELINE.run} · ${PIPELINE.status}`:'NOT TESTED';ep.textContent=`Endpoint: ${API_BASE}`;if(!PIPELINE.events.length){log.innerHTML='<div class="pipeline-empty">No pipeline events recorded yet.</div>';return}log.innerHTML=PIPELINE.events.map((e,i)=>`<div class="pipeline-row"><span class="pipeline-step">${i+1}</span><span class="pipeline-state ${esc(e.state)}">${esc(e.state.toUpperCase())}</span><span class="pipeline-detail">${esc(e.step)} · ${esc(e.detail)}</span><span class="pipeline-ms">${e.ms==null?'':e.ms+'ms'}</span></div>`).join('');const last=PIPELINE.events[PIPELINE.events.length-1];summary.className='pipeline-summary '+(PIPELINE.status==='OK'?'good':PIPELINE.status==='WARN'?'warn':PIPELINE.status==='FAIL'?'bad':'');summary.textContent=PIPELINE.status==='RUN'?`Testing: ${last.step} — ${last.detail}`:PIPELINE.status==='OK'?'Worker and official data routes responded successfully.':PIPELINE.status==='WARN'?last.detail:`Pipeline failed at ${last.step}: ${last.detail}`;}
 async function testWorkerConnection(){pipelineReset('Worker connection test');pipelineEvent('CONFIG','ok',API_BASE);if(navigator.onLine===false){pipelineFinish('FAIL','Browser reports no internet connection');return}const probes=[['ROOT',API_BASE+'/'],['BOOTSTRAP',API_BASE+'/bootstrap-static/'],['FIXTURES',API_BASE+'/fixtures/'],['SCOUT',SCOUT_API_BASE+'/api/health']];let success=0;for(const [name,url] of probes){const t=performance.now();pipelineEvent(name,'run',`GET ${url}`);try{const r=await fetch(url,{method:'GET',cache:'no-store',headers:{Accept:'application/json'}});const ct=r.headers.get('content-type')||'unknown';pipelineEvent(name,r.ok?'ok':'fail',`HTTP ${r.status} · ${ct}`,performance.now()-t);if(r.ok)success++;else if(name!=='ROOT')throw new Error(`HTTP ${r.status}`);}catch(e){const kind=e?.name==='TypeError'?'network/CORS/DNS failure':e.message;pipelineEvent(name,'fail',kind,performance.now()-t);if(name!=='ROOT'){DATA.worker={status:'OFFLINE',contract:'NONE',endpoint:API_BASE,error:kind,meta:null};renderDataStatus();pipelineFinish('FAIL',`${name} route failed: ${kind}`);return}}}if(success>=2){DATA.worker={status:'ONLINE',contract:DATA.worker?.contract||'REACHABLE',endpoint:API_BASE,error:'',meta:DATA.worker?.meta||null};renderDataStatus();pipelineFinish('OK','Required Worker routes are reachable · starting full live refresh');setTimeout(()=>refreshLiveData(true),120);}else{pipelineFinish('WARN','Worker root is unavailable but required routes may still work');}}
 const API_BASE='https://fpl-engine-api.blackpharoahisking.workers.dev',SCOUT_API_BASE='https://otb-role-intelligence.blackpharoahisking.workers.dev',CACHE_KEY='fpl-engine-cache-v2',STATE_KEY='fpl-engine-user-v2',LEGACY_CACHE_KEY='fpl-engine-rc3-live-cache-v1',LEGACY_STATE_KEY='fpl-engine-rc3-user-v1',EXTERNAL_FIXTURE_KEY='fpl-engine-external-calendar-rc232-v1';
 const EXT_CAL={fixtures:[],source:'none',updatedAt:null,error:''};
@@ -753,12 +771,13 @@ async function loadMarketData(){
       MARKET.byKey.set(marketKey(f.away,f.home,false),
         {xgFor:f.xgAway,xgAgainst:f.xgHome,pCS:f.csAway});
     }
+    renderMarketStatus();
     if(typeof pipelineEvent==='function')
       pipelineEvent('MARKET',MARKET.loaded?'OK':'SKIP',
         `${MARKET.fixtures} fixtures, age ${MARKET.ageMinutes ?? '?'}min, ${MARKET.unmatched} unmatched`);
     bumpCache();
   }catch(err){
-    MARKET.loaded=false;MARKET.error=err&&err.message?err.message:String(err);
+    MARKET.loaded=false;MARKET.error=err&&err.message?err.message:String(err);renderMarketStatus();
     if(typeof pipelineEvent==='function')pipelineEvent('MARKET','WARN',MARKET.error);
   }
   return MARKET.loaded;
@@ -777,6 +796,13 @@ function fixtureContext(team,fx){const opp=fx.opp,home=fx.home,ownAtk=ratingValu
     // Prefer the market's clean-sheet number over exp(-lambda): it carries
     // the Dixon-Coles low-score correction, which plain Poisson does not.
     pCS=clamp((1-w)*pCS+w*mkt.pCS,.002,.998);
+    /* The 1-5 difficulty ratings drive the schedule matrix and the fixture
+       ticker. Leaving them on the old basis would make the grid contradict
+       the xP it sits next to — the matrix calling a fixture easy while the
+       projection quietly disagreed. Anchored so league-average (1.45 goals)
+       maps to 3, matching the scale's existing centre. */
+    dAtk=clamp((1-w)*dAtk+w*clamp(3-2*(mkt.xgFor-MARKET_LEAGUE_XG),1,5),1,5);
+    dCS =clamp((1-w)*dCS +w*clamp(3+2*(mkt.xgAgainst-MARKET_LEAGUE_XG),1,5),1,5);
     marketApplied=true;
   }
   const csM=clamp(Math.pow(pCS/.235,S.w.cs),.28,2.35);
