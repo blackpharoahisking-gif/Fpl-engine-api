@@ -810,7 +810,29 @@ function blendVariance(v,w,mA,mB,legacyAdd){
   return base+ww*(1-ww)*d*d;
 }
 function project(pl,gw){const key=pl.id+'|'+gw;if(PROJ_CACHE[key])return PROJ_CACHE[key];const fxs=fixtureListFor(pl.t,gw);if(!fxs.length)return PROJ_CACHE[key]={x:0,low:0,high:0,sd:0,confidence:90,d:null,fixtures:[],parts:{app:0,cs:0,dc:0,atk:0,bon:0,oth:0},detail:{reason:'blank gameweek'}};const rows=fxs.map(f=>projectFixture(pl,f)),parts={app:0,cs:0,dc:0,atk:0,bon:0,oth:0};let x=0,variance=0;for(const r of rows){x+=r.x;variance+=r.variance;for(const k in parts)parts[k]+=r.parts[k]}const l=pl.live||{},played=num(DATA.teamPlayed[pl.t]),form=num(l.form),formW=form>0?S.w.form*clamp(played/6,0,1):0;if(formW>0){const target=form*availability(pl)*fxs.length,priorMean=x;x=x*(1-formW)+target*formW;variance=blendVariance(variance,formW,priorMean,target,0);Object.assign(parts,scaleParts(parts,x))}const next=DATA.nextEvent||1,official=num(l.epNext),offW=official>0&&gw===next?S.w.official:0;if(offW>0){const priorMean=x;x=x*(1-offW)+official*offW;variance=blendVariance(variance,offW,priorMean,official,.9);Object.assign(parts,scaleParts(parts,x))}const sd=Math.sqrt(Math.max(.15,variance)),low=x-1.2816*sd,high=x+1.2816*sd,evidence=rows.reduce((a,r)=>a+r.evidence,0)/rows.length,baseData=num(pl.histPts)>0?.55:.30,confidence=clamp(Math.round(100*(baseData+.30*evidence+.10*(offW>0)-.12*Math.min(1,sd/(x+2)))),20,94);return PROJ_CACHE[key]={x,low,high,sd,confidence,d:rows[0].fx,fixtures:rows,parts,detail:{evidence,formW,offW,expectedMinutes:rows[0].prior.md.exp,availability:rows[0].prior.md.avail,source:DATA.mode}}}
-function horizonForecast(pl){const key=pl.id+'|'+S.gw+'|'+S.horizon+'|'+S.risk;if(HORIZON_CACHE[key])return HORIZON_CACHE[key];let sum=0,varSum=0,n=0,first=null,last=null;for(let g=S.gw;g<=38&&n<S.horizon;g++){const r=project(pl,g);sum+=r.x;varSum+=r.sd*r.sd;n++;if(first===null)first=g;last=g}const mean=n?sum/n:0,sd=n?Math.sqrt(varSum)/n:0,total=sum,totalSd=Math.sqrt(varSum),utility=S.risk==='safe'?mean-.25*sd:S.risk==='upside'?mean+.20*sd:mean,totalUtility=S.risk==='safe'?total-.25*totalSd:S.risk==='upside'?total+.20*totalSd:total;return HORIZON_CACHE[key]={mean,sd,utility,total,totalSd,totalUtility,n,first,last}}
+/* Gameweek outcomes are NOT independent. The dominant source of week-to-week
+   variance is minutes risk, and that is persistent: a player who loses his
+   place in GW10 is likely also out in GW11-13. Summing per-gameweek variances
+   (Var = SUM v_i) therefore understates the spread of a multi-week total.
+
+   With a constant pairwise correlation rho:
+       Var(total) = SUM v_i + rho * [ (SUM sd_i)^2 - SUM v_i ]
+   which is exact at rho=0 (independence, the old behaviour) and at rho=1
+   (perfect persistence, where standard deviations add linearly).
+
+   At a 5-week horizon with equal weekly sd, this widens the interval by
+   sqrt(1 + rho*(n-1)) -- about 61% at rho=0.35.
+
+   HORIZON_RHO is NOT calibrated. It is a deliberate single constant rather
+   than a per-player estimate: a flat rho slightly over-widens nailed starters
+   and under-widens rotation risks, but inventing a per-player correlation on
+   top of uncalibrated inputs would be compounding guesswork. Fitting rho from
+   observed multi-week totals is the natural follow-up once the season supplies
+   data. Set HORIZON_CORRELATION=false to restore the old independent sum. */
+const HORIZON_CORRELATION=true;
+const HORIZON_RHO=.35;
+
+function horizonForecast(pl){const key=pl.id+'|'+S.gw+'|'+S.horizon+'|'+S.risk;if(HORIZON_CACHE[key])return HORIZON_CACHE[key];let sum=0,varSum=0,sdSum=0,n=0,first=null,last=null;for(let g=S.gw;g<=38&&n<S.horizon;g++){const r=project(pl,g);sum+=r.x;varSum+=r.sd*r.sd;sdSum+=r.sd;n++;if(first===null)first=g;last=g}const rho=HORIZON_CORRELATION?clamp(HORIZON_RHO,0,1):0,totalVar=Math.max(0,varSum+rho*(sdSum*sdSum-varSum)),total=sum,totalSd=Math.sqrt(totalVar),mean=n?sum/n:0,sd=n?totalSd/n:0,utility=S.risk==='safe'?mean-.25*sd:S.risk==='upside'?mean+.20*sd:mean,totalUtility=S.risk==='safe'?total-.25*totalSd:S.risk==='upside'?total+.20*totalSd:total;return HORIZON_CACHE[key]={mean,sd,utility,total,totalSd,totalUtility,n,first,last}}
 function horizonLabel(){const h=horizonSpan();return h.n<=1?`GW${h.first}`:`GW${h.first}–${h.last}`}
 function horizonSpan(){const first=clamp(S.gw,1,38),n=Math.max(0,Math.min(S.horizon,39-first)),last=n?first+n-1:first;return{n,first,last}}
 const moneyTenths=v=>Math.round(num(v)*10),moneyTotal=players=>players.reduce((a,p)=>a+moneyTenths(p.c),0)/10;const byId=id=>POOL.find(p=>p.id===id),squadPlayers=()=>S.squad.map(byId).filter(Boolean),spent=()=>moneyTotal(squadPlayers()),bank=()=>Math.round((moneyTenths(S.budget)-moneyTenths(spent())))/10,countPos=pos=>squadPlayers().filter(p=>p.p===pos).length,countClub=t=>squadPlayers().filter(p=>p.t===t).length;
