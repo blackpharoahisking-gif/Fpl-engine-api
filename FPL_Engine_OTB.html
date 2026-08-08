@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%2337003C%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2720%27 fill=%27%2300FF87%27/%3E%3Cpath d=%27M32 17l9 7-3 11H26l-3-11zM26 35l-7 7 8 5 5-6 5 6 8-5-7-7%27 fill=%27%23160019%27/%3E%3C/svg%3E"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="OTB"><meta name="theme-color" content="#37003C">
-<title>FPL Engine — OTB 26/27 · RC5.0.0 Verdict Brain</title>
+<title>FPL Engine — OTB 26/27 · RC5.0.1 Verdict Brain Hardening</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
@@ -100,7 +100,10 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
 .verdict-hero{border:1px solid rgba(0,255,135,.38);border-left:4px solid var(--mint);border-radius:6px;padding:12px;background:linear-gradient(135deg,rgba(0,255,135,.10),rgba(4,245,255,.04));margin-bottom:10px}.verdict-hero.warn{border-left-color:#FFC107;background:rgba(255,193,7,.08)}.verdict-hero.bad{border-left-color:var(--mag);background:rgba(233,0,82,.09)}.verdict-hero .vh-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.verdict-hero .vh-label{font-size:8px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:800}.verdict-hero .vh-title{font-family:Archivo,sans-serif;font-variation-settings:'wdth' 118,'wght' 800;font-size:19px;line-height:1.05;margin-top:4px;text-transform:uppercase}.verdict-hero .vh-conf{font:800 19px 'JetBrains Mono',monospace;color:var(--mint);white-space:nowrap}.verdict-hero.warn .vh-conf{color:#FFD75E}.verdict-hero.bad .vh-conf{color:#FF91B5}.verdict-hero .vh-note{font-size:11px;line-height:1.45;color:var(--paper);margin-top:8px}.verdict-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}.verdict-card{border:1px solid var(--line);border-radius:5px;padding:9px;background:rgba(0,0,0,.20);min-width:0}.verdict-card .vc-head{display:flex;justify-content:space-between;gap:7px;align-items:center;margin-bottom:6px}.verdict-card .vc-title{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:800}.verdict-card .vc-state{font:800 9px 'JetBrains Mono',monospace;color:var(--cyan)}.verdict-card .vc-main{font-size:12px;font-weight:800;line-height:1.35}.verdict-card .vc-sub{font-size:9px;line-height:1.4;color:var(--muted);margin-top:4px}.verdict-card.good{border-left:3px solid var(--mint)}.verdict-card.warn{border-left:3px solid #FFC107}.verdict-card.bad{border-left:3px solid var(--mag)}.verdict-card.info{border-left:3px solid var(--cyan)}.verdict-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:11px}.verdict-actions .btn{margin:0}.verdict-reason{border:1px solid var(--line);border-left:3px solid #B072FF;border-radius:5px;padding:10px;background:rgba(176,114,255,.06);font-size:11px;line-height:1.5;margin-bottom:10px}.verdict-reason b{color:#D7B7FF}.verdict-mini-list{margin-top:5px}.verdict-mini-list div{padding:4px 0;border-bottom:1px solid rgba(234,234,242,.06);font-size:10px}.verdict-mini-list div:last-child{border-bottom:0}.verdict-detail-toggle{margin:2px 0 10px;border:1px solid var(--line);border-radius:4px;background:rgba(0,0,0,.14)}.verdict-detail-toggle summary{cursor:pointer;padding:9px 10px;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan)}.verdict-detail-toggle[open] summary{border-bottom:1px solid var(--line)}.verdict-detail-body{padding:10px}@media(max-width:560px){.verdict-grid,.verdict-actions{grid-template-columns:1fr}.verdict-hero .vh-title{font-size:17px}}
 
 
-/* ═══ RC5.0.0 — Verdict Brain ═══ */
+/* RC5.0.1 — final decision strip: the action queue says what needs attention; this says exactly what the manager is doing. */
+.vdecision{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 0 11px}.vdecision-cell{border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:7px 8px;background:rgba(255,255,255,.022);min-width:0}.vdecision-cell .k{font:800 8px 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.vdecision-cell .v{font-size:11px;font-weight:800;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vdecision-cell.good .v{color:var(--mint)}.vdecision-cell.warn .v{color:#FFD75E}.vdecision-cell.info .v{color:var(--cyan)}.vdecision-note{grid-column:1/-1;font-size:9.5px;line-height:1.45;color:var(--muted);padding:1px 2px}@media(max-width:560px){.vdecision{grid-template-columns:1fr 1fr}}
+
+/* ═══ RC5.0.1 — Verdict Brain hardening (non-destructive audit patch) ═══ */
 .verdict-hero.vq-ok{border-left-color:var(--mint)}
 .verdict-hero.vq-act{border-left-color:#FFC107;background:rgba(255,193,7,.08)}
 .verdict-hero.vq-block{border-left-color:var(--mag);background:rgba(233,0,82,.09)}
@@ -381,7 +384,7 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
     <div class="price-section-title"><span>Transfer-plan exposure</span><span>move now vs wait</span></div><div id="pricePlanExposure"></div>
     <div class="price-section-title"><span>Market pressure</span><span id="priceResultCount">—</span></div><div id="priceIntel" aria-live="polite"></div>
   </div>
-  <div class="pane hide" id="pVerdict"><div id="verdictCommand"></div><div id="verdictActions"></div><div id="verdictHealth"></div><div id="verdictChanges"></div><div id="verdictReadiness"></div><div id="verdictIntel"></div><div class="verdict-actions"><button class="btn" id="verdictOpenTransfers">Open Transfer Plan</button><button class="btn ghost" id="verdictOpenFixtures">Inspect Schedule</button></div><details class="verdict-detail-toggle"><summary>Detailed squad evidence</summary><div class="verdict-detail-body"><div id="verdicts"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Bench intelligence</h2><span class="note">expected autosubs</span></div><div id="benchIntel"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Captain ranking</h2><span class="note">mean · ceiling</span></div><div id="capList"></div><div class="sechead" style="margin:16px -10px 10px;position:static"><h2>Best available upgrades</h2><span class="note">gross gain</span></div><div class="help">Legal swaps ranked by expected-points gain. The heuristic range matters: a narrow +0.5 may be more dependable than a volatile +1.0.</div><div id="upgrades"></div></div></details></div>
+  <div class="pane hide" id="pVerdict"><div id="verdictCommand"></div><div id="verdictDecisionStrip"></div><div id="verdictActions"></div><div id="verdictHealth"></div><div id="verdictChanges"></div><div id="verdictReadiness"></div><div id="verdictIntel"></div><div class="verdict-actions"><button class="btn" id="verdictOpenTransfers">Open Transfer Plan</button><button class="btn ghost" id="verdictOpenFixtures">Inspect Schedule</button></div><details class="verdict-detail-toggle"><summary>Detailed squad evidence</summary><div class="verdict-detail-body"><div id="verdicts"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Bench intelligence</h2><span class="note">expected autosubs</span></div><div id="benchIntel"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Captain ranking</h2><span class="note">mean · ceiling</span></div><div id="capList"></div><div class="sechead" style="margin:16px -10px 10px;position:static"><h2>Best available upgrades</h2><span class="note">gross gain</span></div><div class="help">Legal swaps ranked by expected-points gain. The heuristic range matters: a narrow +0.5 may be more dependable than a volatile +1.0.</div><div id="upgrades"></div></div></details></div>
   <div class="pane hide" id="pModel">
     <div class="help"><b>OTB hybrid xPts.</b> Historical output is retained as a prior, not multiplied again by old minutes or the player’s own club strength. Current-season xG, xA, expected minutes, clean-sheet probability, saves, goals-conceded deductions, cards, DefCon threshold probability and bonus are introduced gradually as evidence accumulates. Official FPL xPts and recent form are calibration layers, not extra points added on top. Bonus specifically also carries a 2026/27 BPS rule adjustment on the historical prior — CBI-reliant defenders are scaled down (clearances/blocks/interceptions now earn less per action), goalkeepers and attacking players scaled up slightly (tackled-suffered penalty removed; save scoring enhanced) — since last season’s bonus rate was earned under different rules. This correction fades out automatically as real 2026/27 bonus data accumulates.</div>
     <div class="field"><label>Fixture sensitivity <b id="lFix">0.30</b></label><input type="range" id="wFix" min="0" max="0.6" step="0.02" value="0.30"></div>
@@ -592,7 +595,7 @@ function wildcardRecommendation(p,byId){
   candidates.sort((a,b)=>b.score-a.score||a.gw-b.gw);const c=candidates[0];
   const remove=c.owned.slice(0,8).map(x=>`${x.name} (${x.team}, ${x.run} GWs harder)`).join(', ');
   const target=c.targets.slice(0,5).map(x=>`${x.team} (${x.run} GWs easier)`).join(', ');
-  return{type:'WC',gw:c.gw,score:c.score,confidence:c.owned.length>=6?'HIGH':'MEDIUM',reason:`Fixture-swing trigger: ${c.owned.length} owned players enter negative runs lasting at least 4 gameweeks. Consider moving out ${remove}. Target ${target}.`,triggered:true,remove:c.owned,target:c.targets};
+  return{type:'WC',gw:c.gw,score:c.score,confidence:c.owned.length>=6?'HIGH':'MEDIUM',qualified:true,reason:`Fixture-swing trigger: ${c.owned.length} owned players enter negative runs lasting at least 4 gameweeks. Consider moving out ${remove}. Target ${target}.`,triggered:true,remove:c.owned,target:c.targets};
 }
 function tripleCaptainRecommendation(p,byId){
   let best=null;
@@ -601,7 +604,13 @@ function tripleCaptainRecommendation(p,byId){
     const score=num(g.mean);if(!best||score>best.score)best={type:'TC',gw,score,playerId:pl.id,player:pl.n,team:pl.t,confidence:num(g.confidence)>=.7?'HIGH':num(g.confidence)>=.45?'MEDIUM':'LOW',opp:g.opp||'opponent TBC',venue:g.venue||'',reason:''};
   }
   if(!best)return null;
-  best.owned=(p.currentIds||[]).indexOf(best.id)>=0;best.reason=`${best.player}${best.owned?'':' (NOT in your squad \u2014 a transfer would be required)'} has the highest first-half single-player projection: ${best.score.toFixed(1)} xP against ${best.opp}${best.venue?` (${best.venue})`:''}.`;
+  /* A ranking winner is not automatically a chip recommendation. Triple Captain
+     is only directly actionable when the player is already owned; otherwise the
+     transfer/restructure cost has not been solved and the result stays a candidate. */
+  best.owned=(p.currentIds||[]).indexOf(best.playerId)>=0;
+  best.threshold=7.0;
+  best.qualified=!!best.owned&&best.score>=best.threshold&&best.confidence!=='LOW';
+  best.reason=`${best.player}${best.owned?'':' (NOT in your squad \u2014 a transfer would be required)'} has the highest first-half single-player projection: ${best.score.toFixed(1)} xP against ${best.opp}${best.venue?` (${best.venue})`:''}. ${best.qualified?'This clears OTB\'s owned-player Triple Captain gate.':'This is a candidate window, not an action recommendation; OTB requires an owned target, at least '+best.threshold.toFixed(1)+' xP and non-low confidence before promoting Triple Captain.'}`;
   return best;
 }
 function freeHitXI(gw,p,byId){
@@ -645,10 +654,11 @@ function freeHitRecommendation(p,byId){
   for(let gw=Math.max(2,p.currentGw);gw<=19;gw++){
     const mine=currentSquadScore(p.currentIds,gw,byId);
     const alt=freeHitXI(gw,p,byId);
-    const gain=Math.max(0,alt-mine);
-    out.push({type:'FH',gw,score:gain,squadXp:mine,altXp:alt,
-      confidence:gain>=12?'HIGH':gain>=7?'MEDIUM':'LOW',
-      reason:`A temporary Free Hit XI projects ${alt.toFixed(1)} xP in GW${gw} against your own squad's ${mine.toFixed(1)} xP \u2014 an estimated gain of ${gain.toFixed(1)} xP. Estimated from the best affordable XI with a nominal bench reserve \u2014 not a fully solved legal 15.`});
+    const rawGain=alt-mine,threshold=7.0;
+    out.push({type:'FH',gw,score:rawGain,rawGain,squadXp:mine,altXp:alt,threshold,
+      confidence:rawGain>=12?'HIGH':rawGain>=threshold?'MEDIUM':'LOW',
+      qualified:rawGain>=threshold,
+      reason:`A temporary Free Hit XI projects ${alt.toFixed(1)} xP in GW${gw} against your own squad's ${mine.toFixed(1)} xP \u2014 an estimated advantage of ${rawGain>=0?'+':''}${rawGain.toFixed(1)} xP. ${rawGain>=threshold?'This clears OTB\'s '+threshold.toFixed(1)+' xP Free Hit gate.':'This is only the best candidate window; it does NOT clear OTB\'s '+threshold.toFixed(1)+' xP activation gate, so the chip should be held.'} Estimated from the best affordable XI with a nominal bench reserve \u2014 not a fully solved legal 15.`});
   }
   out.sort((a,b)=>b.score-a.score||a.gw-b.gw);
   if(!out.length)return null;
@@ -660,7 +670,8 @@ function benchBoostRecommendation(p,byId,wc){
   const options=[wc.gw+1,wc.gw+2].filter(g=>g<=19&&g>=p.currentGw);
   if(!options.length)return null;
   const ranked=options.map(gw=>({gw,score:benchProjection(p.currentIds,gw,byId)})).sort((a,b)=>b.score-a.score||a.gw-b.gw),b=ranked[0];
-  return{type:'BB',gw:b.gw,score:b.score,confidence:b.score>=12?'HIGH':b.score>=8?'MEDIUM':'LOW',reason:`Scheduled ${b.gw-wc.gw} gameweek${b.gw-wc.gw===1?'':'s'} after the GW${wc.gw} Wildcard. The bench adds ${b.score.toFixed(1)} xP beyond expected autosubs \u2014 the stronger of the two post-Wildcard options. Scored on your CURRENT bench, so treat this as provisional until the Wildcard rebuild is decided.`};
+  const threshold=8.0;
+  return{type:'BB',gw:b.gw,score:b.score,threshold,qualified:b.score>=threshold,confidence:b.score>=12?'HIGH':b.score>=threshold?'MEDIUM':'LOW',reason:`Scheduled ${b.gw-wc.gw} gameweek${b.gw-wc.gw===1?'':'s'} after the GW${wc.gw} Wildcard. The bench adds ${b.score.toFixed(1)} xP beyond expected autosubs \u2014 the stronger of the two post-Wildcard options. ${b.score>=threshold?'This clears the provisional '+threshold.toFixed(1)+' xP Bench Boost gate.':'This does not clear the '+threshold.toFixed(1)+' xP Bench Boost gate.'} Scored on your CURRENT bench, so treat this as provisional until the Wildcard rebuild is decided.`};
 }
 function guidance(type){
   return({WC:'Reserve Wildcard 2 for restructuring once confirmed blank and double gameweeks expose major fixture swings.',FH:'Reserve Free Hit 2 for the most damaging confirmed blank gameweek, or a double gameweek where your squad has poor coverage.',TC:'Hold Triple Captain 2 for a confirmed double gameweek featuring a highly projected, secure starter with strong fixtures.',BB:'Plan Bench Boost 2 after Wildcard 2 when all 15 players can be prepared for confirmed double-gameweek fixtures.'})[type];
@@ -700,7 +711,7 @@ function resolveChipCollisions(recs){
         reason:alt.reason+` Moved off GW${r.gw}: only one chip may be played per gameweek, and ${winner.replace(/1$/,'')} scores higher there.`};
       held.set(alt.gw,k);
     } else {
-      recs[k]={type:r.type,gw:null,score:0,confidence:'HOLD',alternatives:[],
+      recs[k]={type:r.type,gw:null,score:0,confidence:'HOLD',qualified:false,alternatives:[],
         reason:`Held. Its best window (GW${r.gw}) is already taken by ${winner.replace(/1$/,'')}, and no alternative gameweek offers comparable value. Only one chip may be played per gameweek.`};
     }
   }
@@ -717,9 +728,9 @@ function run(p){
     const bb=benchBoostRecommendation(p,byId,wc);
     const recs={WC1:wc,FH1:fh,TC1:tc,BB1:bb};
     resolveChipCollisions(recs);
-    for(const t of ['WC','FH','TC','BB'])recs[t+'2']={type:t,gw:null,score:0,confidence:'GUIDANCE',reason:guidance(t),guidance:true};
+    for(const t of ['WC','FH','TC','BB'])recs[t+'2']={type:t,gw:null,score:0,confidence:'GUIDANCE',qualified:false,reason:guidance(t),guidance:true};
     postMessage({type:'progress',progress:1,detail:'Rule-based plan complete'});
-    postMessage({type:'result',result:{recommendations:recs,firstHalfRecommended:Object.values(recs).filter(r=>r?.gw).length,wildcardTriggered:!!wc,method:'Marcus rule-based chip framework'}});
+    postMessage({type:'result',result:{recommendations:recs,firstHalfRecommended:Object.values(recs).filter(r=>r?.gw&&r?.qualified===true).length,firstHalfCandidates:Object.values(recs).filter(r=>r?.gw).length,wildcardTriggered:!!wc,method:'Marcus rule-based chip framework · qualified-action gate'}});
   }catch(e){postMessage({type:'error',error:e?.message||String(e)})}
 }
 onmessage=e=>{if(e.data?.type==='run')run(e.data.payload)};
@@ -1281,6 +1292,24 @@ function initTransferControls(){const vals={tpStrategyStyle:S.transfer.style||'v
 function renderTransferPrices(){const host=document.getElementById('transferPrices');if(!host)return;const ps=squadPlayers();if(!ps.length){host.innerHTML='<div class="help">Build or load a squad first.</div>';return}let saleTotal=0;const rows=ps.slice().sort((a,b)=>['GK','DEF','MID','FWD'].indexOf(a.p)-['GK','DEF','MID','FWD'].indexOf(b.p)||a.c-b.c).map(p=>{const bought=transferBoughtPrice(p),sale=fplSellingPrice(p,bought);saleTotal+=sale;return`<div class="transfer-econ-row"><span class="player">${esc(p.n)} <span style="color:var(--muted)">${esc(p.t)} · ${p.p}</span></span><span class="mono">£${p.c.toFixed(1)}</span><input type="number" min="3.5" max="25" step="0.1" value="${bought.toFixed(1)}" data-buy-key="${esc(stableKey(p))}" aria-label="Price paid for ${esc(p.n)}"><span class="mono" data-sale-for="${esc(stableKey(p))}">£${sale.toFixed(1)}</span></div>`}).join('');const b=Math.max(0,num(document.getElementById('tpBank')?.value,bank()));host.innerHTML=`<div class="transfer-summary"><div class="transfer-kpi"><div class="k">Selling value</div><div class="v">£${saleTotal.toFixed(1)}</div></div><div class="transfer-kpi"><div class="k">Planner bank</div><div class="v">£${b.toFixed(1)}</div></div><div class="transfer-kpi"><div class="k">Total funds</div><div class="v">£${(saleTotal+b).toFixed(1)}</div></div></div><div class="transfer-econ"><div class="transfer-econ-head"><span>Player</span><span>Now</span><span>Bought</span><span>Sell</span></div>${rows}</div>`}
 function renderTransferPlanner(){const guard=document.getElementById('transferGuard'),btn=document.getElementById('btnPlanTransfers');if(!guard||!btn)return;const ready=productionDataReady(),full=S.squad.length===15&&legal(squadPlayers()),ok=ready&&full;guard.className='data-guard '+(ok?'ready':'');guard.innerHTML=!ready?'<b>Planner locked.</b> Refresh or import validated 2026/27 data.':!full?'<b>Complete a legal 15-player squad.</b> The planner needs 2 GK, 5 DEF, 5 MID and 3 FWD.':'<b>Transfer planning ready.</b> Purchase prices and bank can now be reviewed.';btn.disabled=!ok;renderTransferPrices()}
 function transferCandidatePool(gws){const current=squadPlayers(),out=[];for(const pos of ['GK','DEF','MID','FWD']){const all=POOL.filter(p=>p.p===pos&&TEAMS[p.t]&&availability(p)>.02).map(p=>({p,total:gws.reduce((a,g)=>a+project(p,g).x,0)})),byPts=[...all].sort((a,b)=>b.total-a.total).slice(0,38),byVal=[...all].sort((a,b)=>b.total/b.p.c-a.total/a.p.c).slice(0,26),byCheap=[...all].sort((a,b)=>a.p.c-b.p.c).slice(0,10),m=new Map;[...byPts,...byVal,...byCheap,...current.filter(p=>p.p===pos).map(p=>({p,total:0}))].forEach(o=>m.set(o.p.id,o.p));out.push(...m.values())}return[...new Map(out.map(p=>[p.id,p])).values()]}
+function verdictPlannerFingerprint(){
+  /* Conservative invalidation without clock drift: timestamps/versions change only
+     when inputs are actually refreshed or edited. This avoids making a valid route
+     stale merely because fifteen minutes passed. */
+  try{return [S.gw,[...S.squad].sort((a,b)=>a-b).join(','),bank().toFixed(2),
+    S.transfer?.free,S.transfer?.horizon,S.transfer?.maxMoves,S.transfer?.maxHit,S.transfer?.threshold,
+    S.transfer?.decay,S.transfer?.ftScale,S.transfer?.useFriction,S.transfer?.itbValue,S.transfer?.style,
+    S.w?.fix,S.w?.home,S.w?.cs,S.w?.dc,S.w?.official,S.w?.form,JSON.stringify(S.overrides||{}),
+    JSON.stringify(S.chips||{}),DATA.lastUpdated||0,NEWS.last?.generatedAt||0,
+    PRICE.last?.sampleEnd||PRICE.last?.generatedAt||0,MARKET.fetchedAt||0,
+    JSON.stringify((S.roleIntel?.events||[]).map(e=>[e.id,e.createdAt,e.type,e.affectedApiId,e.overlap,e.hierarchy,e.confidence])),
+    SCOUT.last?.generatedAt||0].join('|')}catch(e){return ''}
+}
+function transferPlanIsStale(last=S.transfer?.last){
+  if(!last?.plan?.length)return false;
+  if(!last.verdictFingerprint)return true;
+  return last.verdictFingerprint!==verdictPlannerFingerprint();
+}
 function transferPlannerPayload(){syncTransferSettings();const gws=transferGameweeks(),profile=transferStrategyProfile(),styleRisk=profile.risk||'mean',styleUtility=r=>styleRisk==='safe'?r.x-.25*r.sd:styleRisk==='upside'?r.x+.20*r.sd:r.x,players=transferCandidatePool(gws).map(p=>{const signal=builderStyleSignal(p,profile,gws);let decay=1;const gwMap=Object.fromEntries(gws.map(g=>{const r=project(p,g),md=minuteDetail(p),adj=signal*decay;decay*=(profile.horizonScale||1);return[g,{mean:r.x,utility:styleUtility(r)+adj,pAppear:md.pAppear,sd:r.sd,confidence:r.confidence}]}));return{id:p.id,n:p.n,p:p.p,t:p.t,c:p.c,gw:gwMap}}),current=squadPlayers(),purchase=Object.fromEntries(current.map(p=>[p.id,transferBoughtPrice(p)])),chips={wc:[S.chips.WC1,S.chips.WC2].filter(Boolean).map(Number),fh:[S.chips.FH1,S.chips.FH2].filter(Boolean).map(Number),bb:[S.chips.BB1,S.chips.BB2].filter(Boolean).map(Number),tc:[S.chips.TC1,S.chips.TC2].filter(Boolean).map(Number)},hybrid={decay:S.transfer.decay,beamWidth:8,actionsPerState:6,bufferGws:gws.length>=5?2:1,useFriction:S.transfer.useFriction,itbValue:S.transfer.itbValue,ftScale:S.transfer.ftScale,stressCandidateLimit:12},sensitivity=S.transfer.sensitivityRuns>1?{runs:S.transfer.sensitivityRuns,strength:S.transfer.sensitivityStrength,seed:20262027}:null;return{players,gws,squadIds:current.map(p=>p.id),purchase,bank:S.transfer.bank,free:S.transfer.free,maxMoves:S.transfer.maxMoves,maxHit:S.transfer.maxHit,threshold:S.transfer.threshold,lockedIds:current.filter(p=>S.locks.has(p.id)).map(p=>p.id),chips,hybrid,sensitivity}}
 function combinedWorkerSource(id){const common=document.getElementById('workerCommonSource')?.textContent||'',specific=document.getElementById(id)?.textContent||'';return common&&specific?common+'\n'+specific:''}
 function createTransferWorker(){const source=combinedWorkerSource('transferWorkerSource');if(!source||typeof Worker!=='function')return null;const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'})),w=new Worker(url);w.__url=url;return w}
@@ -1289,8 +1318,8 @@ function stopTransferPlanner(message=''){if(ACTIVE_TRANSFER_WORKER){try{ACTIVE_T
 function transferPlanText(result){return['OTB RC2.2.7 Hybrid Transfer Route',...result.plan.map(w=>{const move=w.moves.length?w.moves.map(m=>`${m.outName} → ${m.inName}`).join('; '):(w.chip==='FH'?'Free Hit — permanent squad held':'Roll transfer');return`GW${w.gw}${w.chip?' '+w.chip:''}: ${move} | hit ${w.hit?'-'+w.hit:'0'} | FT ${w.ftBefore}→${w.ftAfter} | bank £${w.bankAfter.toFixed(1)}m`})].join('\n')}
 function transferFirstActionText(plan){const w=plan?.[0];if(!w)return'No route';if(w.chip)return`${w.chip} in GW${w.gw}`;if(!w.moves?.length)return`Roll in GW${w.gw}`;return w.moves.map(m=>`${m.outName} → ${m.inName}`).join('; ')}
 function projectionStressHTML(stress){if(!stress||!stress.table?.length)return'';const survived=Math.round(num(stress.consensus)*num(stress.runs)),pct=Math.round(100*num(stress.consensus)),tone=pct>=70?'': 'warn',rows=stress.table.slice(0,4).map(x=>`<div class="lrow"><span>${esc(x.label)}</span><span class="mono">${num(x.count)}/${num(stress.runs)} · ${Math.round(100*num(x.share))}%</span></div>`).join('');return`<div class="verdict ${tone}"><b>Input stress ${survived}/${num(stress.runs)}:</b> the selected first action retained the highest score in ${pct}% of reproducible uncertainty draws across ${num(stress.candidateCount)} fixed primary-search route candidates. This isolates projection movement; it is not the probability that the transfer will succeed.</div><div class="stress-table"><div class="test-cat-lab">FIRST ACTIONS ACROSS FIXED-CANDIDATE INPUT RE-SCORES</div>${rows}</div>`}
-function renderTransferResult(result,t0){S.transfer.last=result;const by=new Map(POOL.map(p=>[p.id,p])),rob=result.robustness||{},objectiveShare=num(rob.agreement)/Math.max(1,num(rob.total,1)),inputShare=result.stress?num(result.stress.consensus):null,weakest=inputShare==null?objectiveShare:Math.min(objectiveShare,inputShare),combinedLabel=inputShare==null?`${String(rob.label||'UNRATED')} OBJECTIVE STABILITY`:weakest>=.70?'STRONG ROBUSTNESS':weakest>=.50?'MIXED ROBUSTNESS':'FRAGILE ROBUSTNESS',stability=inputShare==null?String(rob.label||'—').toLowerCase():weakest>=.70?'high':weakest>=.50?'medium':'low',opp=result.opportunity,oppMarkup=opp&&result.plan?.[0]&&!result.plan[0].moves?.length?`<div class="hybrid-opportunity"><b>Best transfer opportunity considered:</b> ${esc(opp.moves.map(m=>`${m.outName} → ${m.inName}`).join('; '))}. OTB searched ${num(opp.candidateCount)} legal candidate route${num(opp.candidateCount)===1?'':'s'}; this move gained ${num(opp.gross).toFixed(2)} raw route points but finished ${num(opp.net)>=0?'+':''}${num(opp.net).toFixed(2)} versus rolling after FT value, hits, friction and bank flexibility. Required threshold: +${num(opp.threshold).toFixed(2)}.<div class="op-meta"><span>Raw +${num(opp.gross).toFixed(2)}</span><span>Adjusted ${num(opp.net)>=0?'+':''}${num(opp.net).toFixed(2)}</span><span>Hit ${opp.hit?'-'+opp.hit:'0'}</span><span>FT after ${num(opp.ftAfter)}</span></div></div>`:'',altMarkup=(result.alternatives||[]).map((a,i)=>`<div class="hybrid-alt"><b>Alternative ${i+1}:</b> ${esc(transferFirstActionText(a.plan))} · ${num(a.gap).toFixed(2)} hybrid points behind.</div>`).join(''),rows=result.plan.map((w,i)=>{const moves=w.moves.length?w.moves.map(m=>`<div class="transfer-move"><span class="out">${esc(m.outName)} <small>£${num(m.outPrice).toFixed(1)}</small></span><span>→</span><span class="in">${esc(m.inName)} <small>£${num(m.inPrice).toFixed(1)}</small></span></div>`).join(''):`<div class="transfer-note">${esc(w.note)}</div>`,cap=by.get(w.captainId);return`<div class="transfer-week ${!w.moves.length?'hold ':''}${w.hit?'hit ':''}${w.chip?'chip':''}"><div class="transfer-week-head"><b>GW${w.gw}</b>${w.chip?`<span class="chip-tag">${esc(w.chip)}</span>`:''}<span style="margin-left:auto;font-size:10px;color:var(--muted)">${w.moves.length} move${w.moves.length===1?'':'s'}</span></div>${moves}<div class="transfer-meta"><span>FT ${w.ftBefore}→${w.ftAfter}</span><span>Hit ${w.hit?'-'+w.hit:'0'}</span><span>Bank £${num(w.bankAfter).toFixed(1)}</span><span>GW xPts ${num(w.score).toFixed(1)}</span><span>${esc(w.formation||'—')}</span>${cap?`<span>${esc(cap.n)} (C)</span>`:''}${w.moves.length?`<span>Hybrid +${num(w.netGain).toFixed(1)}</span>`:''}</div></div>`}).join('');const first=result.plan[0],canApply=first&&first.moves?.length&&first.chip!=='FH',summary=`<div class="hybrid-summary"><div class="hs-head"><b>${transferStrategyProfile().icon} ${esc(transferStrategyProfile().label)} Path</b><span class="hybrid-badge ${stability}">${esc(combinedLabel)}</span></div><div>${esc(transferFirstActionText(result.plan))}. <b>Objective stability ${num(rob.agreement,1)}/${num(rob.total,1)}</b>${result.stress?` · <b>input stress ${Math.round(num(result.stress.consensus)*num(result.stress.runs))}/${num(result.stress.runs)}</b>`:' · input stress not run'}. The combined badge is governed by the weaker valid signal; neither measure is predictive confidence. Active transfer depth: ${num(result.transferDepth)} of ${num(result.evaluationHorizon)} evaluated GWs; the remaining buffer protects against end-of-horizon moves.</div></div>`;document.getElementById('transferPlanOut').innerHTML=`${summary}${oppMarkup}${altMarkup}${projectionStressHTML(result.stress)}<div class="verdict"><b>Transfer route complete.</b> ${result.plan.length} gameweeks · final bank £${num(result.finalBank).toFixed(1)}m · final free transfers ${result.finalFt}. Calculated in ${Math.round(performance.now()-t0)}ms.</div>${rows}<button class="btn" id="btnApplyTransferStep" ${canApply?'':'disabled'}>Apply first permanent step</button><button class="btn ghost" id="btnCopyTransferPlan">Copy transfer route</button><div class="help">A roll verdict is a real recommendation, not a failed search. Objective stability tests alternative objective assumptions; input stress re-scores fixed candidate routes under forecast uncertainty. Neither is a guarantee of real-world results. The opportunity card shows the strongest rejected move whenever no transfer clears the route threshold.</div>`;document.getElementById('btnApplyTransferStep').onclick=applyFirstTransferStep;document.getElementById('btnCopyTransferPlan').onclick=()=>navigator.clipboard.writeText(transferPlanText(result)).then(()=>flash('Transfer route copied.'),()=>flash('Clipboard unavailable.'));saveUserState()}
-function runTransferPlanner(){if(!productionDataReady()||S.squad.length!==15||!legal(squadPlayers())){flash('A complete legal squad and validated data are required.');return}stopTransferPlanner('');const out=document.getElementById('transferPlanOut'),cancel=document.getElementById('btnCancelTransferPlan'),run=++TRANSFER_RUN,t0=performance.now();out.innerHTML='<div class="optimiser-progress"><b>Planning transfers…</b><div class="progress-track"><div class="progress-fill" id="tpProgress"></div></div><div class="progress-meta"><span id="tpDetail">Preparing candidate routes</span><span id="tpPct">0%</span></div></div>';cancel.classList.remove('hide-control');cancel.onclick=()=>{TRANSFER_RUN++;stopTransferPlanner('Transfer planning cancelled.')};let w;try{w=createTransferWorker()}catch(e){w=null}if(!w){stopTransferPlanner('This browser does not support the background transfer planner.');return}ACTIVE_TRANSFER_WORKER=w;const timeoutMs=S.transfer.sensitivityRuns>1?60000:45000,timer=setTimeout(()=>{if(run===TRANSFER_RUN){TRANSFER_RUN++;stopTransferPlanner(`Transfer planning exceeded ${Math.round(timeoutMs/1000)} seconds and was stopped.`)}},timeoutMs);w.onmessage=e=>{if(run!==TRANSFER_RUN)return;const d=e.data||{};if(d.type==='progress'){const pct=Math.min(96,Math.round(100*d.progress));const bar=document.getElementById('tpProgress'),lab=document.getElementById('tpPct'),det=document.getElementById('tpDetail');if(bar)bar.style.width=pct+'%';if(lab)lab.textContent=pct+'%';if(det)det.textContent=d.detail||'Planning'}else if(d.type==='result'){clearTimeout(timer);stopTransferPlanner('');renderTransferResult(d.result,t0)}else if(d.type==='error'){clearTimeout(timer);stopTransferPlanner(d.error||'Transfer planner failed.')}};w.onerror=e=>{clearTimeout(timer);stopTransferPlanner('Background transfer planner failed.')};w.postMessage({type:'run',payload:transferPlannerPayload()})}
+function renderTransferResult(result,t0,plannerFingerprint=''){result.verdictFingerprint=plannerFingerprint||verdictPlannerFingerprint();result.verdictGeneratedAt=Date.now();S.transfer.last=result;const by=new Map(POOL.map(p=>[p.id,p])),rob=result.robustness||{},objectiveShare=num(rob.agreement)/Math.max(1,num(rob.total,1)),inputShare=result.stress?num(result.stress.consensus):null,weakest=inputShare==null?objectiveShare:Math.min(objectiveShare,inputShare),combinedLabel=inputShare==null?`${String(rob.label||'UNRATED')} OBJECTIVE STABILITY`:weakest>=.70?'STRONG ROBUSTNESS':weakest>=.50?'MIXED ROBUSTNESS':'FRAGILE ROBUSTNESS',stability=inputShare==null?String(rob.label||'—').toLowerCase():weakest>=.70?'high':weakest>=.50?'medium':'low',opp=result.opportunity,oppMarkup=opp&&result.plan?.[0]&&!result.plan[0].moves?.length?`<div class="hybrid-opportunity"><b>Best transfer opportunity considered:</b> ${esc(opp.moves.map(m=>`${m.outName} → ${m.inName}`).join('; '))}. OTB searched ${num(opp.candidateCount)} legal candidate route${num(opp.candidateCount)===1?'':'s'}; this move gained ${num(opp.gross).toFixed(2)} raw route points but finished ${num(opp.net)>=0?'+':''}${num(opp.net).toFixed(2)} versus rolling after FT value, hits, friction and bank flexibility. Required threshold: +${num(opp.threshold).toFixed(2)}.<div class="op-meta"><span>Raw +${num(opp.gross).toFixed(2)}</span><span>Adjusted ${num(opp.net)>=0?'+':''}${num(opp.net).toFixed(2)}</span><span>Hit ${opp.hit?'-'+opp.hit:'0'}</span><span>FT after ${num(opp.ftAfter)}</span></div></div>`:'',altMarkup=(result.alternatives||[]).map((a,i)=>`<div class="hybrid-alt"><b>Alternative ${i+1}:</b> ${esc(transferFirstActionText(a.plan))} · ${num(a.gap).toFixed(2)} hybrid points behind.</div>`).join(''),rows=result.plan.map((w,i)=>{const moves=w.moves.length?w.moves.map(m=>`<div class="transfer-move"><span class="out">${esc(m.outName)} <small>£${num(m.outPrice).toFixed(1)}</small></span><span>→</span><span class="in">${esc(m.inName)} <small>£${num(m.inPrice).toFixed(1)}</small></span></div>`).join(''):`<div class="transfer-note">${esc(w.note)}</div>`,cap=by.get(w.captainId);return`<div class="transfer-week ${!w.moves.length?'hold ':''}${w.hit?'hit ':''}${w.chip?'chip':''}"><div class="transfer-week-head"><b>GW${w.gw}</b>${w.chip?`<span class="chip-tag">${esc(w.chip)}</span>`:''}<span style="margin-left:auto;font-size:10px;color:var(--muted)">${w.moves.length} move${w.moves.length===1?'':'s'}</span></div>${moves}<div class="transfer-meta"><span>FT ${w.ftBefore}→${w.ftAfter}</span><span>Hit ${w.hit?'-'+w.hit:'0'}</span><span>Bank £${num(w.bankAfter).toFixed(1)}</span><span>GW xPts ${num(w.score).toFixed(1)}</span><span>${esc(w.formation||'—')}</span>${cap?`<span>${esc(cap.n)} (C)</span>`:''}${w.moves.length?`<span>Hybrid +${num(w.netGain).toFixed(1)}</span>`:''}</div></div>`}).join('');const first=result.plan[0],canApply=first&&first.moves?.length&&first.chip!=='FH',summary=`<div class="hybrid-summary"><div class="hs-head"><b>${transferStrategyProfile().icon} ${esc(transferStrategyProfile().label)} Path</b><span class="hybrid-badge ${stability}">${esc(combinedLabel)}</span></div><div>${esc(transferFirstActionText(result.plan))}. <b>Objective stability ${num(rob.agreement,1)}/${num(rob.total,1)}</b>${result.stress?` · <b>input stress ${Math.round(num(result.stress.consensus)*num(result.stress.runs))}/${num(result.stress.runs)}</b>`:' · input stress not run'}. The combined badge is governed by the weaker valid signal; neither measure is predictive confidence. Active transfer depth: ${num(result.transferDepth)} of ${num(result.evaluationHorizon)} evaluated GWs; the remaining buffer protects against end-of-horizon moves.</div></div>`;document.getElementById('transferPlanOut').innerHTML=`${summary}${oppMarkup}${altMarkup}${projectionStressHTML(result.stress)}<div class="verdict"><b>Transfer route complete.</b> ${result.plan.length} gameweeks · final bank £${num(result.finalBank).toFixed(1)}m · final free transfers ${result.finalFt}. Calculated in ${Math.round(performance.now()-t0)}ms.</div>${rows}<button class="btn" id="btnApplyTransferStep" ${canApply?'':'disabled'}>Apply first permanent step</button><button class="btn ghost" id="btnCopyTransferPlan">Copy transfer route</button><div class="help">A roll verdict is a real recommendation, not a failed search. Objective stability tests alternative objective assumptions; input stress re-scores fixed candidate routes under forecast uncertainty. Neither is a guarantee of real-world results. The opportunity card shows the strongest rejected move whenever no transfer clears the route threshold.</div>`;document.getElementById('btnApplyTransferStep').onclick=applyFirstTransferStep;document.getElementById('btnCopyTransferPlan').onclick=()=>navigator.clipboard.writeText(transferPlanText(result)).then(()=>flash('Transfer route copied.'),()=>flash('Clipboard unavailable.'));saveUserState()}
+function runTransferPlanner(){if(!productionDataReady()||S.squad.length!==15||!legal(squadPlayers())){flash('A complete legal squad and validated data are required.');return}stopTransferPlanner('');syncTransferSettings();const plannerFingerprint=verdictPlannerFingerprint(),out=document.getElementById('transferPlanOut'),cancel=document.getElementById('btnCancelTransferPlan'),run=++TRANSFER_RUN,t0=performance.now();out.innerHTML='<div class="optimiser-progress"><b>Planning transfers…</b><div class="progress-track"><div class="progress-fill" id="tpProgress"></div></div><div class="progress-meta"><span id="tpDetail">Preparing candidate routes</span><span id="tpPct">0%</span></div></div>';cancel.classList.remove('hide-control');cancel.onclick=()=>{TRANSFER_RUN++;stopTransferPlanner('Transfer planning cancelled.')};let w;try{w=createTransferWorker()}catch(e){w=null}if(!w){stopTransferPlanner('This browser does not support the background transfer planner.');return}ACTIVE_TRANSFER_WORKER=w;const timeoutMs=S.transfer.sensitivityRuns>1?60000:45000,timer=setTimeout(()=>{if(run===TRANSFER_RUN){TRANSFER_RUN++;stopTransferPlanner(`Transfer planning exceeded ${Math.round(timeoutMs/1000)} seconds and was stopped.`)}},timeoutMs);w.onmessage=e=>{if(run!==TRANSFER_RUN)return;const d=e.data||{};if(d.type==='progress'){const pct=Math.min(96,Math.round(100*d.progress));const bar=document.getElementById('tpProgress'),lab=document.getElementById('tpPct'),det=document.getElementById('tpDetail');if(bar)bar.style.width=pct+'%';if(lab)lab.textContent=pct+'%';if(det)det.textContent=d.detail||'Planning'}else if(d.type==='result'){clearTimeout(timer);stopTransferPlanner('');renderTransferResult(d.result,t0,plannerFingerprint)}else if(d.type==='error'){clearTimeout(timer);stopTransferPlanner(d.error||'Transfer planner failed.')}};w.onerror=e=>{clearTimeout(timer);stopTransferPlanner('Background transfer planner failed.')};w.postMessage({type:'run',payload:transferPlannerPayload()})}
 
 const STRATEGY_PROFILES={
  conservative:{icon:'🛡',label:'Conservative',note:'Low risk, stable minutes and budget safety.',risk:'safe',horizonScale:1.00,weights:{ownership:.03,availability:.80,value:.10,price:.00,fixture:.00},transfer:{threshold:.50,decay:.94,ftScale:1.20,useFriction:.40,itbValue:.15},riskLabel:'Low'},
@@ -1495,7 +1524,7 @@ const VERDICT_FEED_SOURCES={
   news     :()=>[NEWS.last?.generatedAt||0,NEWS.error||'',NEWS.fromCache?1:0],
   prices   :()=>[PRICE.last?.sampleEnd||PRICE.last?.generatedAt||0,PRICE.error||'',PRICE.fromCache?1:0],
   market   :()=>[MARKET.loaded?1:0,Math.round((marketAgeMinutes()||0)/15),MARKET.error||''],
-  roles    :()=>[(S.roleIntel?.events||[]).length,ROLE_INTEL.suspend?1:0],
+  roles    :()=>[(S.roleIntel?.events||[]).length,ROLE_INTEL.suspend?1:0,SCOUT.last?.generatedAt||0,SCOUT.last?.evidenceAuthoritative===false?0:1,SCOUT.last?.evidenceCarriedForward?1:0],
   chips    :()=>[CHIP_ADVISOR_LAST?1:0,JSON.stringify(S.chips||{})],
   accuracy :()=>[Object.keys(ACCURACY.ledger?.actuals||{}).length,Object.keys(ACCURACY.ledger?.snapshots||{}).length]
 };
@@ -1527,9 +1556,13 @@ function verdictFeeds(){
     !MARKET_BLEND?'off':MARKET.error?'fail':!MARKET.loaded?'warn':marketStale()?'warn':'ok',
     !MARKET_BLEND?'blend disabled in build':MARKET.error?esc(MARKET.error):!MARKET.loaded?'no odds loaded — projections are model-only':marketStale()?'past '+(MARKET_MAX_AGE_MIN/60)+'h cutoff — EXCLUDED from projections':MARKET.fixtures+' fixtures blended at '+Math.round(MARKET_WEIGHT*100)+'%',false,'schedule');
 
-  const roleEvents=(S.roleIntel?.events||[]).length;
-  add('roles','Role intel',null,roleEvents?'ok':'warn',
-    roleEvents?roleEvents+' logged role events':'no role evidence logged',false,'roles');
+  const roleEvents=(S.roleIntel?.events||[]).length,scoutAge=verdictAgeMin(SCOUT.last?.generatedAt);
+  const scoutLimited=!SCOUT.last||SCOUT.last?.evidenceAuthoritative===false||SCOUT.last?.evidenceCarriedForward;
+  add('roles','Role intel',scoutAge,scoutLimited?'warn':'ok',
+    !SCOUT.last?'no Scout report loaded this session — role events may still be manual or saved':
+      SCOUT.last?.evidenceAuthoritative===false?'latest Scout scan did not achieve authoritative article coverage — retained evidence may be in use':
+      SCOUT.last?.evidenceCarriedForward?'latest Scout result carried earlier evidence forward':
+      `${roleEvents} logged role event${roleEvents===1?'':'s'} · selected-club official-source scan only; not a league-wide breaking-web guarantee`,false,'roles');
 
   add('chips','Chip plan',null,CHIP_ADVISOR_LAST?'ok':'warn',
     CHIP_ADVISOR_LAST?(Object.values(CHIP_ADVISOR_LAST.recommendations||{}).filter(r=>r?.gw).length+' chip windows identified'):'chip adviser has not run this session',false,'chips');
@@ -1660,8 +1693,8 @@ function verdictReadiness(ctx){
   const feeds=verdictFeeds(),bad=feeds.filter(f=>f.state==='fail'),warn=feeds.filter(f=>f.state==='warn'||f.state==='cached');
   add('Feed integrity',clamp(20-bad.length*10-warn.length*3,0,20),20,
     bad.length?`${bad.length} feed(s) failed`:warn.length?`${warn.length} feed(s) degraded or cached`:'all feeds current');
-  add('Transfer resolved',ctx.firstPlan||ctx.routeRolled?10:0,10,
-    ctx.firstPlan?'route recommends a move':ctx.routeRolled?'route recommends rolling':'no transfer route computed');
+  add('Transfer resolved',!ctx.planStale&&(ctx.firstPlan||ctx.routeRolled)?10:0,10,
+    ctx.planStale?'saved route is stale — re-run after the latest changes':ctx.firstPlan?'route recommends a move':ctx.routeRolled?'route recommends rolling':'no transfer route computed');
   const got=parts.reduce((a,p)=>a+p.got,0),max=parts.reduce((a,p)=>a+p.max,0);
   return{score:Math.round(100*got/max),parts,got,max};
 }
@@ -1721,10 +1754,20 @@ function verdictQueue(ctx){
   /* — captaincy — */
   if(ctx.bestCap&&ctx.capSet&&ctx.bestCap.p.id!==S.cap){
     const chosen=ctx.xi.find(o=>o.p.id===S.cap);
-    if(chosen){const gap=(ctx.bestCap.r.x-chosen.r.x)*2;
+    if(chosen){const gap=(ctx.bestCap.r.x-chosen.r.x);
       if(gap>0.15)add({id:'captain',severity:gap>=2?'act':'watch',cost:gap,title:`Captain: ${ctx.bestCap.p.n} over ${chosen.p.n}`,
-        evidence:`${ctx.bestCap.p.n} projects ${ctx.bestCap.r.x.toFixed(1)} xP against ${chosen.p.n}'s ${chosen.r.x.toFixed(1)}. Doubled, that is ${gap.toFixed(1)} points. On ceiling the order is ${ctx.ceilCap.p.n} (${(ctx.ceilCap.r.high*2).toFixed(1)} at the 80th percentile) — mean is the right target when protecting a rank, ceiling when chasing one.`,
+        evidence:`${ctx.bestCap.p.n} projects ${ctx.bestCap.r.x.toFixed(1)} xP against ${chosen.p.n}'s ${chosen.r.x.toFixed(1)}. Because both players already score their ordinary XI points, changing the armband adds one extra copy of the difference: ${gap.toFixed(1)} expected points, not twice the gap. On ceiling the order is ${ctx.ceilCap.p.n} (${(ctx.ceilCap.r.high*2).toFixed(1)} at the 80th percentile) — mean is the right target when protecting a rank, ceiling when chasing one.`,
         action:'Set captain',panel:'squad',capId:ctx.bestCap.p.id});
+    }
+  }
+
+  /* — vice-captain quality — the vice only matters when the captain fails to appear. */
+  if(ctx.bestVice&&ctx.viceSet&&ctx.bestVice.p.id!==S.vice){
+    const chosenVice=ctx.xi.find(o=>o.p.id===S.vice),cap=ctx.xi.find(o=>o.p.id===S.cap);
+    if(chosenVice&&cap){const capMiss=clamp(1-num(cap.md?.pAppear,1),0,1),gap=capMiss*Math.max(0,ctx.bestVice.r.x-chosenVice.r.x);
+      if(gap>=0.05)add({id:'vice',severity:gap>=0.5?'act':'watch',cost:gap,title:`Vice: ${ctx.bestVice.p.n} over ${chosenVice.p.n}`,
+        evidence:`Your captain has about ${Math.round(capMiss*100)}% no-show probability. In that branch, ${ctx.bestVice.p.n} carries ${ctx.bestVice.r.x.toFixed(1)} xP versus ${chosenVice.r.x.toFixed(1)}, worth ${gap.toFixed(2)} xP in unconditional expectation.`,
+        action:'Set vice',panel:'squad',capId:ctx.bestVice.p.id});
     }
   }
 
@@ -1755,7 +1798,12 @@ function verdictQueue(ctx){
     action:'Reorder bench',panel:'squad'});
 
   /* — transfer route and its opportunity cost — */
-  if(ctx.firstPlan){
+  if(ctx.planStale){
+    add({id:'transfer_stale',severity:regime==='LOCK'?'block':'act',blocking:regime==='LOCK',cost:0,
+      title:'Transfer plan is stale — re-run before using it',
+      evidence:'A squad, projection, feed or planner input changed after this route was calculated. Verdict will not combine current intelligence with an old transfer solution.',
+      action:'Re-run planner',panel:'transfers'});
+  }else if(ctx.firstPlan){
     const gain=num(ctx.firstPlan.netGain,num(ctx.firstPlan.gain,0));
     add({id:'transfer',severity:regime==='PLAN'?'watch':'act',cost:Math.max(0,gain),
       title:regime==='PLAN'?`Route suggests ${ctx.planLabel} — hold until team news`:`Transfer: ${ctx.planLabel}`,
@@ -1791,7 +1839,7 @@ function verdictQueue(ctx){
   q.sort((a,b)=>(rank[a.severity]-rank[b.severity])||(b.cost-a.cost));
   /* In LOCK, speculative items are suppressed: at T-2h you cannot act on a
      chip window three gameweeks out or a market disagreement. */
-  if(regime==='LOCK')return q.filter(i=>i.blocking||['captain','bench','xi','nocap','novice'].includes(i.id)||i.id.startsWith('risk_')||i.id.startsWith('news_'));
+  if(regime==='LOCK')return q.filter(i=>i.blocking||['captain','vice','bench','xi','nocap','novice'].includes(i.id)||i.id.startsWith('risk_')||i.id.startsWith('news_'));
   return q;
 }
 
@@ -1910,6 +1958,8 @@ function verdictContext(){
   ctx.ceilCap=xi.slice().sort((a,b)=>b.r.high-a.r.high)[0]||ctx.bestCap;
   ctx.capAligned=!!(ctx.bestCap&&S.cap===ctx.bestCap.p.id);
   ctx.capRanked=ranked;
+  const vicePool=xi.filter(o=>o.p.id!==S.cap);
+  ctx.bestVice=vicePool.slice().sort((a,b)=>b.r.x-a.r.x)[0]||null;
 
   /* availability risk — computed ONCE (was three identical filters) */
   ctx.risk=xi.map(o=>{const av=availability(o.p),f=flagInfo(o.p);
@@ -1939,7 +1989,9 @@ function verdictContext(){
   }catch(e){ctx.benchBest=ctx.benchCurrent=ctx.benchGap=0;ctx.benchOptimalNames='';ctx.benchFull=0}
 
   /* transfer route + opportunity cost */
-  const last=S.transfer.last,step=last?.plan?.[0]||null,moves=step?.moves||[];
+  const last=S.transfer.last,rawStep=last?.plan?.[0]||null;
+  ctx.planStale=transferPlanIsStale(last);
+  const step=ctx.planStale?null:rawStep,moves=step?.moves||[];
   ctx.step=step;ctx.moves=moves;
   ctx.firstPlan=moves.length?step:null;ctx.routeRolled=!!step&&!moves.length;
   if(ctx.firstPlan){
@@ -1951,7 +2003,7 @@ function verdictContext(){
   }else if(ctx.routeRolled){
     ctx.planLabel='ROLL';
     ctx.planEvidence=`No move cleared the ${num(S.transfer.threshold,0).toFixed(1)} xP threshold required to justify spending a free transfer, so the transfer is worth more banked than used.`;
-  }else{ctx.planLabel='';ctx.planEvidence=''}
+  }else{ctx.planLabel=ctx.planStale?'STALE PLAN':'';ctx.planEvidence=ctx.planStale?'The last transfer route was calculated under an older input state and has been excluded until the planner is run again.':''}
 
   /* price pressure on the planned move */
   ctx.priceRisk=null;
@@ -2001,12 +2053,16 @@ function verdictContext(){
   }catch(e){ctx.newsDivergence=[]}
 
   /* chip windows from the advisor's cached result — no recomputation */
-  ctx.chips=[];
+  ctx.chips=[];ctx.chipCandidates=[];
   try{
     const recs=CHIP_ADVISOR_LAST?.recommendations||{};
     for(const k of ['WC1','BB1','TC1','FH1']){const r=recs[k];
-      if(r&&r.gw&&r.gw>=S.gw&&r.gw<=S.gw+2)ctx.chips.push({key:k,label:chipAdvisorLabel(k),gw:r.gw,score:num(r.score,0),reason:r.reason||''})}
-  }catch(e){ctx.chips=[]}
+      if(!(r&&r.gw&&r.gw>=S.gw&&r.gw<=S.gw+2))continue;
+      const row={key:k,label:chipAdvisorLabel(k),gw:r.gw,score:num(r.score,0),reason:r.reason||'',qualified:r.qualified===true,confidence:r.confidence||''};
+      ctx.chipCandidates.push(row);
+      if(row.qualified)ctx.chips.push(row);
+    }
+  }catch(e){ctx.chips=[];ctx.chipCandidates=[]}
 
   /* schedule outlook — ranked on fixture quality, NOT on how many players you
      own from a club. Exposure is reported alongside, never mixed into the rank. */
@@ -2077,22 +2133,24 @@ function renderVerdict(){
     host.innerHTML=`<div class="verdict-hero vq-block"><div class="vh-top"><span class="vh-tag">NO VERDICT</span></div>
       <div class="vh-line">Squad is ${players.length}/15</div>
       <div class="vh-note">Verdict issues decisions, not estimates. Complete a legal 15-player squad and it will rank every action by what it is costing you.</div></div>`;
-    ['verdictActions','verdictHealth','verdictChanges','verdictReadiness','verdictIntel','verdicts','benchIntel','capList','upgrades'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=''});
+    ['verdictDecisionStrip','verdictActions','verdictHealth','verdictChanges','verdictReadiness','verdictIntel','verdicts','benchIntel','capList','upgrades'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=''});
     return;
   }
 
   const ctx=verdictContext(),q=ctx.queue,regime=ctx.regime,feeds=verdictFeeds();
   const blocking=q.filter(i=>i.blocking),top=q[0]||null;
 
-  const totalCost=q.filter(i=>!i.blocking).reduce((a,i)=>a+num(i.cost,0),0);
+  /* Standalone action costs overlap (a transfer can also remove availability,
+     role or price risk). Never sum them as if independent. */
+  const costed=q.filter(i=>!i.blocking&&num(i.cost,0)>0),largestCost=costed.reduce((m,i)=>Math.max(m,num(i.cost,0)),0);
   /* hero — the top item of the queue, not a separate priority ladder */
   const heroTag=blocking.length?'BLOCKED':regime.key==='LOCK'?'LOCK — FINALISE':regime.key==='REVIEW'?'GAMEWEEK UNDER WAY':
     top&&top.severity==='act'?'ACTION REQUIRED':'HOLD — SQUAD READY';
   const heroLine=blocking.length?blocking[0].title:top&&top.severity==='act'?top.title:
     ctx.routeRolled?`Roll the transfer · captain ${byId(S.cap)?.n||'—'}`:`Squad is ready · captain ${byId(S.cap)?.n||'—'}`;
   const heroNote=blocking.length?blocking[0].evidence:top&&top.severity==='act'?top.evidence:
-    (totalCost>=0.1
-      ?`The largest remaining item is worth ${num(q[0]?.cost,0).toFixed(1)} points; ${totalCost.toFixed(1)} in total is on the table. ${regime.note}`
+    (largestCost>=0.1
+      ?`The largest remaining standalone action is worth ${largestCost.toFixed(1)} expected points. Costs are not summed because transfer, availability, role and price signals can describe the same recoverable loss. ${regime.note}`
       :`Nothing detected is costing a measurable number of points. ${regime.note}`);
 
   const heroCls=blocking.length?'vq-block':top&&top.severity==='act'?'vq-act':'vq-ok';
@@ -2105,10 +2163,25 @@ function renderVerdict(){
     <div class="vh-meta">
       <span><b>${ctx.xiTotal.toFixed(1)}</b> xP projected XI <span class="vh-band">± ${ctx.xiSd.toFixed(1)}</span></span>
       <span><b>${ctx.readiness.score}</b>/100 readiness</span>
-      <span><b>${totalCost.toFixed(1)}</b> pts on the table</span>
+      <span><b>${largestCost.toFixed(1)}</b> largest action</span>
       <span class="vh-regime">${esc(regime.label)} mode</span>
     </div></div>`;
   host.dataset.rendered='1';
+
+  /* final gameweek decision strip — explicit configuration, not another priority score. */
+  const ds=document.getElementById('verdictDecisionStrip');
+  if(ds){
+    const cap=byId(S.cap),vice=byId(S.vice),benchOut=ctx.benchRows.filter(o=>o.p.p!=='GK'),
+      order=(S.benchOrder||[]).map(id=>benchOut.find(o=>o.p.id===id)).filter(Boolean),bench1=(order[0]||benchOut.slice().sort((a,b)=>b.r.x-a.r.x)[0])?.p,
+      transfer=ctx.planStale?'RE-RUN':ctx.firstPlan?ctx.planLabel:ctx.routeRolled?'ROLL':'NOT RUN',
+      chipNow=(ctx.chips||[]).find(c=>c.gw===S.gw),chip=chipNow?chipNow.label:'HOLD',
+      ready=blocking.length?'BLOCKED':ctx.readiness.score>=90?'READY':'REVIEW';
+    const cell=(k,v,tone='info')=>`<div class="vdecision-cell ${tone}"><div class="k">${esc(k)}</div><div class="v">${esc(v||'—')}</div></div>`;
+    ds.innerHTML=`<div class="vsec-h">Final GW decision<span>the configuration OTB is currently endorsing</span></div><div class="vdecision">
+      ${cell('Transfer',transfer,ctx.planStale?'warn':ctx.routeRolled?'good':'info')}${cell('Captain',cap?.n||'NOT SET',cap?'good':'warn')}${cell('Vice',vice?.n||'NOT SET',vice?'good':'warn')}
+      ${cell('Bench 1',bench1?.n||'—','info')}${cell('Chip',chip,chipNow?'warn':'good')}${cell('State',ready,blocking.length?'warn':ctx.readiness.score>=90?'good':'info')}
+      <div class="vdecision-note">Action costs below are standalone estimates and may overlap. A stale transfer route is excluded until it is recomputed against the current feeds and projections.</div></div>`;
+  }
 
   /* feed strip */
   const fh=document.getElementById('verdictHealth');
@@ -2487,7 +2560,7 @@ function chipAdvisorLabel(k){return({WC1:'Wildcard 1',FH1:'Free Hit 1',TC1:'Trip
 function renderChipAdvisorResult(result){
   const host=chipAdvisorHost(),recs=result?.recommendations||{};if(!host)return;CHIP_ADVISOR_LAST=result;
   const first=['WC1','BB1','TC1','FH1'],second=['WC2','BB2','TC2','FH2'];
-  const card=k=>{const r=recs[k]||{},guide=!!r.guidance,none=!r.gw&&!guide,badge=guide?'Awaiting BGW/DGW confirmation':none?'No trigger detected':r.confidence==='HIGH'?'Strong recommendation':r.confidence==='MEDIUM'?'Rule-based recommendation':'Provisional recommendation';return`<div class="chip-ai-card ${!r.gw?'hold':''}"><div class="ca-top"><span class="ca-name">${esc(chipAdvisorLabel(k))}</span><span class="ca-value">${guide?'GUIDANCE':none?'NO TRIGGER':esc(r.confidence||'—')+(Number.isFinite(+r.score)?' · '+num(r.score).toFixed(1)+' xP':'')}</span></div><div class="ca-gw">${guide?'TBC':none?'NOT SUGGESTED':`GW${r.gw}`}</div><div class="ca-reason">${esc(r.reason||(k==='WC1'?'Wildcard conditions are not currently met: fewer than 4 owned players have sustained negative swings or fewer than 3 target teams have sustained positive swings.':'No recommendation available.'))}</div><span class="chip-ai-badge ${guide?'await':none?'available':'strong'}">${esc(badge)}</span></div>`};
+  const card=k=>{const r=recs[k]||{},guide=!!r.guidance,none=!r.gw&&!guide,qualified=r.qualified===true,badge=guide?'Awaiting BGW/DGW confirmation':none?'No trigger detected':qualified?'Action threshold cleared':'Candidate only · HOLD';return`<div class="chip-ai-card ${(!r.gw||!qualified)?'hold':''}"><div class="ca-top"><span class="ca-name">${esc(chipAdvisorLabel(k))}</span><span class="ca-value">${guide?'GUIDANCE':none?'NO TRIGGER':(qualified?'QUALIFIED · ':'CANDIDATE · ')+esc(r.confidence||'—')+(Number.isFinite(+r.score)?' · '+signed(num(r.score),1)+' xP':'')}</span></div><div class="ca-gw">${guide?'TBC':none?'NOT SUGGESTED':`GW${r.gw}`}</div><div class="ca-reason">${esc(r.reason||(k==='WC1'?'Wildcard conditions are not currently met: fewer than 4 owned players have sustained negative swings or fewer than 3 target teams have sustained positive swings.':'No recommendation available.'))}</div><span class="chip-ai-badge ${guide?'await':qualified?'strong':'available'}">${esc(badge)}</span></div>`};
   const actionable=first.filter(k=>recs[k]?.gw).length;
   host.innerHTML=`<div class="chip-ai-head"><b>Rule-Based Automated Chip Plan</b><span>${actionable}/4 first-half chips recommended</span></div><div class="chip-plan-summary"><b>First-half method:</b> Wildcard from fixture-swing exposure; Bench Boost 1–2 GWs after Wildcard; Triple Captain from highest player xP; Free Hit from the squad's lowest projected week.</div><div class="chip-ai-grid">${first.map(card).join('')}</div><div class="chip-plan-summary"><b>Second half:</b> Specific recommendations are withheld until confirmed blank and double gameweeks are available.</div><div class="chip-ai-grid">${second.map(card).join('')}</div><button class="btn" id="btnApplyChipAdvice" ${actionable?'':'disabled'}>Apply first-half recommendations</button><button class="btn ghost" id="btnRefreshChipAdvice">Recalculate advice</button><div class="chip-ai-note">Manual selectors remain authoritative. Applying the plan updates only recommended first-half chips and leaves second-half manual choices untouched.</div>`;
   const apply=document.getElementById('btnApplyChipAdvice');if(apply)apply.onclick=()=>{for(const k of first)if(recs[k]?.gw)S.chips[k]=String(recs[k].gw);renderChips();saveUserState();renderChipAdvisorResult(result);flash('Rule-based first-half chip recommendations applied. Manual overrides remain available.')};
@@ -2648,6 +2721,9 @@ function runSelfTests(){const USER_TEST_HORIZON=S.horizon;if(S.horizon>2){S.hori
 try{const visible=document.getElementById('chipAdvisorOut'),resolved=typeof chipAdvisorHost==='function'?chipAdvisorHost():null;add('Chip Advisor is bound to its visible output host',!!visible&&resolved===visible,resolved?.id||'host unresolved')}catch(e){add('Chip Advisor is bound to its visible output host',false,e.message)}
 try{const src=document.getElementById('chipAdvisorWorkerSource')?.textContent||'';add('Chip advisor prevents two chips sharing a gameweek',src.includes('resolveChipCollisions')&&src.includes('only one chip may be played per gameweek'),'collision resolver registered')}catch(e){add('Chip advisor prevents two chips sharing a gameweek',false,e.message)}
 try{const src=document.getElementById('chipAdvisorWorkerSource')?.textContent||'';add('Free Hit is valued by alternative-squad gain, not squad weakness',src.includes('function freeHitXI')&&!/score:0,squadXp/.test(src),'temporary-XI gain replaces the hardcoded zero','model')}catch(e){add('Free Hit is valued by alternative-squad gain, not squad weakness',false,e.message,'model')}
+try{const src=document.getElementById('chipAdvisorWorkerSource')?.textContent||'';add('Free Hit preserves negative differential and requires activation threshold',src.includes('const rawGain=alt-mine,threshold=7.0')&&src.includes('qualified:rawGain>=threshold')&&src.includes('estimated advantage'),'candidate ranking cannot masquerade as a recommendation','model')}catch(e){add('Free Hit preserves negative differential and requires activation threshold',false,e.message,'model')}
+try{const src=document.getElementById('chipAdvisorWorkerSource')?.textContent||'';add('Triple Captain promotion requires the target to be owned',src.includes('best.playerId')&&src.includes('best.qualified=!!best.owned'),'unowned TC candidate is informational only','model')}catch(e){add('Triple Captain promotion requires the target to be owned',false,e.message,'model')}
+try{const src=String(verdictContext);add('Verdict Action Queue consumes qualified chip recommendations only',src.includes('if(row.qualified)ctx.chips.push(row)'),'candidate chip windows remain outside the action queue')}catch(e){add('Verdict Action Queue consumes qualified chip recommendations only',false,e.message)}
 try{const src=document.getElementById('chipAdvisorWorkerSource')?.textContent||'';add('Chip advisor describes itself as rule-based, not a strategic optimiser',src.includes('rule-based')&&!src.includes('strategicSynergy'),'engine self-description matches implementation')}catch(e){add('Chip advisor describes itself as rule-based, not a strategic optimiser',false,e.message)}
 try{const chipTab=document.querySelector('.tabs button[data-t="chips"]'),source=String(chipTab?.onclick||'');add('Opening the Chips panel schedules automated advice',!!chipTab&&typeof scheduleChipAdvisor==='function'&&source.includes('scheduleChipAdvisor'),'tab route and scheduler verified')}catch(e){add('Opening the Chips panel schedules automated advice',false,e.message)}
 try{add('Release identity is internally consistent',document.title.includes(APP_RELEASE)&&document.documentElement.dataset.release===APP_RELEASE_SLUG,document.documentElement.dataset.release||'missing release metadata')}catch(e){add('Release identity is internally consistent',false,e.message)}try{const probe=[{player_id:999,web_name:'Zulu',team_code:'ARS',status:'d',chance:50},{player_id:998,web_name:'Alpha',team_code:'ARS',status:'i',chance:0}],sorted=sortCurrentAlerts(probe);add('Current alerts use squad-and-urgency priority rather than alphabetic order',sorted[0]?.web_name==='Alpha'&&typeof alertOwned==='function','priority sorter registered')}catch(e){add('Current alerts use squad-and-urgency priority rather than alphabetic order',false,e.message)}try{const src=document.getElementById('transferWorkerSource')?.textContent||'';add('Transfer roll verdict exposes strongest rejected opportunity',src.includes('exploreTolerance')&&src.includes('opportunity')&&src.includes('candidateCount'),'diagnostic candidate retained')}catch(e){add('Transfer roll verdict exposes strongest rejected opportunity',false,e.message)}try{const ids=['fplTeamId','btnImportFplTeam','teamImportStatus'];add('FPL team-import controls are registered and named',ids.every(id=>{const el=document.getElementById(id);return!!el&&(id==='teamImportStatus'||(id==='btnImportFplTeam'&&!!el.textContent.trim())||((el.labels&&el.labels.length)||el.getAttribute('aria-label')))}),`${ids.length} import controls checked`)}catch(e){add('FPL team-import controls are registered and named',false,e.message)}try{const gws=scheduleGws(S.gw,6),rows=Object.keys(TEAMS).map(c=>scheduleTeamStats(c,gws));add('Schedule Intelligence produces finite club metrics',gws.length>0&&rows.length===Object.keys(TEAMS).length&&rows.every(r=>['avgAtk','avgCS','avgOverall','congestion','swing'].every(k=>Number.isFinite(r[k]))),`${rows.length} clubs · ${gws.length} GWs`,'model')}catch(e){add('Schedule Intelligence produces finite club metrics',false,e.message,'model')}try{const ids=['fxStart','fxN','fxView','fxTeamFocus','fxCompareA','fxCompareB','fxCompareSwap','fxExternalInput','fxImportExternal','fxSyncExternal','fxExampleExternal','fxClearExternal'];add('Schedule Intelligence controls are registered',ids.every(id=>!!document.getElementById(id)),`${ids.length} controls checked`)}catch(e){add('Schedule Intelligence controls are registered',false,e.message)}try{const gws=scheduleGws(S.gw,6),rows=Object.keys(TEAMS).map(c=>scheduleTeamStats(c,gws)),pairs=scheduleRotationPairs(rows,gws);add('Defensive rotation engine returns legal distinct club pairs',pairs.length>0&&pairs.every(x=>x.a.code!==x.b.code&&Number.isFinite(x.avg)),`${pairs.length} ranked pairs`,'model')}catch(e){add('Defensive rotation engine returns legal distinct club pairs',false,e.message,'model')}try{const probe=[{dOverall:5,dAtk:5,dCS:5},{dOverall:5,dAtk:5,dCS:5}],single=[probe[0]];add('Fixture difficulty is independent of fixture volume',Math.abs(scheduleGwDifficulty(probe,'overall')-scheduleGwDifficulty(single,'overall'))<1e-9,`${scheduleGwDifficulty(single).toFixed(1)} single · ${scheduleGwDifficulty(probe).toFixed(1)} double`,'model')}catch(e){add('Fixture difficulty is independent of fixture volume',false,e.message,'model')}try{const rows=parseExternalCalendar(JSON.stringify([{team:'ARS',kickoff:'2026-09-16T19:00:00Z',competition:'UEFA Champions League',opponent:'Inter',home:true}]));add('Supplementary calendar parses without affecting FPL fixture arrays',rows.length===1&&rows[0].team==='ARS'&&isPremierCompetition(rows[0].competition)===false,`${rows.length} record parsed`,'engineering')}catch(e){add('Supplementary calendar parses without affecting FPL fixture arrays',false,e.message,'engineering')}
