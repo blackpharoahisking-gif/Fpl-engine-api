@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%2337003C%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2720%27 fill=%27%2300FF87%27/%3E%3Cpath d=%27M32 17l9 7-3 11H26l-3-11zM26 35l-7 7 8 5 5-6 5 6 8-5-7-7%27 fill=%27%23160019%27/%3E%3C/svg%3E"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="OTB"><meta name="theme-color" content="#37003C">
-<title>FPL Engine — OTB 26/27 · RC4.8.0 Role Split</title>
+<title>FPL Engine — OTB 26/27 · RC5.0.0 Verdict Brain</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
@@ -99,6 +99,79 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
 /* RC3.1 — Verdict Command Center: lightweight cross-module synthesis rendered only on demand. */
 .verdict-hero{border:1px solid rgba(0,255,135,.38);border-left:4px solid var(--mint);border-radius:6px;padding:12px;background:linear-gradient(135deg,rgba(0,255,135,.10),rgba(4,245,255,.04));margin-bottom:10px}.verdict-hero.warn{border-left-color:#FFC107;background:rgba(255,193,7,.08)}.verdict-hero.bad{border-left-color:var(--mag);background:rgba(233,0,82,.09)}.verdict-hero .vh-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.verdict-hero .vh-label{font-size:8px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:800}.verdict-hero .vh-title{font-family:Archivo,sans-serif;font-variation-settings:'wdth' 118,'wght' 800;font-size:19px;line-height:1.05;margin-top:4px;text-transform:uppercase}.verdict-hero .vh-conf{font:800 19px 'JetBrains Mono',monospace;color:var(--mint);white-space:nowrap}.verdict-hero.warn .vh-conf{color:#FFD75E}.verdict-hero.bad .vh-conf{color:#FF91B5}.verdict-hero .vh-note{font-size:11px;line-height:1.45;color:var(--paper);margin-top:8px}.verdict-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}.verdict-card{border:1px solid var(--line);border-radius:5px;padding:9px;background:rgba(0,0,0,.20);min-width:0}.verdict-card .vc-head{display:flex;justify-content:space-between;gap:7px;align-items:center;margin-bottom:6px}.verdict-card .vc-title{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:800}.verdict-card .vc-state{font:800 9px 'JetBrains Mono',monospace;color:var(--cyan)}.verdict-card .vc-main{font-size:12px;font-weight:800;line-height:1.35}.verdict-card .vc-sub{font-size:9px;line-height:1.4;color:var(--muted);margin-top:4px}.verdict-card.good{border-left:3px solid var(--mint)}.verdict-card.warn{border-left:3px solid #FFC107}.verdict-card.bad{border-left:3px solid var(--mag)}.verdict-card.info{border-left:3px solid var(--cyan)}.verdict-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:11px}.verdict-actions .btn{margin:0}.verdict-reason{border:1px solid var(--line);border-left:3px solid #B072FF;border-radius:5px;padding:10px;background:rgba(176,114,255,.06);font-size:11px;line-height:1.5;margin-bottom:10px}.verdict-reason b{color:#D7B7FF}.verdict-mini-list{margin-top:5px}.verdict-mini-list div{padding:4px 0;border-bottom:1px solid rgba(234,234,242,.06);font-size:10px}.verdict-mini-list div:last-child{border-bottom:0}.verdict-detail-toggle{margin:2px 0 10px;border:1px solid var(--line);border-radius:4px;background:rgba(0,0,0,.14)}.verdict-detail-toggle summary{cursor:pointer;padding:9px 10px;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan)}.verdict-detail-toggle[open] summary{border-bottom:1px solid var(--line)}.verdict-detail-body{padding:10px}@media(max-width:560px){.verdict-grid,.verdict-actions{grid-template-columns:1fr}.verdict-hero .vh-title{font-size:17px}}
 
+
+/* ═══ RC5.0.0 — Verdict Brain ═══ */
+.verdict-hero.vq-ok{border-left-color:var(--mint)}
+.verdict-hero.vq-act{border-left-color:#FFC107;background:rgba(255,193,7,.08)}
+.verdict-hero.vq-block{border-left-color:var(--mag);background:rgba(233,0,82,.09)}
+.verdict-hero .vh-tag{font:800 9px 'JetBrains Mono',monospace;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+.verdict-hero .vh-clock{font:700 9px 'JetBrains Mono',monospace;color:var(--cyan);letter-spacing:.05em}
+.verdict-hero .vh-line{font-size:17px;font-weight:800;line-height:1.25;margin:7px 0 6px;color:var(--paper)}
+.verdict-hero .vh-note{font-size:11.5px;line-height:1.55;color:var(--muted)}
+.verdict-hero .vh-meta{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.08);font:600 10px 'JetBrains Mono',monospace;color:var(--muted)}
+.verdict-hero .vh-meta b{color:var(--paper);font-size:12px}
+.verdict-hero .vh-band{opacity:.6}
+.verdict-hero .vh-regime{margin-left:auto;color:var(--cyan)}
+.vsec-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:14px 0 7px;font:800 10px 'JetBrains Mono',monospace;letter-spacing:.11em;text-transform:uppercase;color:var(--paper)}
+.vsec-h span{font-weight:600;letter-spacing:.03em;text-transform:none;color:var(--muted);font-size:9.5px}
+.vq-item{border:1px solid rgba(255,255,255,.09);border-left:3px solid var(--muted);border-radius:5px;padding:9px 10px;margin-bottom:7px;background:rgba(255,255,255,.022)}
+.vq-item.vq-block{border-left-color:var(--mag);background:rgba(233,0,82,.07)}
+.vq-item.vq-act{border-left-color:#FFC107;background:rgba(255,193,7,.055)}
+.vq-item.vq-watch{border-left-color:var(--cyan);background:rgba(4,245,255,.035)}
+.vq-item.vq-ok{border-left-color:var(--mint);background:rgba(0,255,135,.05)}
+.vq-head{display:flex;align-items:baseline;gap:8px}
+.vq-rank{font:800 9px 'JetBrains Mono',monospace;color:var(--muted);min-width:12px}
+.vq-title{font-size:12.5px;font-weight:800;flex:1;line-height:1.3;color:var(--paper)}
+.vq-cost{font:800 10px 'JetBrains Mono',monospace;color:#FFC107;white-space:nowrap}
+.vq-item.vq-block .vq-cost{color:var(--mag)}
+.vq-ev{font-size:11px;line-height:1.55;color:var(--muted);margin-top:5px}
+.vq-act{margin-top:6px}
+.vq-act a{font:700 10px 'JetBrains Mono',monospace;color:var(--cyan);text-decoration:none}
+.vq-more{font-size:10px;color:var(--muted);font-style:italic;padding:5px 2px;line-height:1.5}
+.vfeed{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:5px}
+.vfeed-cell{border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:6px 7px;background:rgba(255,255,255,.02);cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.vfeed-cell .vf-dot{font-size:9px;line-height:1}
+.vfeed-cell .vf-label{font:700 9px 'JetBrains Mono',monospace;color:var(--paper);letter-spacing:.03em}
+.vfeed-cell .vf-age{font:600 9px 'JetBrains Mono',monospace;color:var(--muted)}
+.vfeed-cell.vf-ok .vf-dot{color:var(--mint)}
+.vfeed-cell.vf-warn{border-color:rgba(255,193,7,.4)}.vfeed-cell.vf-warn .vf-dot{color:#FFC107}
+.vfeed-cell.vf-cached{border-color:rgba(255,193,7,.4)}.vfeed-cell.vf-cached .vf-dot{color:#FFC107}
+.vfeed-cell.vf-fail{border-color:rgba(233,0,82,.5)}.vfeed-cell.vf-fail .vf-dot{color:var(--mag)}
+.vfeed-cell.vf-off{opacity:.5}
+.vfeed-warn{margin-top:7px;padding:7px 9px;border-left:3px solid #FFC107;background:rgba(255,193,7,.07);font-size:10.5px;line-height:1.5;color:var(--muted);border-radius:0 4px 4px 0}
+.vchg{display:flex;flex-direction:column;gap:4px}
+.vchg-row{display:flex;gap:7px;align-items:baseline;font-size:11px;line-height:1.45;color:var(--muted)}
+.vchg-row b{color:var(--paper)}
+.vchg-ar{font:800 11px 'JetBrains Mono',monospace;min-width:11px}
+.vchg-up .vchg-ar{color:var(--mint)}.vchg-down .vchg-ar{color:var(--mag)}.vchg-new .vchg-ar{color:var(--cyan)}
+.vchg-note{margin-top:6px;font-size:10px;font-style:italic;color:var(--muted);line-height:1.5}
+.vrd{display:flex;flex-direction:column;gap:4px}
+.vrd-row{display:grid;grid-template-columns:104px 1fr 42px;gap:7px;align-items:center;font-size:10.5px}
+.vrd-k{font:700 9.5px 'JetBrains Mono',monospace;color:var(--paper)}
+.vrd-bar{height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.vrd-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--mint))}
+.vrd-v{font:700 9.5px 'JetBrains Mono',monospace;color:var(--muted);text-align:right}
+.vrd-n{grid-column:1/-1;font-size:9.5px;color:var(--muted);line-height:1.4;margin:-2px 0 3px}
+.vrd-unc{margin-top:9px;padding:8px 10px;border-left:3px solid var(--cyan);background:rgba(4,245,255,.05);font-size:11px;line-height:1.55;color:var(--muted);border-radius:0 4px 4px 0}
+.vrd-unc b{color:var(--paper)}
+.vrd-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.vrd-actions .btn{margin:0;flex:1;min-width:150px;font-size:10px}
+.vcal{display:flex;flex-direction:column;gap:5px}
+.vcal-row{display:grid;grid-template-columns:104px 52px 1fr;gap:7px;align-items:baseline;font-size:10.5px;color:var(--muted)}
+.vcal-row b{font:800 12px 'JetBrains Mono',monospace;color:var(--mint)}
+.vcal-row b.bad{color:var(--mag)}
+.vcal-n{font-size:9.5px;line-height:1.4}
+.vcal-warn{margin-top:6px;padding:7px 9px;border-left:3px solid var(--mag);background:rgba(233,0,82,.07);font-size:10.5px;line-height:1.5;border-radius:0 4px 4px 0;color:var(--muted)}
+.vcal-wait{font-size:10.5px;line-height:1.55;color:var(--muted);font-style:italic}
+.vsens{margin-top:9px;padding:9px 10px;border:1px solid rgba(255,255,255,.1);border-left:3px solid var(--cyan);border-radius:0 4px 4px 0;font-size:11px;line-height:1.55;color:var(--muted);background:rgba(4,245,255,.04)}
+.vsens.ok{border-left-color:var(--mint)}.vsens.warn{border-left-color:#FFC107}
+.vsens b{color:var(--paper)}
+.vint{display:grid;gap:7px}
+.vint-card{border:1px solid rgba(255,255,255,.09);border-radius:5px;padding:9px 10px;background:rgba(255,255,255,.022);font-size:11px;line-height:1.55;color:var(--paper)}
+.vint-card b{font:800 9.5px 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:4px}
+.vint-card .bad{color:var(--mag);font-weight:800}
+.vint-n{font-size:9.5px;color:var(--muted);line-height:1.45;margin-top:5px;font-style:italic}
+@media(min-width:700px){.vint{grid-template-columns:1fr 1fr}}
 
 /* RC3.2 — Live Data Pipeline Audit: lightweight client-side tracing, explicit connection test and actionable startup states. */
 .pipeline-audit{border:1px solid rgba(4,245,255,.28);border-left:3px solid var(--cyan);border-radius:5px;background:rgba(4,245,255,.055);padding:10px;margin:9px 0 12px}.pipeline-audit-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.pipeline-audit-head b{font-size:11px;color:var(--cyan);letter-spacing:.06em;text-transform:uppercase}.pipeline-audit-head span{font:700 9px 'JetBrains Mono',monospace;color:var(--muted)}.pipeline-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px}.pipeline-actions .btn{margin:0}.pipeline-summary{font-size:10px;line-height:1.45;color:var(--muted);padding:7px 8px;border:1px solid var(--line);border-radius:3px;background:rgba(0,0,0,.18);margin-bottom:8px}.pipeline-summary.good{color:var(--mint);border-color:rgba(0,255,135,.35)}.pipeline-summary.warn{color:#FFD75E;border-color:rgba(255,193,7,.35)}.pipeline-summary.bad{color:#FF91B5;border-color:rgba(233,0,82,.38)}.pipeline-log{max-height:210px;overflow:auto;border:1px solid var(--line);border-radius:3px;background:#120015}.pipeline-row{display:grid;grid-template-columns:26px 62px minmax(0,1fr) auto;gap:6px;align-items:start;padding:6px 7px;border-bottom:1px solid rgba(234,234,242,.06);font:9px/1.35 'JetBrains Mono',monospace}.pipeline-row:last-child{border-bottom:0}.pipeline-step{color:var(--muted)}.pipeline-state{font-weight:800}.pipeline-state.ok{color:var(--mint)}.pipeline-state.run{color:var(--cyan)}.pipeline-state.warn{color:#FFD75E}.pipeline-state.fail{color:#FF91B5}.pipeline-detail{overflow-wrap:anywhere}.pipeline-ms{color:var(--muted);white-space:nowrap}.pipeline-empty{padding:10px;color:var(--muted);font-size:10px}.pipeline-endpoint{font:9px/1.4 'JetBrains Mono',monospace;color:var(--muted);overflow-wrap:anywhere;margin-top:7px}@media(max-width:560px){.pipeline-actions{grid-template-columns:1fr}.pipeline-row{grid-template-columns:22px 52px minmax(0,1fr)}.pipeline-ms{grid-column:3}}
@@ -308,7 +381,7 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
     <div class="price-section-title"><span>Transfer-plan exposure</span><span>move now vs wait</span></div><div id="pricePlanExposure"></div>
     <div class="price-section-title"><span>Market pressure</span><span id="priceResultCount">—</span></div><div id="priceIntel" aria-live="polite"></div>
   </div>
-  <div class="pane hide" id="pVerdict"><div id="verdictCommand"></div><div class="verdict-actions"><button class="btn" id="verdictOpenTransfers">Open Transfer Plan</button><button class="btn ghost" id="verdictOpenFixtures">Inspect Schedule</button></div><details class="verdict-detail-toggle"><summary>Detailed squad evidence</summary><div class="verdict-detail-body"><div id="verdicts"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Bench intelligence</h2><span class="note">expected autosubs</span></div><div id="benchIntel"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Captain ranking</h2><span class="note">mean · ceiling</span></div><div id="capList"></div><div class="sechead" style="margin:16px -10px 10px;position:static"><h2>Best available upgrades</h2><span class="note">gross gain</span></div><div class="help">Legal swaps ranked by expected-points gain. The heuristic range matters: a narrow +0.5 may be more dependable than a volatile +1.0.</div><div id="upgrades"></div></div></details></div>
+  <div class="pane hide" id="pVerdict"><div id="verdictCommand"></div><div id="verdictActions"></div><div id="verdictHealth"></div><div id="verdictChanges"></div><div id="verdictReadiness"></div><div id="verdictIntel"></div><div class="verdict-actions"><button class="btn" id="verdictOpenTransfers">Open Transfer Plan</button><button class="btn ghost" id="verdictOpenFixtures">Inspect Schedule</button></div><details class="verdict-detail-toggle"><summary>Detailed squad evidence</summary><div class="verdict-detail-body"><div id="verdicts"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Bench intelligence</h2><span class="note">expected autosubs</span></div><div id="benchIntel"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Captain ranking</h2><span class="note">mean · ceiling</span></div><div id="capList"></div><div class="sechead" style="margin:16px -10px 10px;position:static"><h2>Best available upgrades</h2><span class="note">gross gain</span></div><div class="help">Legal swaps ranked by expected-points gain. The heuristic range matters: a narrow +0.5 may be more dependable than a volatile +1.0.</div><div id="upgrades"></div></div></details></div>
   <div class="pane hide" id="pModel">
     <div class="help"><b>OTB hybrid xPts.</b> Historical output is retained as a prior, not multiplied again by old minutes or the player’s own club strength. Current-season xG, xA, expected minutes, clean-sheet probability, saves, goals-conceded deductions, cards, DefCon threshold probability and bonus are introduced gradually as evidence accumulates. Official FPL xPts and recent form are calibration layers, not extra points added on top. Bonus specifically also carries a 2026/27 BPS rule adjustment on the historical prior — CBI-reliant defenders are scaled down (clearances/blocks/interceptions now earn less per action), goalkeepers and attacking players scaled up slightly (tackled-suffered penalty removed; save scoring enhanced) — since last season’s bonus rate was earned under different rules. This correction fades out automatically as real 2026/27 bonus data accumulates.</div>
     <div class="field"><label>Fixture sensitivity <b id="lFix">0.30</b></label><input type="range" id="wFix" min="0" max="0.6" step="0.02" value="0.30"></div>
@@ -734,10 +807,10 @@ function renderMarketStatus(){
   if(!MARKET_BLEND){el.textContent='Market blend: disabled in build';return}
   if(MARKET.error){el.innerHTML='Market blend: <b>unavailable</b> — '+esc(MARKET.error);return}
   if(!MARKET.loaded){el.textContent='Market blend: no data yet';return}
-  const stale=MARKET.ageMinutes!=null&&MARKET.ageMinutes>MARKET_MAX_AGE_MIN;
-  const age=MARKET.ageMinutes==null?'unknown age'
-    :MARKET.ageMinutes<90?MARKET.ageMinutes+'m old'
-    :(MARKET.ageMinutes/60).toFixed(1)+'h old';
+  const eff=marketAgeMinutes(),stale=marketStale();
+  const age=eff==null?'unknown age'
+    :eff<90?Math.round(eff)+'m old'
+    :(eff/60).toFixed(1)+'h old';
   el.innerHTML='Market blend: <b>'+(stale?'STALE — ignored':'active')+'</b> · '
     +MARKET.fixtures+' fixtures · '+age+' · weight '+Math.round(MARKET_WEIGHT*100)+'%'
     +(MARKET.unmatched?' · <b>'+MARKET.unmatched+' club(s) unmatched</b>':'');
@@ -824,15 +897,21 @@ let MARKET_SUSPEND=false;
 const MARKET_WEIGHT=.5;
 const MARKET_MAX_AGE_MIN=720;      // ignore data older than 12h
 const MARKET_LEAGUE_XG=1.45;       // matches the engine's own base lambda
-const MARKET={loaded:false,ageMinutes:null,byKey:new Map(),fixtures:0,unmatched:0,error:''};
+const MARKET={loaded:false,ageMinutes:null,fetchedAt:0,byKey:new Map(),fixtures:0,unmatched:0,error:''};
+/* RC5.0.0 F1 — ageMinutes is the server-reported age at fetch time and never
+   advanced locally. Between hourly refreshes that understated true age by up to
+   60 minutes, right against a 720-minute cutoff. Effective age now adds the
+   wall-clock time elapsed since the response was received. */
+function marketAgeMinutes(){if(!MARKET.loaded||MARKET.ageMinutes==null)return null;const drift=MARKET.fetchedAt?Math.max(0,(Date.now()-MARKET.fetchedAt)/60000):0;return MARKET.ageMinutes+drift}
+function marketStale(){const a=marketAgeMinutes();return a!=null&&a>MARKET_MAX_AGE_MIN}
+function marketActive(){return !!(MARKET_BLEND&&!MARKET_SUSPEND&&MARKET.loaded&&!marketStale())}
 
 function marketKey(team,opp,home){return `${team}|${opp}|${home?'H':'A'}`}
 
 /** Look up this exact fixture. Keyed on both clubs and venue, so no date
     matching is needed and a wrong-week match is impossible. */
 function marketFor(team,fx){
-  if(!MARKET_BLEND||MARKET_SUSPEND||!MARKET.loaded)return null;
-  if(MARKET.ageMinutes!=null&&MARKET.ageMinutes>MARKET_MAX_AGE_MIN)return null;
+  if(!marketActive())return null;
   return MARKET.byKey.get(marketKey(team,fx.opp,fx.home))||null;
 }
 
@@ -844,6 +923,7 @@ async function loadMarketData(){
     MARKET.byKey.clear();
     MARKET.loaded=!!d.available;
     MARKET.ageMinutes=Number.isFinite(d.ageMinutes)?d.ageMinutes:null;
+    MARKET.fetchedAt=Date.now();
     MARKET.fixtures=(d.fixtures||[]).length;
     MARKET.unmatched=(d.unmatched||[]).length;
     MARKET.error='';
@@ -1084,7 +1164,7 @@ document.getElementById('btnJumpNews').onclick=()=>{document.querySelector('[dat
 function applyShotMode(){const on=!!S.shotMode;const shotBtn=document.getElementById('btnShotMode');shotBtn.classList.toggle('on',on);const shotLabel=shotBtn.querySelector('.qf-label');if(shotLabel)shotLabel.textContent=on?'Exit compact':'Compact XI';else shotBtn.textContent=on?'Exit compact':'Compact XI';document.getElementById('pitchBox').classList.toggle('compact',on);const bench=document.getElementById('benchBox');bench.classList.remove('compact-hidden');bench.classList.toggle('compact-bench',on);document.getElementById('spineWrap').classList.toggle('compact-mode',on);const note=document.getElementById('shotNote');note.textContent=on?'XI and all four substitutes are included in the screenshot view':'';}
 document.getElementById('btnShotMode').onclick=()=>{S.shotMode=!S.shotMode;applyShotMode();render();saveUserState();};
 const STATUS_LABEL={a:'available',d:'doubtful',i:'injured',s:'suspended',u:'unavailable',n:'on loan'};
-function relTime(iso){const ms=Date.now()-Date.parse(iso);if(!Number.isFinite(ms))return '—';if(ms<0)return 'now';const h=Math.floor(ms/3600000);if(h<1)return Math.max(1,Math.floor(ms/60000))+'m ago';if(h<48)return h+'h ago';return Math.floor(h/86400000)+'d ago'}
+function relTime(iso){const ms=Date.now()-Date.parse(iso);if(!Number.isFinite(ms))return '—';if(ms<0)return 'now';const h=Math.floor(ms/3600000);if(h<1)return Math.max(1,Math.floor(ms/60000))+'m ago';if(h<48)return h+'h ago';return Math.floor(h/24)+'d ago'}
 function eventMillis(e){return Date.parse(e?.detected_at||e?.detectedAt||e?.timestamp||'')||0}
 function dedupeNewsEvents(events){const seen=new Set;return (Array.isArray(events)?events:[]).filter(e=>{const k=e.fingerprint||[e.player_id,e.kind,e.old_value,e.new_value,e.detected_at].join('|');if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>eventMillis(b)-eventMillis(a))}
 function alertOwned(a){const pid=String(a?.player_id??a?.id??a?.element??''),name=normalName(a?.web_name||a?.name||''),team=String(a?.team_code||a?.team||'').toUpperCase();return squadPlayers().some(p=>String(p.apiId??p.id)===pid||(normalName(p.n)===name&&String(p.t).toUpperCase()===team))}
@@ -1155,7 +1235,11 @@ function legalOutfieldCounts(c){return c.DEF>=OUT_MIN.DEF&&c.DEF<=OUT_MAX.DEF&&c
 function canCompleteAutosub(c,slots,rows,i=0){if(legalOutfieldCounts(c))return true;if(slots<=0||i>=rows.length)return false;if(canCompleteAutosub(c,slots,rows,i+1))return true;const p=rows[i].p.p;if(c[p]>=OUT_MAX[p])return false;return canCompleteAutosub({...c,[p]:c[p]+1},slots-1,rows,i+1)}
 function selectAutosubs(base,slots,appeared){const c={...base},selected=[];for(let i=0;i<appeared.length&&slots>0;i++){const o=appeared[i],p=o.p.p;if(c[p]>=OUT_MAX[p])continue;const n={...c,[p]:c[p]+1};if(canCompleteAutosub(n,slots-1,appeared.slice(i+1))){c[p]++;selected.push(o);slots--}}return legalOutfieldCounts(c)?selected:[]}
 function conditionalBenchValue(o,key){const a=Math.max(.03,o.appear),v=(key==='mean'?o.mean:o.x)/a;return clamp(v,key==='mean'?0:-12,25)}
-function expectedAutosub(r){const startGK=r.xi.find(o=>o.p.p==='GK'),benchGK=r.benchRows.find(o=>o.p.p==='GK'),startOut=r.xi.filter(o=>o.p.p!=='GK'),benchOut=r.benchRows.filter(o=>o.p.p!=='GK'),startCounts={GK:0,DEF:0,MID:0,FWD:0};startOut.forEach(o=>startCounts[o.p.p]++);let gkMean=0,gkUtility=0,gkCall=0;if(startGK&&benchGK){const miss=1-startGK.appear;gkMean=miss*benchGK.mean;gkUtility=miss*benchGK.x;gkCall=miss*benchGK.appear}const states=missingStateDistribution(startOut);let best=null;for(const order of permuteBench3(benchOut)){let mean=0,utility=0;const calls=new Map(order.map(o=>[o.p.id,0]));for(const st of states){const slots=st.DEF+st.MID+st.FWD;if(!slots||st.prob<1e-10)continue;const base={DEF:startCounts.DEF-st.DEF,MID:startCounts.MID-st.MID,FWD:startCounts.FWD-st.FWD};for(let mask=0;mask<8;mask++){let pm=1;const appeared=[];for(let j=0;j<3;j++){const a=order[j].appear,on=!!(mask&(1<<j));pm*=on?a:1-a;if(on)appeared.push(order[j])}if(pm<1e-10)continue;const sel=selectAutosubs(base,slots,appeared);for(const o of sel){const w=st.prob*pm;mean+=w*conditionalBenchValue(o,'mean');utility+=w*conditionalBenchValue(o,'utility');calls.set(o.p.id,calls.get(o.p.id)+w)}}}const z={mean:mean+gkMean,utility:utility+gkUtility,outfieldMean:mean,outfieldUtility:utility,gkMean,gkUtility,gkCall,order,calls};if(!best||z.utility>best.utility)best=z}best.fullMean=r.benchRows.reduce((a,o)=>a+o.mean,0);best.fullUtility=r.benchRows.reduce((a,o)=>a+o.x,0);best.roles=best.order.map(o=>({id:o.p.id,call:best.calls.get(o.p.id)||0,mean:(best.calls.get(o.p.id)||0)*conditionalBenchValue(o,'mean')}));return best}
+function expectedAutosub(r,forceOrder){const startGK=r.xi.find(o=>o.p.p==='GK'),benchGK=r.benchRows.find(o=>o.p.p==='GK'),startOut=r.xi.filter(o=>o.p.p!=='GK'),benchOut=r.benchRows.filter(o=>o.p.p!=='GK'),startCounts={GK:0,DEF:0,MID:0,FWD:0};startOut.forEach(o=>startCounts[o.p.p]++);let gkMean=0,gkUtility=0,gkCall=0;if(startGK&&benchGK){const miss=1-startGK.appear;gkMean=miss*benchGK.mean;gkUtility=miss*benchGK.x;gkCall=miss*benchGK.appear}const states=missingStateDistribution(startOut);let best=null;/* RC5.0.0 — forceOrder evaluates ONE specific bench order instead of picking the
+   best of the six permutations. Verdict uses it to price the gap between the
+   order you actually have set and the optimal one, in expected points. */
+const orders=Array.isArray(forceOrder)&&forceOrder.length===3?[forceOrder]:permuteBench3(benchOut);
+for(const order of orders){let mean=0,utility=0;const calls=new Map(order.map(o=>[o.p.id,0]));for(const st of states){const slots=st.DEF+st.MID+st.FWD;if(!slots||st.prob<1e-10)continue;const base={DEF:startCounts.DEF-st.DEF,MID:startCounts.MID-st.MID,FWD:startCounts.FWD-st.FWD};for(let mask=0;mask<8;mask++){let pm=1;const appeared=[];for(let j=0;j<3;j++){const a=order[j].appear,on=!!(mask&(1<<j));pm*=on?a:1-a;if(on)appeared.push(order[j])}if(pm<1e-10)continue;const sel=selectAutosubs(base,slots,appeared);for(const o of sel){const w=st.prob*pm;mean+=w*conditionalBenchValue(o,'mean');utility+=w*conditionalBenchValue(o,'utility');calls.set(o.p.id,calls.get(o.p.id)+w)}}}const z={mean:mean+gkMean,utility:utility+gkUtility,outfieldMean:mean,outfieldUtility:utility,gkMean,gkUtility,gkCall,order,calls};if(!best||z.utility>best.utility)best=z}best.fullMean=r.benchRows.reduce((a,o)=>a+o.mean,0);best.fullUtility=r.benchRows.reduce((a,o)=>a+o.x,0);best.roles=best.order.map(o=>({id:o.p.id,call:best.calls.get(o.p.id)||0,mean:(best.calls.get(o.p.id)||0)*conditionalBenchValue(o,'mean')}));return best}
 function score(list,form,benchMode='autosub'){const weeks=[];let utilityTotal=0,meanTotal=0;for(const gw of optimisationGameweeks()){const r=bestXIForGw(list,form,gw);if(!r)return{v:-1e9,r:null};const b=expectedAutosub(r);r.bench=b;r.utilityScore=r.xiUtility+r.captain.x+b.utility;r.meanScore=r.xiMean+r.captain.mean+b.mean;if(benchMode==='rotation'){r.rotationUtility=.10*Math.max(0,b.fullUtility-b.utility);r.rotationMean=.10*Math.max(0,b.fullMean-b.mean);r.utilityScore+=r.rotationUtility;r.meanScore+=r.rotationMean}
     /* FODDER: the optimiser re-picks the XI every gameweek, so it happily buys
        a rotating second keeper and a playable bench. Theoretically optimal,
@@ -1371,26 +1455,809 @@ function orderedOutfieldBench(list){const orderMap=new Map((S.benchOrder||[]).ma
 function moveBenchPlayer(id,dir){const outfield=squadPlayers().filter(p=>!S.start.has(p.id)&&p.p!=='GK');const ordered=orderedOutfieldBench(outfield),keys=ordered.map(stableKey);const p=byId(id);if(!p)return;const idx=keys.indexOf(stableKey(p)),swapIdx=idx+dir;if(idx<0||swapIdx<0||swapIdx>=keys.length)return;[keys[idx],keys[swapIdx]]=[keys[swapIdx],keys[idx]];S.benchOrder=keys;render();saveUserState()}
 function renderPitch(){const xi=squadPlayers().filter(p=>S.start.has(p.id)),benchAll=squadPlayers().filter(p=>!S.start.has(p.id));for(const pos of ['GK','DEF','MID','FWD']){const row=xi.filter(p=>p.p===pos).sort((a,b)=>project(b,S.gw).x-project(a,S.gw).x);let html=row.map(p=>cardHTML(p)).join(''),need={GK:1,DEF:3,MID:2,FWD:1}[pos];for(let i=row.length;i<need;i++)html+=`<div class="slot">${pos}</div>`;document.getElementById('r'+pos).innerHTML=html}const benchGK=benchAll.filter(p=>p.p==='GK'),benchOutfield=orderedOutfieldBench(benchAll.filter(p=>p.p!=='GK'));const gkHtml=benchGK.map(p=>cardHTML(p)).join('');const outHtml=benchOutfield.map((p,i)=>cardHTML(p,{idx:i,total:benchOutfield.length})).join('');const html=gkHtml+outHtml;document.getElementById('rBench').innerHTML=html||'<div class="slot">EMPTY</div>'}
 function renderSpine(){const xi=squadPlayers().filter(p=>S.start.has(p.id)),tot={atk:0,cs:0,dc:0,bon:0,app:0,oth:0};const TOT=S.display==='total',sp=horizonSpan();let sum=0;xi.forEach(p=>{const m=p.id===S.cap?2:1;if(TOT){let n=0;for(let g=S.gw;g<=38&&n<S.horizon;g++){if(FIX[g]){const r=project(p,g);for(const k in tot)tot[k]+=r.parts[k]*m;sum+=r.x*m;n++}}}else{const r=project(p,S.gw);for(const k in tot)tot[k]+=r.parts[k]*m;sum+=r.x*m}});const xpts=document.getElementById('hXpts'),label=document.getElementById('hXptsLabel'),range=sp.n>1?`GW${sp.first}–${sp.last}`:`GW${sp.first}`;document.getElementById('spineTotal').textContent=sum.toFixed(1);xpts.textContent=sum.toFixed(1);if(label){label.textContent=TOT?`XI xPts ${range}`:`XI xPts GW${S.gw}`;label.title=TOT?`Starting XI expected-points total across ${range}, including captaincy`:`Starting XI expected points for GW${S.gw}, including captaincy`;xpts.title=label.title;xpts.setAttribute('aria-label',`${label.title}: ${sum.toFixed(1)}`)}document.getElementById('spineGw').textContent=TOT&&sp.n>1?`${sp.first}–${sp.last}`:S.gw;const cols={atk:'#00FF87',cs:'#04F5FF',dc:'#B072FF',bon:'#EAFF04',app:'#6E5A75',oth:'#FF8C42'};document.getElementById('spine').innerHTML=sum>0?Object.keys(cols).map(k=>`<div style="width:${Math.max(0,tot[k]/sum*100).toFixed(1)}%;background:${cols[k]}" title="${k}: ${tot[k].toFixed(1)}"></div>`).join(''):'<div style="width:100%;background:#2a0030"></div>'}
-function verdictHorizonProjection(player,gws){let total=0;for(const g of gws)total+=project(player,g).x;return total}
-function verdictCard(title,state,main,sub,tone='info'){return`<div class="verdict-card ${tone}"><div class="vc-head"><span class="vc-title">${esc(title)}</span><span class="vc-state">${esc(state)}</span></div><div class="vc-main">${main}</div>${sub?`<div class="vc-sub">${sub}</div>`:''}</div>`}
-function renderVerdict(){
- const verdictKey=[S.gw,S.squad.join(','),[...S.start].sort((a,b)=>a-b).join(','),S.cap||0,S.vice||0,bank().toFixed(1),DATA.mode,DATA.lastUpdated||0,JSON.stringify(S.transfer.last?.plan?.[0]||null)].join('|');
- if(VERDICT_RENDER_KEY===verdictKey&&document.getElementById('verdictCommand')?.childElementCount)return;
- VERDICT_RENDER_KEY=verdictKey;
- const out=[],n=S.squad.length,players=squadPlayers(),need=Object.keys(LIMITS).map(k=>`${LIMITS[k]-countPos(k)} ${k}`).filter(x=>!x.startsWith('0')),xi=players.filter(p=>S.start.has(p.id)),legalXi=xi.length===11&&xiLegality(xi.map(p=>p.id))===null,budgetOk=bank()>=0,full=n===15&&legal(players),gws=Array.from({length:5},(_,i)=>S.gw+i).filter(g=>g<=38);
- if(n<15)out.push(`<div class="verdict warn">Squad incomplete — <b>${15-n} to go</b>. Still needed: ${need.join(', ')}.</div>`);if(!budgetOk)out.push(`<div class="verdict warn">You are <b>£${Math.abs(bank()).toFixed(1)}m over budget</b>.</div>`);
- let xiMean=0,xiSd=0,low=0,high=0,flagged=[];if(legalXi){let variance=0;for(const p of xi){const r=project(p,S.gw),m=p.id===S.cap?2:1;xiMean+=m*r.x;variance+=m*m*r.sd*r.sd}xiSd=Math.sqrt(variance);low=xiMean-1.2816*xiSd;high=xiMean+1.2816*xiSd;out.push(`<div class="verdict">XI uncertainty range with captain: <b>${low.toFixed(1)}–${high.toFixed(1)}</b> (80% model range). Use the floor when protecting rank and the ceiling when chasing.</div>`);flagged=xi.filter(p=>availability(p)<.85||minuteDetail(p).exp<60);if(flagged.length)out.push(`<div class="verdict warn"><b>Minutes/availability risk:</b> ${flagged.map(p=>esc(p.n)).join(', ')}.</div>`)}
- document.getElementById('verdicts').innerHTML=out.join('')||'<div class="verdict">Squad is legal and funded.</div>';
- const benchHost=document.getElementById('benchIntel');let benchMean=0,benchFull=0,benchOrder=[];if(benchHost){if(legalXi){const rows=players.map(p=>{const r=project(p,S.gw);return{p,r,x:gwUtility(r),mean:r.x,appear:minuteDetail(p).pAppear}}),r={xi:rows.filter(o=>S.start.has(o.p.id)),benchRows:rows.filter(o=>!S.start.has(o.p.id))},bi=expectedAutosub(r);benchMean=bi.mean;benchFull=bi.fullMean;benchOrder=bi.order;const order=bi.order.map((o,i)=>`<span class="bench-role">${i+1}. ${esc(o.p.n)} · ${(100*(bi.calls.get(o.p.id)||0)).toFixed(0)}% call</span>`).join('');benchHost.innerHTML=`<div class="bench-intel">Expected autosub contribution in GW${S.gw}: <b>${bi.mean.toFixed(2)} points</b> · goalkeeper ${bi.gkMean.toFixed(2)} · outfield ${bi.outfieldMean.toFixed(2)}.<br>Suggested outfield priority: ${order||'—'}<br>Full Bench Boost projection: <b>${bi.fullMean.toFixed(1)} points</b>.</div>`}else benchHost.innerHTML='<div class="help">Complete a legal XI to calculate expected autosubs and bench priority.</div>'}
- const caps=xi.map(p=>({p,r:project(p,S.gw)})).sort((a,b)=>b.r.x-a.r.x).slice(0,7);document.getElementById('capList').innerHTML=caps.map((o,i)=>`<div class="lrow"><span><span class="rank">${i+1}</span>${esc(o.p.n)} <span style="color:var(--muted);font-size:10px">${esc(o.p.t)}</span></span><span class="r mono" style="color:${i===0?'var(--mint)':'var(--paper)'}">${(o.r.x*2).toFixed(1)} · ${(o.r.high*2).toFixed(1)}</span></div>`).join('')||'<div class="help">Pick an XI first.</div>';
- const cands=[];if(players.length){for(const own of players)for(const cand of POOL){if(S.squad.includes(cand.id)||cand.p!==own.p||!TEAMS[cand.t]||cand.c>own.c+bank()+.001)continue;const others=players.filter(p=>p.id!==own.id);if(others.filter(p=>p.t===cand.t).length>=3)continue;const g=project(cand,S.gw).x-project(own,S.gw).x;if(g>.05)cands.push({own,cand,g,sd:Math.sqrt(project(cand,S.gw).sd**2+project(own,S.gw).sd**2)})}cands.sort((a,b)=>b.g-a.g);document.getElementById('upgrades').innerHTML=cands.slice(0,8).map(o=>`<div class="lrow"><span style="font-size:11px">${esc(o.own.n)} → <b>${esc(o.cand.n)}</b></span><span class="r mono">+${o.g.toFixed(1)} ±${o.sd.toFixed(1)}</span></div>`).join('')||'<div class="help">No positive legal swap inside budget.</div>'}
- const bestCap=caps[0],chosenCap=byId(S.cap),firstPlan=S.transfer.last?.plan?.[0],firstMove=firstPlan?.moves?.[0],transferText=firstPlan?(firstPlan.moves?.length?(firstPlan.moves.map(m=>`${m.outName} → ${m.inName}`).join('; ')):'Roll the transfer'):'No transfer plan run yet',transferSub=firstPlan?`GW${firstPlan.gw} · ${firstPlan.moves?.length?`hybrid gain ${num(firstPlan.netGain).toFixed(1)}`:'preserve flexibility'} · bank £${num(firstPlan.bankAfter).toFixed(1)}m`:'Open Transfers and run the planner for a route-based recommendation.';
- const squadTeams=[...new Set(players.map(p=>p.t))],teamScores=squadTeams.map(t=>({t,score:players.filter(p=>p.t===t).reduce((a,p)=>a+verdictHorizonProjection(p,gws),0)})).sort((a,b)=>b.score-a.score),bestTeam=teamScores[0],worstTeam=teamScores.at(-1),fiveWeek=players.reduce((a,p)=>a+verdictHorizonProjection(p,gws),0),riskCount=players.filter(p=>availability(p)<.85||minuteDetail(p).exp<60).length;
- let confidence=full&&budgetOk?82:35;confidence-=Math.min(24,riskCount*6);if(S.cap&&bestCap?.p.id===S.cap)confidence+=6;if(firstPlan)confidence+=5;if(DATA.mode==='live')confidence+=4;confidence=clamp(Math.round(confidence),20,96);
- let heroTone='good',heroTitle='HOLD AND FINALISE',heroNote='Your squad is structurally ready. Confirm late team news, captaincy and bench order before the deadline.';if(!full||!budgetOk){heroTone='bad';heroTitle='FIX SQUAD STRUCTURE';heroNote=n<15?`Complete the remaining ${15-n} squad places before relying on advanced recommendations.`:'Correct the formation or budget before making strategic decisions.'}else if(riskCount>=2){heroTone='warn';heroTitle='REVIEW AVAILABILITY';heroNote=`${riskCount} player${riskCount===1?'':'s'} carry meaningful minutes or availability risk. Resolve those flags before committing transfers.`}else if(chosenCap&&bestCap&&chosenCap.id!==bestCap.p.id&&(bestCap.r.x-project(chosenCap,S.gw).x)>1.0){const capGap=bestCap.r.x-project(chosenCap,S.gw).x;heroTone=capGap>2.0?'bad':'warn';heroTitle=capGap>2.0?'CHANGE YOUR CAPTAIN':'REVIEW CAPTAINCY';heroNote=`${esc(chosenCap.n)} captains but ${esc(bestCap.p.n)} projects ${capGap.toFixed(1)} more this gameweek `+`— about ${(capGap*2).toFixed(1)} captain points. `+(S.capManual?'You chose this deliberately; the cost is shown so it stays a choice, not an oversight.':'Tap C on the higher option, or keep yours if you have a reason the model cannot see.');}else if(firstPlan?.moves?.length){heroTone='good';heroTitle=firstPlan.moves.length===1?'MAKE 1 TRANSFER':`MAKE ${firstPlan.moves.length} TRANSFERS`;heroNote=`The latest route recommends ${transferText}. Re-run it after major news or price movement.`}
- const command=document.getElementById('verdictCommand');if(command){const captainMain=bestCap?`${esc(bestCap.p.n)} · ${(bestCap.r.x*2).toFixed(1)} captain xPts`:'Set a legal XI',captainSub=bestCap?(chosenCap?`Current captain: ${esc(chosenCap.n)}${chosenCap.id===bestCap.p.id?' · model aligned':' · model prefers '+esc(bestCap.p.n)}`:'No captain selected'):'Complete the XI to rank captaincy.';const schedMain=bestTeam?`${esc(bestTeam.t)} leads your 5-GW squad outlook`:'Complete squad for schedule summary',schedSub=bestTeam?`${gws.length}-GW squad projection ${fiveWeek.toFixed(1)} · weakest club exposure ${esc(worstTeam?.t||'—')}`:'OTB summarises only clubs represented in your squad.';const riskNames=players.filter(p=>availability(p)<.85||minuteDetail(p).exp<60).slice(0,3).map(p=>`<a href="#" data-riskfix="${p.id}" style="color:var(--cyan);text-decoration:underline">${esc(p.n)}</a>`);const reasonParts=[];if(bestCap)reasonParts.push(`${bestCap.p.n} has the strongest captain projection`);if(firstPlan)reasonParts.push(firstPlan.moves?.length?`the transfer route favours ${transferText}`:'the transfer model favours rolling');if(bestTeam)reasonParts.push(`${bestTeam.t} supplies the strongest medium-term schedule contribution`);if(riskCount)reasonParts.push(`${riskCount} availability or minutes flag${riskCount===1?' remains':'s remain'}`);command.innerHTML=`<div class="verdict-hero ${heroTone}"><div class="vh-top"><div><div class="vh-label">OTB weekly verdict · GW${S.gw}</div><div class="vh-title">${esc(heroTitle)}</div></div><div><div class="vh-label">Readiness score</div><div class="vh-conf">${confidence}<span style="font-size:.5em;opacity:.6">/100</span></div></div></div><div class="vh-note">${esc(heroNote)}</div><div class="rc4-health-note">Confidence blends squad legality, player availability, captain alignment, transfer evidence and live-data readiness.</div></div><div class="verdict-grid">${verdictCard('Squad health',full&&budgetOk?(riskCount?'WATCH':'READY'):'BLOCKED',full&&budgetOk?`${15-riskCount} low-risk players · ${riskCount} flagged`:`${n}/15 selected · bank £${bank().toFixed(1)}m`,riskNames.length?`Priority checks: ${riskNames.join(', ')} <span style="color:var(--muted)">— tap to set expected minutes</span>`:'Formation, funding and availability checks combined.',full&&budgetOk?(riskCount?'warn':'good'):'bad')}${verdictCard('Transfer decision',firstPlan?(firstPlan.moves?.length?'ACT':'ROLL'):'NOT RUN',esc(transferText),esc(transferSub),firstPlan?(firstPlan.moves?.length?'good':'info'):'warn')}${verdictCard('Schedule outlook',bestTeam?'5-GW VIEW':'PENDING',schedMain,schedSub,bestTeam?'info':'warn')}${verdictCard('Captaincy',bestCap?(chosenCap?.id===bestCap.p.id?'ALIGNED':'REVIEW'):'PENDING',captainMain,captainSub,bestCap?(chosenCap?.id===bestCap.p.id?'good':'warn'):'warn')}${verdictCard('Bench',legalXi?(benchFull>=14?'STRONG':'NORMAL'):'PENDING',legalXi?`${benchFull.toFixed(1)} full bench xPts · ${benchMean.toFixed(1)} autosub value`:'Complete a legal XI',benchOrder.length?`First outfield priority: ${esc(benchOrder[0].p.n)}`:'Bench order will be checked automatically.',legalXi?'info':'warn')}${verdictCard('Primary risk',riskCount?'ACTION NEEDED':'CONTROLLED',riskCount?`${riskCount} minutes/availability flag${riskCount===1?'':'s'}`:'No major player-risk flags detected',riskNames.length?riskNames.join(', '):'Continue monitoring news before deadline.',riskCount?'warn':'good')}</div><div class="verdict-reason"><b>Why OTB thinks this:</b> ${esc(reasonParts.length?reasonParts.join('; ')+'.':'Complete the squad and run the Transfer Planner to unlock a fully synthesised recommendation.')}</div>`;}
- const tx=document.getElementById('verdictOpenTransfers'),fx=document.getElementById('verdictOpenFixtures');if(tx)tx.onclick=()=>uxOpenPanel('transfers');if(fx)fx.onclick=()=>uxOpenPanel('fixtures');
+/* ═══════════════════════ RC5.0.0 — VERDICT BRAIN ═══════════════════════
+   Verdict was a summary panel. It consumed projections, the squad, the bank
+   and the first transfer step — and nothing else. News, Prices, Market, Roles,
+   Chips and Accuracy fed it nothing, opening the tab refreshed none of them,
+   and its render key ignored every external feed, so it could silently freeze.
+
+   RC5.0.0 makes it the decision layer. Almost all of what follows is wiring to
+   engines that already existed elsewhere in this file. Two rules govern it:
+
+   1. EVERY action is costed in expected points. No composite "decision score"
+      is produced. A unitless product of six weighted terms cannot be validated
+      against anything and destroys comparability; points can be checked against
+      what actually happened.
+   2. NOTHING is asserted with more confidence than the data supports. Readiness
+      is a deterministic state measure with a published breakdown. Calibration
+      is empirical and stays hidden until three gameweeks of actuals exist.
+      Stale feeds are declared, never silently used.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const VERDICT_SEEN_KEY='otb_verdict_seen_v1',VERDICT_JOURNAL_KEY='otb_verdict_journal_v1';
+const VERDICT_LOCK_MIN=180,VERDICT_DECIDE_MIN=2880,VERDICT_LOCK_FEED_MAX_MIN=45,VERDICT_MIN_CALIB_GWS=3;
+let VERDICT_SENSITIVITY=null,VERDICT_EXPAND=new Set();
+
+/* ── Feed registry ──────────────────────────────────────────────────────
+   One declared list of everything Verdict depends on. The freshness strip,
+   the render key and the self-tests all read from this, so a feed cannot be
+   consumed without also being displayed and cache-keyed. */
+function verdictAgeMin(t){if(!t)return null;const ms=Date.now()-(typeof t==='number'?t:Date.parse(t));return Number.isFinite(ms)?Math.max(0,ms/60000):null}
+function verdictAgeLabel(m){if(m==null)return 'never';if(m<1)return 'just now';if(m<90)return Math.round(m)+'m';if(m<2880)return (m/60).toFixed(1)+'h';return Math.floor(m/1440)+'d'}
+
+/* RC5.0.0 T7 — the freshness strip and the render-key fingerprint must never
+   drift apart: a feed shown as fresh that cannot invalidate the cache is worse
+   than no strip at all. Both are now generated from this one list, and a
+   self-test asserts they still agree. */
+const VERDICT_FEED_SOURCES={
+  bootstrap:()=>[DATA.mode,DATA.lastUpdated||0],
+  fixtures :()=>[DATA.validation?.topologyPass?1:0,Object.keys(FIX||{}).length],
+  news     :()=>[NEWS.last?.generatedAt||0,NEWS.error||'',NEWS.fromCache?1:0],
+  prices   :()=>[PRICE.last?.sampleEnd||PRICE.last?.generatedAt||0,PRICE.error||'',PRICE.fromCache?1:0],
+  market   :()=>[MARKET.loaded?1:0,Math.round((marketAgeMinutes()||0)/15),MARKET.error||''],
+  roles    :()=>[(S.roleIntel?.events||[]).length,ROLE_INTEL.suspend?1:0],
+  chips    :()=>[CHIP_ADVISOR_LAST?1:0,JSON.stringify(S.chips||{})],
+  accuracy :()=>[Object.keys(ACCURACY.ledger?.actuals||{}).length,Object.keys(ACCURACY.ledger?.snapshots||{}).length]
+};
+const VERDICT_FEED_KEYS=Object.keys(VERDICT_FEED_SOURCES);
+function verdictFeeds(){
+  const feeds=[],readiness=releaseReadiness(),coreAge=verdictAgeMin(DATA.lastUpdated);
+  const add=(key,label,ageMin,state,detail,critical,panel)=>feeds.push({key,label,ageMin,state,detail,critical:!!critical,panel:panel||'data'});
+
+  add('bootstrap','Player data',coreAge,
+    readiness==='BLOCKED'?'fail':DATA.mode!=='LIVE'?'fail':coreAge!=null&&coreAge>180?'warn':'ok',
+    DATA.mode==='LIVE'?('official payload · '+readiness):(DATA.mode+' data — not certified for decisions'),true,'data');
+
+  add('fixtures','Fixtures',coreAge,
+    DATA.validation?.topologyPass?'ok':'warn',
+    DATA.validation?.topologyPass?'topology certified':'fixture topology not certified',true,'data');
+
+  const newsAge=verdictAgeMin(NEWS.last?.generatedAt);
+  add('news','Team news',newsAge,
+    NEWS.error&&!NEWS.last?'fail':NEWS.error?'cached':!NEWS.last?'warn':newsAge!=null&&newsAge>240?'warn':'ok',
+    NEWS.error&&!NEWS.last?esc(NEWS.error):NEWS.error?'refresh failed — serving cached copy':!NEWS.last?'not fetched this session':(NEWS.last.events?.length||0)+' change events',true,'news');
+
+  const priceAge=verdictAgeMin(PRICE.last?.sampleEnd||PRICE.last?.generatedAt);
+  add('prices','Price intel',priceAge,
+    PRICE.error&&!PRICE.last?'fail':PRICE.error?'cached':!PRICE.last?'warn':priceAge!=null&&priceAge>720?'warn':'ok',
+    PRICE.error&&!PRICE.last?esc(PRICE.error):PRICE.error?'refresh failed — serving cached copy':!PRICE.last?'not fetched this session':'sample window current',false,'prices');
+
+  const mAge=marketAgeMinutes();
+  add('market','Market odds',mAge,
+    !MARKET_BLEND?'off':MARKET.error?'fail':!MARKET.loaded?'warn':marketStale()?'warn':'ok',
+    !MARKET_BLEND?'blend disabled in build':MARKET.error?esc(MARKET.error):!MARKET.loaded?'no odds loaded — projections are model-only':marketStale()?'past '+(MARKET_MAX_AGE_MIN/60)+'h cutoff — EXCLUDED from projections':MARKET.fixtures+' fixtures blended at '+Math.round(MARKET_WEIGHT*100)+'%',false,'schedule');
+
+  const roleEvents=(S.roleIntel?.events||[]).length;
+  add('roles','Role intel',null,roleEvents?'ok':'warn',
+    roleEvents?roleEvents+' logged role events':'no role evidence logged',false,'roles');
+
+  add('chips','Chip plan',null,CHIP_ADVISOR_LAST?'ok':'warn',
+    CHIP_ADVISOR_LAST?(Object.values(CHIP_ADVISOR_LAST.recommendations||{}).filter(r=>r?.gw).length+' chip windows identified'):'chip adviser has not run this session',false,'chips');
+
+  const calib=verdictCalibration();
+  add('accuracy','Calibration',null,calib?'ok':'warn',
+    calib?calib.gwCount+' gameweeks scored':'needs '+VERDICT_MIN_CALIB_GWS+' completed gameweeks',false,'accuracy');
+
+  return feeds;
 }
+function verdictFeedFingerprint(){
+  return VERDICT_FEED_KEYS.map(k=>{try{return VERDICT_FEED_SOURCES[k]().join('|')}catch(e){return 'err'}}).join('~');
+}
+function verdictBlockingFeeds(regime){
+  return verdictFeeds().filter(f=>{
+    if(f.state==='fail'&&f.critical)return true;
+    if(regime==='LOCK'&&f.critical&&f.ageMin!=null&&f.ageMin>VERDICT_LOCK_FEED_MAX_MIN)return true;
+    return false;
+  });
+}
+
+/* ── Deadline regime ────────────────────────────────────────────────────
+   The correct advice at T-6 days is not the correct advice at T-40 minutes.
+   Previously Verdict gave the same answer at both. */
+function verdictRegime(){
+  const ms=DEADLINE?Date.parse(DEADLINE)-Date.now():NaN;
+  if(!Number.isFinite(ms))return{key:'PLAN',minsLeft:null,verified:false,label:'Deadline unknown',note:'No deadline timestamp available — treating this as a planning session.'};
+  if(ms<0)return{key:'REVIEW',minsLeft:null,verified:!!DEADLINE_VERIFIED,label:'Deadline passed',note:'The gameweek is under way. Decisions are locked; this is a review view.'};
+  const mins=ms/60000;
+  if(mins<=VERDICT_LOCK_MIN)return{key:'LOCK',minsLeft:mins,verified:!!DEADLINE_VERIFIED,label:'Lock',note:'Under three hours. Speculative items are suppressed — only what must be right at the whistle is shown.'};
+  if(mins<=VERDICT_DECIDE_MIN)return{key:'DECIDE',minsLeft:mins,verified:!!DEADLINE_VERIFIED,label:'Decide',note:'Inside 48 hours. Press conferences and price deadlines are live; this is the window to commit.'};
+  return{key:'PLAN',minsLeft:mins,verified:!!DEADLINE_VERIFIED,label:'Plan',note:'More than 48 hours out. Team news has not landed — routes are provisional and transfers are usually better left uncommitted.'};
+}
+function verdictCountdown(mins){
+  if(mins==null)return '—';
+  const t=Math.max(0,Math.round(mins)),d=Math.floor(t/1440),h=Math.floor((t%1440)/60),m=t%60;
+  return d?`${d}d ${h}h`:h?`${h}h ${m}m`:`${m}m`;
+}
+
+/* ── Calibration (empirical, gated) ─────────────────────────────────────
+   The Accuracy module has been computing interval coverage, bias and rank
+   correlation since RC3 and nothing acted on any of it. It is surfaced here,
+   but only once there is enough of it to mean something. Below three scored
+   gameweeks this returns null and the panel stays hidden rather than showing
+   a number fitted to noise. */
+function verdictCalibration(){
+  try{
+    const m=accuracyOverall('relevant')?.metrics;
+    if(!m||num(m.gwCount)<VERDICT_MIN_CALIB_GWS||!num(m.n))return null;
+    return{gwCount:num(m.gwCount),n:num(m.n),coverage:m.interval,bias:m.bias,rank:m.rank,mae:m.mae,startBrier:m.startBrier,minutesMae:m.minutesMae};
+  }catch(e){return null}
+}
+
+/* ── Uncertainty attribution ────────────────────────────────────────────
+   "Main uncertainty: Palmer expected minutes" is computable and was already
+   half-computed: renderVerdict summed m²·sd² across the XI and threw the
+   per-player terms away. Ranking those terms names the player who is actually
+   driving the width of your projection. */
+function verdictUncertainty(xi,capId){
+  const rows=xi.map(o=>{const m=o.p.id===capId?2:1,v=m*m*o.r.sd*o.r.sd,md=minuteDetail(o.p);
+    return{p:o.p,v,sd:o.r.sd,exp:md.exp,pStart:md.pStart,captain:o.p.id===capId}});
+  const total=rows.reduce((a,r)=>a+r.v,0)||1;
+  rows.forEach(r=>r.share=r.v/total);
+  rows.sort((a,b)=>b.v-a.v);
+  return{rows,sd:Math.sqrt(total),top:rows[0]||null};
+}
+
+/* ── Model vs market divergence ─────────────────────────────────────────
+   Both numbers already exist; only the comparison was missing. The model side
+   is obtained by re-running fixtureContext with the blend suspended, which is
+   the exact inverse of the blend performed in fixtureContext itself. */
+function verdictMarketDivergence(gw){
+  if(!marketActive())return null;
+  const codes=[...new Set(squadPlayers().map(p=>p.t))],rows=[];
+  const prev=MARKET_SUSPEND;
+  try{
+    for(const code of codes){
+      for(const fx of fixtureListFor(code,gw)){
+        MARKET_SUSPEND=true;const model=fixtureContext(code,fx);
+        MARKET_SUSPEND=prev;const blended=fixtureContext(code,fx);
+        if(!blended.marketApplied)continue;
+        const mkt=marketFor(code,fx);if(!mkt||!Number.isFinite(mkt.xgFor))continue;
+        const modelXg=model.attackM*MARKET_LEAGUE_XG,marketXg=mkt.xgFor;
+        if(modelXg<=0)continue;
+        rows.push({code,opp:fx.opp,home:fx.home,modelXg,marketXg,diff:(marketXg-modelXg)/modelXg,
+          owned:squadPlayers().filter(p=>p.t===code).length});
+      }
+    }
+  }finally{MARKET_SUSPEND=prev}
+  if(!rows.length)return null;
+  rows.sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
+  return{rows,max:rows[0]};
+}
+
+/* ── Ownership exposure ─────────────────────────────────────────────────
+   NOTE ON HONESTY: FPL publishes selected_by_percent, NOT captaincy share.
+   True effective ownership cannot be computed from this data, so nothing here
+   is labelled EO. These are ownership figures and are described as such. */
+function verdictOwnership(xi){
+  const rows=xi.map(o=>({p:o.p,own:num(o.p.live?.selected,NaN),x:o.r.x})).filter(r=>Number.isFinite(r.own));
+  if(!rows.length)return null;
+  const template=rows.filter(r=>r.own>=30),diffs=rows.filter(r=>r.own<=8).sort((a,b)=>b.x-a.x);
+  const avg=rows.reduce((a,r)=>a+r.own,0)/rows.length;
+  const missing=POOL.filter(p=>num(p.live?.selected,0)>=35&&!S.squad.includes(p.id))
+    .map(p=>({p,own:num(p.live.selected),x:project(p,S.gw).x})).sort((a,b)=>b.own-a.own).slice(0,3);
+  return{rows,template,diffs:diffs.slice(0,3),avg,missing,coverage:rows.length/Math.max(1,xi.length)};
+}
+/* ── Readiness (deterministic, decomposed) ──────────────────────────────
+   The old score was `full && budgetOk ? 82 : 35` with ±6/±5/±4 adjustments,
+   one of which (`DATA.mode==='live'`) never fired because the mode is stored
+   uppercase. It was also mislabelled: the header said readiness, the note
+   underneath said confidence. They are different claims.
+
+   This is READINESS ONLY — is the decision in a committable state? Every
+   component is a fact, not a prediction, and every component is published so
+   the number can be checked rather than believed. Predictive quality lives
+   separately in verdictCalibration(). */
+function verdictReadiness(ctx){
+  const parts=[],add=(k,got,max,note)=>parts.push({k,got:Math.round(got),max,note});
+  const sq=ctx.players,full=sq.length===15;
+  add('Squad complete',full&&ctx.budgetOk?20:full?10:0,20,
+    !full?`${sq.length}/15 players selected`:!ctx.budgetOk?`over budget by £${Math.abs(bank()).toFixed(1)}m`:'15 players, funded');
+  add('XI legal',ctx.xiOk?15:0,15,ctx.xiOk?`${ctx.formation} legal`:'starting XI is not a legal formation');
+  add('Captain set',ctx.capSet?10:0,10,ctx.capSet?(ctx.capAligned?'set and matches top projection':'set, but not the top projection'):'no captain selected');
+  add('Vice set',ctx.viceSet?5:0,5,ctx.viceSet?'set':'no vice — an unplayed captain scores zero');
+  const availLoss=ctx.risk.reduce((a,r)=>a+r.cost,0);
+  add('Availability',clamp(20-availLoss*2.5,0,20),20,ctx.risk.length?`${ctx.risk.length} XI player(s) at risk · ${availLoss.toFixed(1)} xP exposed`:'no availability risk in the XI');
+  const feeds=verdictFeeds(),bad=feeds.filter(f=>f.state==='fail'),warn=feeds.filter(f=>f.state==='warn'||f.state==='cached');
+  add('Feed integrity',clamp(20-bad.length*10-warn.length*3,0,20),20,
+    bad.length?`${bad.length} feed(s) failed`:warn.length?`${warn.length} feed(s) degraded or cached`:'all feeds current');
+  add('Transfer resolved',ctx.firstPlan||ctx.routeRolled?10:0,10,
+    ctx.firstPlan?'route recommends a move':ctx.routeRolled?'route recommends rolling':'no transfer route computed');
+  const got=parts.reduce((a,p)=>a+p.got,0),max=parts.reduce((a,p)=>a+p.max,0);
+  return{score:Math.round(100*got/max),parts,got,max};
+}
+
+/* ── Action queue ───────────────────────────────────────────────────────
+   Replaces the single-branch hero. The old if/else was a strict ladder —
+   structure, then availability, then captain, then transfer — so two flagged
+   players AND a captain three points off the best surfaced only the flag.
+
+   Every item carries `cost` in expected points. That is what makes them
+   sortable against each other and what makes the page auditable at the end
+   of the gameweek. Items that genuinely cannot be costed are marked blocking
+   and sort above everything rather than being given a fake number. */
+/* releaseReadiness() blocks for four different reasons and the mode is only one
+   of them. Reporting "Player data is in LIVE mode" while the real blocker was a
+   failed season or structural check would be a wrong explanation attached to a
+   blocking message — the reader would go looking in the wrong place. This reads
+   the actual cause back out of the validation record. */
+function verdictBlockReason(){
+  const v=DATA.validation||{};
+  if(!(DATA.mode==='LIVE'||DATA.mode==='CACHE'||DATA.mode==='STALE'))
+    return `Player data is in ${DATA.mode} mode — demonstration values, not the official payload.`;
+  const issues=validationLoadBlockingIssues(v);
+  if(!v.structuralPass)return `The official payload failed its structural check${issues.length?': '+esc(String(issues[0])):'.'}`;
+  if(!v.seasonPass)return `The loaded payload does not validate as ${EXPECTED_SEASON}${issues.length?': '+esc(String(issues[0])):'.'}`;
+  if(issues.length)return `The loaded payload has ${issues.length} unresolved load issue${issues.length>1?'s':''}: ${esc(String(issues[0]))}`;
+  return 'The loaded payload has not passed validation.';
+}
+function verdictQueue(ctx){
+  const q=[],regime=ctx.regime.key;
+  const add=(o)=>q.push(Object.assign({cost:0,blocking:false,severity:'act',panel:null,evidence:''},o));
+
+  /* — blocking: data and structure — */
+  if(releaseReadiness()==='BLOCKED')add({id:'data',blocking:true,severity:'block',title:'Data is not certified for decisions',
+    evidence:`${verdictBlockReason()} The optimiser and transfer planner already refuse to run on this; Verdict now refuses to issue a recommendation on it too.`,action:'Load official data',panel:'data'});
+  for(const f of verdictBlockingFeeds(regime))add({id:'feed_'+f.key,blocking:true,severity:'block',
+    title:`${f.label} ${f.state==='fail'?'failed':'is stale inside the lock window'}`,
+    evidence:`${f.detail}. ${f.ageMin==null?'No successful update this session.':'Last update '+verdictAgeLabel(f.ageMin)+' ago.'}${regime==='LOCK'?` Inside three hours of the deadline, critical feeds older than ${VERDICT_LOCK_FEED_MAX_MIN} minutes are not safe to decide on.`:''}`,
+    action:'Open feed',panel:f.panel});
+  if(ctx.players.length!==15)add({id:'squad',blocking:true,severity:'block',title:`Squad is ${ctx.players.length}/15`,
+    evidence:'A verdict cannot be issued on an incomplete squad.',action:'Open squad',panel:'squad'});
+  else if(!ctx.budgetOk)add({id:'budget',blocking:true,severity:'block',title:`Over budget by £${Math.abs(bank()).toFixed(1)}m`,
+    evidence:'The squad is not fundable and could not be entered as selected.',action:'Open squad',panel:'squad'});
+  if(!ctx.xiOk&&ctx.players.length===15)add({id:'xi',blocking:true,severity:'block',title:'Starting XI is not a legal formation',
+    evidence:`Current shape ${ctx.formation}. FPL requires 1 GK, 3-5 DEF, 2-5 MID, 1-3 FWD.`,action:'Fix XI',panel:'squad'});
+  if(!ctx.capSet)add({id:'nocap',blocking:true,severity:'block',title:'No captain selected',evidence:'An unset armband forfeits the doubled score.',action:'Set captain',panel:'squad'});
+  else if(!ctx.viceSet)add({id:'novice',blocking:true,severity:'block',title:'No vice-captain selected',
+    evidence:'If the captain does not play, the armband is not transferred and the double is lost entirely.',action:'Set vice',panel:'squad'});
+
+  /* NOTE: squadSanityIssues() is deliberately NOT folded in here. All three of
+     its checks — captain gap, flagged XI players, low-minutes starters — are
+     reproduced below WITH a points cost attached. Including both would double
+     report the same finding under two different headings. It remains the
+     beginner card's engine, where an uncosted plain-language warning is the
+     right shape. */
+
+  /* — captaincy — */
+  if(ctx.bestCap&&ctx.capSet&&ctx.bestCap.p.id!==S.cap){
+    const chosen=ctx.xi.find(o=>o.p.id===S.cap);
+    if(chosen){const gap=(ctx.bestCap.r.x-chosen.r.x)*2;
+      if(gap>0.15)add({id:'captain',severity:gap>=2?'act':'watch',cost:gap,title:`Captain: ${ctx.bestCap.p.n} over ${chosen.p.n}`,
+        evidence:`${ctx.bestCap.p.n} projects ${ctx.bestCap.r.x.toFixed(1)} xP against ${chosen.p.n}'s ${chosen.r.x.toFixed(1)}. Doubled, that is ${gap.toFixed(1)} points. On ceiling the order is ${ctx.ceilCap.p.n} (${(ctx.ceilCap.r.high*2).toFixed(1)} at the 80th percentile) — mean is the right target when protecting a rank, ceiling when chasing one.`,
+        action:'Set captain',panel:'squad',capId:ctx.bestCap.p.id});
+    }
+  }
+
+  /* — availability — */
+  for(const r of ctx.risk){
+    add({id:'risk_'+r.p.id,severity:r.cost>=1.5?'act':'watch',cost:r.cost,
+      title:`${r.p.n} — ${r.label}`,
+      evidence:`${Math.round(r.avail*100)}% available, ${Math.round(r.exp)} expected minutes. At ${r.r.x.toFixed(1)} xP that is ${r.cost.toFixed(1)} points of exposure in your XI.`,
+      action:'Inspect',panel:'squad',playerId:r.p.id});
+  }
+
+  /* — news ahead of the official payload (F4) — */
+  for(const d of (ctx.newsDivergence||[])){
+    add({id:'news_'+d.p.id,severity:'act',cost:d.cost,title:`${d.p.n} — team news not yet in the official payload`,
+      evidence:`${d.text} The projection still uses the bootstrap value, so this player's xP has not moved yet.`,
+      action:'Open news',panel:'news',playerId:d.p.id});
+  }
+
+  /* — role change on an owned player — */
+  for(const r of (ctx.roleShifts||[])){
+    add({id:'role_'+r.p.id,severity:'watch',cost:Math.abs(r.cost),
+      title:`${r.p.n} — role evidence logged`,evidence:r.text,action:'Open roles',panel:'roles',playerId:r.p.id});
+  }
+
+  /* — bench order — */
+  if(ctx.benchGap>0.1)add({id:'bench',severity:'watch',cost:ctx.benchGap,title:'Bench order is not optimal',
+    evidence:`Your order returns ${ctx.benchCurrent.toFixed(2)} xP from autosubs against ${ctx.benchBest.toFixed(2)} for the optimal order (${ctx.benchOptimalNames}). Worth ${ctx.benchGap.toFixed(2)} points in expectation.`,
+    action:'Reorder bench',panel:'squad'});
+
+  /* — transfer route and its opportunity cost — */
+  if(ctx.firstPlan){
+    const gain=num(ctx.firstPlan.netGain,num(ctx.firstPlan.gain,0));
+    add({id:'transfer',severity:regime==='PLAN'?'watch':'act',cost:Math.max(0,gain),
+      title:regime==='PLAN'?`Route suggests ${ctx.planLabel} — hold until team news`:`Transfer: ${ctx.planLabel}`,
+      evidence:ctx.planEvidence+(regime==='PLAN'?' More than 48 hours out this is provisional: no press conferences have been held and the injury picture has not settled. Committing a free transfer now buys nothing that waiting does not.':''),
+      action:'Open planner',panel:'transfers'});
+  }else if(ctx.routeRolled){
+    add({id:'roll',severity:'watch',cost:0,title:'Transfer: ROLL',
+      evidence:ctx.planEvidence,action:'Open planner',panel:'transfers'});
+  }
+
+  /* — price pressure on the planned move — */
+  if(ctx.priceRisk)add({id:'price',severity:ctx.priceRisk.severity,cost:ctx.priceRisk.cost,
+    title:ctx.priceRisk.title,evidence:ctx.priceRisk.evidence,action:'Open prices',panel:'prices'});
+
+  /* — chip windows — */
+  for(const c of (ctx.chips||[])){
+    add({id:'chip_'+c.key,severity:c.gw===S.gw?'act':'watch',cost:num(c.score,0),
+      title:`${c.label}: GW${c.gw}${c.gw===S.gw?' — this gameweek':''}`,evidence:c.reason,action:'Open chips',panel:'chips'});
+  }
+
+  /* — market state and disagreement — */
+  if(MARKET_BLEND&&!marketActive())add({id:'mktoff',severity:'watch',cost:0,title:'Market blend is not active',
+    evidence:MARKET.loaded?`Odds are ${verdictAgeLabel(marketAgeMinutes())} old, past the ${MARKET_MAX_AGE_MIN/60}-hour cutoff, so they have been excluded. Projections are running model-only and will differ from what you saw when odds were live.`:'No odds loaded this session. Projections are running model-only.',
+    action:'Open schedule',panel:'schedule'});
+  if(ctx.divergence&&Math.abs(ctx.divergence.max.diff)>=0.10){
+    const d=ctx.divergence.max;
+    add({id:'mktdiv',severity:'watch',cost:0,title:`Model and market disagree on ${TEAMS[d.code]?.n||d.code}`,
+      evidence:`OTB projects ${d.modelXg.toFixed(2)} expected goals ${d.home?'at home to':'away at'} ${TEAMS[d.opp]?.n||d.opp}; the market implies ${d.marketXg.toFixed(2)} — a ${(d.diff*100).toFixed(0)}% ${d.diff>0?'bullish':'bearish'} gap. You own ${d.owned} player(s) here. The blend already applies ${Math.round(MARKET_WEIGHT*100)}% of this; treat the residual as a reason to check minutes and role evidence, not to override them.`,
+      action:'Open schedule',panel:'schedule'});
+  }
+
+  const rank={block:0,act:1,watch:2};
+  q.sort((a,b)=>(rank[a.severity]-rank[b.severity])||(b.cost-a.cost));
+  /* In LOCK, speculative items are suppressed: at T-2h you cannot act on a
+     chip window three gameweeks out or a market disagreement. */
+  if(regime==='LOCK')return q.filter(i=>i.blocking||['captain','bench','xi','nocap','novice'].includes(i.id)||i.id.startsWith('risk_')||i.id.startsWith('news_'));
+  return q;
+}
+
+/* ── What changed since you last looked ─────────────────────────────────
+   Nothing else in the app answers this. It is the difference between a page
+   you open once a week and one worth opening daily. */
+function verdictSnapshot(ctx){
+  const md=p=>{const m=minuteDetail(p);return{x:+project(p,S.gw).x.toFixed(2),exp:Math.round(m.exp),pStart:+num(m.pStart,0).toFixed(2),avail:+availability(p).toFixed(2)}};
+  const players={};ctx.players.forEach(p=>players[p.id]=md(p));
+  return{at:Date.now(),gw:S.gw,cap:S.cap,vice:S.vice,squad:[...S.squad],start:[...S.start],
+    plan:ctx.planLabel||'',top:(ctx.queue||[]).slice(0,3).map(i=>i.id),players,
+    market:ctx.divergence?+ctx.divergence.max.diff.toFixed(3):null};
+}
+function verdictLoadSeen(){try{return JSON.parse(localStorage.getItem(VERDICT_SEEN_KEY)||'null')}catch(e){return null}}
+function verdictSaveSeen(snap){try{localStorage.setItem(VERDICT_SEEN_KEY,JSON.stringify(snap))}catch(e){}}
+function verdictChanges(prev,now){
+  if(!prev||prev.gw!==now.gw)return null;
+  const out=[];
+  for(const id of Object.keys(now.players)){
+    const a=prev.players[id],b=now.players[id];if(!a)continue;const p=byId(+id);if(!p)continue;
+    if(Math.abs(b.pStart-a.pStart)>=0.08)out.push({dir:b.pStart>a.pStart?'up':'down',w:Math.abs(b.pStart-a.pStart)*10,
+      text:`<b>${esc(p.n)}</b> start probability ${Math.round(a.pStart*100)}% → ${Math.round(b.pStart*100)}%`});
+    else if(Math.abs(b.avail-a.avail)>=0.1)out.push({dir:b.avail>a.avail?'up':'down',w:Math.abs(b.avail-a.avail)*10,
+      text:`<b>${esc(p.n)}</b> availability ${Math.round(a.avail*100)}% → ${Math.round(b.avail*100)}%`});
+    else if(Math.abs(b.x-a.x)>=0.4)out.push({dir:b.x>a.x?'up':'down',w:Math.abs(b.x-a.x),
+      text:`<b>${esc(p.n)}</b> projection ${a.x.toFixed(1)} → ${b.x.toFixed(1)} xP`});
+  }
+  const gone=prev.squad.filter(id=>!now.squad.includes(id)).map(id=>byId(id)?.n).filter(Boolean);
+  const came=now.squad.filter(id=>!prev.squad.includes(id)).map(id=>byId(id)?.n).filter(Boolean);
+  if(gone.length||came.length)out.push({dir:'new',w:99,text:`Squad changed: ${came.length?'in '+came.map(esc).join(', '):''}${came.length&&gone.length?' · ':''}${gone.length?'out '+gone.map(esc).join(', '):''}`});
+  if(prev.cap!==now.cap&&byId(now.cap))out.push({dir:'new',w:98,text:`Captain changed to <b>${esc(byId(now.cap).n)}</b>`});
+  if(prev.plan!==now.plan&&now.plan)out.push({dir:'new',w:97,text:`Transfer route now: <b>${esc(now.plan)}</b>`});
+  if(prev.market!=null&&now.market!=null&&Math.abs(now.market-prev.market)>=0.05)
+    out.push({dir:now.market>prev.market?'up':'down',w:5,text:`Largest model-vs-market gap moved ${(prev.market*100).toFixed(0)}% → ${(now.market*100).toFixed(0)}%`});
+  out.sort((a,b)=>b.w-a.w);
+  return{since:prev.at,items:out.slice(0,6),total:out.length};
+}
+
+/* ── Decision journal ───────────────────────────────────────────────────
+   The accuracy ledger snapshots PROJECTIONS at the deadline but never records
+   what was actually DECIDED — captain, transfer, bench, chip. Without that,
+   post-gameweek review of the decision process cannot be reconstructed after
+   the fact, at any point, ever. This writes the missing half.
+
+   It deliberately does not score decisions by outcome. A benched player
+   returning does not make benching him wrong; that judgement needs the
+   information available before the deadline, which is exactly what is stored
+   here. Read it alongside the accuracy ledger, not instead of it. */
+function verdictLoadJournal(){try{const j=JSON.parse(localStorage.getItem(VERDICT_JOURNAL_KEY)||'null');return (j&&j.season===EXPECTED_SEASON)?j:{season:EXPECTED_SEASON,entries:{}}}catch(e){return{season:EXPECTED_SEASON,entries:{}}}}
+function verdictSaveJournal(j){try{localStorage.setItem(VERDICT_JOURNAL_KEY,JSON.stringify(j))}catch(e){}}
+function verdictJournalCapture(ctx,{manual=false}={}){
+  const j=verdictLoadJournal(),key='gw'+S.gw,existing=j.entries[key];
+  if(existing&&existing.locked&&!manual)return existing;
+  const cal=verdictCalibration();
+  const entry={gw:S.gw,at:new Date().toISOString(),regime:ctx.regime.key,locked:ctx.regime.key==='LOCK'||manual,
+    readiness:ctx.readiness.score,dataMode:DATA.mode,
+    captain:byId(S.cap)?{id:S.cap,n:byId(S.cap).n,x:+project(byId(S.cap),S.gw).x.toFixed(2)}:null,
+    vice:byId(S.vice)?{id:S.vice,n:byId(S.vice).n}:null,
+    altCaptain:ctx.bestCap&&ctx.bestCap.p.id!==S.cap?{id:ctx.bestCap.p.id,n:ctx.bestCap.p.n,x:+ctx.bestCap.r.x.toFixed(2)}:null,
+    xi:ctx.xi.map(o=>({id:o.p.id,n:o.p.n,x:+o.r.x.toFixed(2)})),
+    bench:ctx.benchRows.map(o=>({id:o.p.id,n:o.p.n,x:+o.r.x.toFixed(2)})),
+    transfer:ctx.planLabel||'ROLL',transferGain:ctx.firstPlan?+num(ctx.firstPlan.netGain,0).toFixed(2):0,
+    chip:Object.entries(S.chips||{}).filter(([,v])=>+v===S.gw).map(([k])=>k).join(',')||'NONE',
+    projectedXI:+ctx.xiTotal.toFixed(2),projectedSd:+ctx.xiSd.toFixed(2),
+    topUncertainty:ctx.uncertainty.top?{n:ctx.uncertainty.top.p.n,share:+ctx.uncertainty.top.share.toFixed(2)}:null,
+    marketActive:marketActive(),calibrationAtDecision:cal?{coverage:cal.coverage,bias:cal.bias,gws:cal.gwCount}:null,
+    queue:(ctx.queue||[]).slice(0,5).map(i=>({id:i.id,title:i.title,cost:+num(i.cost,0).toFixed(2),severity:i.severity}))};
+  j.entries[key]=entry;verdictSaveJournal(j);return entry;
+}
+
+/* ── Decision sensitivity ───────────────────────────────────────────────
+   Reports whether the captaincy call is robust or marginal, by finding the
+   availability at which it actually flips. This is deliberately on-demand:
+   each probe requires clearing the projection cache, which is too expensive
+   to run on every render on a phone. It reports fragility rather than
+   asserting confidence, which is the honest direction to be wrong in. */
+function verdictCaptainSensitivity(){
+  const xi=verdictContext()?.xi;if(!xi||xi.length<2)return null;
+  const ranked=xi.slice().sort((a,b)=>b.r.x-a.r.x),top=ranked[0],second=ranked[1];
+  if(!top||!second)return null;
+  const id=top.p.id,prev=S.overrides?.[id]?{...S.overrides[id]}:null;
+  const probe=(av)=>{S.overrides=S.overrides||{};S.overrides[id]={...(S.overrides[id]||{}),availability:av};bumpCache();
+    return project(top.p,S.gw).x};
+  let lo=0,hi=1,flip=null;
+  try{
+    if(probe(1)<=project(second.p,S.gw).x)flip=1;
+    else{
+      for(let i=0;i<6;i++){const mid=(lo+hi)/2;if(probe(mid)>project(second.p,S.gw).x)hi=mid;else lo=mid}
+      flip=hi;
+    }
+  }catch(e){flip=null}
+  finally{if(prev)S.overrides[id]=prev;else if(S.overrides)delete S.overrides[id];bumpCache()}
+  if(flip==null)return null;
+  const cur=availability(top.p);
+  return{player:top.p,rival:second.p,flipAt:flip,current:cur,margin:cur-flip,
+    robust:cur-flip>0.25};
+}
+/* ── Context assembly ───────────────────────────────────────────────────
+   One pass that gathers every signal Verdict acts on. The old renderVerdict
+   recomputed the same availability filter three times and re-ran project()
+   inside a sort comparator; everything here is computed once and shared. */
+function verdictContext(){
+  const players=squadPlayers(),gws=scheduleGws(S.gw,5);
+  const rows=players.map(p=>({p,r:project(p,S.gw),md:minuteDetail(p)}));
+  const xi=rows.filter(o=>S.start.has(o.p.id)),benchRows=rows.filter(o=>!S.start.has(o.p.id));
+  const ctx={players,rows,xi,benchRows,gws,regime:verdictRegime()};
+
+  ctx.budgetOk=bank()>=-1e-9;
+  ctx.xiOk=xi.length===11&&(()=>{const c={GK:0,DEF:0,MID:0,FWD:0};xi.forEach(o=>c[o.p.p]++);
+    return c.GK===1&&c.DEF>=3&&c.DEF<=5&&c.MID>=2&&c.MID<=5&&c.FWD>=1&&c.FWD<=3})();
+  {const c={GK:0,DEF:0,MID:0,FWD:0};xi.forEach(o=>c[o.p.p]++);ctx.formation=`${c.DEF}-${c.MID}-${c.FWD}`}
+  ctx.capSet=!!byId(S.cap)&&S.start.has(S.cap);ctx.viceSet=!!byId(S.vice)&&S.start.has(S.vice);
+
+  const ranked=xi.slice().sort((a,b)=>b.r.x-a.r.x);
+  ctx.bestCap=ranked[0]||null;
+  ctx.ceilCap=xi.slice().sort((a,b)=>b.r.high-a.r.high)[0]||ctx.bestCap;
+  ctx.capAligned=!!(ctx.bestCap&&S.cap===ctx.bestCap.p.id);
+  ctx.capRanked=ranked;
+
+  /* availability risk — computed ONCE (was three identical filters) */
+  ctx.risk=xi.map(o=>{const av=availability(o.p),f=flagInfo(o.p);
+    if(av>=.85&&o.md.exp>=60)return null;
+    return{p:o.p,r:o.r,avail:av,exp:o.md.exp,cost:o.r.x*(1-av)+(o.md.exp<60?o.r.x*0.15:0),
+      label:f?f.label:o.md.exp<60?'rotation risk':'availability doubt'}})
+    .filter(Boolean).sort((a,b)=>b.cost-a.cost);
+
+  /* projection totals — XI only. The old code summed all 15, so bench fodder
+     inflated the horizon by points that can never be scored. */
+  ctx.xiTotal=xi.reduce((a,o)=>a+o.r.x,0)+(ctx.capSet?(xi.find(o=>o.p.id===S.cap)?.r.x||0):0);
+  ctx.uncertainty=verdictUncertainty(xi,S.cap);
+  ctx.xiSd=ctx.uncertainty.sd;
+  ctx.horizon=gws.map(g=>{const r=bestXIForGw(players,null,g);
+    return{gw:g,x:r?r.xiMean+(r.captain?.mean||0):0,ok:!!r}});
+  ctx.horizonTotal=ctx.horizon.reduce((a,h)=>a+h.x,0);
+
+  /* bench — priced against the order actually set */
+  try{
+    const best=expectedAutosub({xi,benchRows});
+    const outfield=benchRows.filter(o=>o.p.p!=='GK');
+    const order=(S.benchOrder||[]).map(id=>outfield.find(o=>o.p.id===id)).filter(Boolean);
+    const cur=order.length===3?expectedAutosub({xi,benchRows},order):best;
+    ctx.benchBest=best.mean;ctx.benchCurrent=cur.mean;ctx.benchGap=Math.max(0,best.mean-cur.mean);
+    ctx.benchOptimalNames=best.order.map(o=>o.p.n).join(' → ');
+    ctx.benchFull=benchRows.reduce((a,o)=>a+o.r.x,0);
+  }catch(e){ctx.benchBest=ctx.benchCurrent=ctx.benchGap=0;ctx.benchOptimalNames='';ctx.benchFull=0}
+
+  /* transfer route + opportunity cost */
+  const last=S.transfer.last,step=last?.plan?.[0]||null,moves=step?.moves||[];
+  ctx.step=step;ctx.moves=moves;
+  ctx.firstPlan=moves.length?step:null;ctx.routeRolled=!!step&&!moves.length;
+  if(ctx.firstPlan){
+    ctx.planLabel=moves.map(m=>`${m.outName} → ${m.inName}`).join('; ');
+    const gain=num(step.netGain,0),hit=num(step.hit,0);
+    ctx.planEvidence=`The planner values this at ${signed(gain,1)} xP over ${num(S.transfer.horizon,5)} gameweeks${hit?` after a ${hit}-point hit`:''}, leaving £${num(step.bankAfter,0).toFixed(1)}m in the bank.`;
+    const opp=step.opportunity||last?.opportunity;
+    if(opp&&(opp.outName||opp.label))ctx.planEvidence+=` Strongest rejected alternative: ${esc(opp.label||(opp.outName+' → '+opp.inName))}${Number.isFinite(+opp.net)?` at ${signed(num(opp.net),1)} xP`:''} — the gap between them is what this route costs you elsewhere.`;
+  }else if(ctx.routeRolled){
+    ctx.planLabel='ROLL';
+    ctx.planEvidence=`No move cleared the ${num(S.transfer.threshold,0).toFixed(1)} xP threshold required to justify spending a free transfer, so the transfer is worth more banked than used.`;
+  }else{ctx.planLabel='';ctx.planEvidence=''}
+
+  /* price pressure on the planned move */
+  ctx.priceRisk=null;
+  if(ctx.firstPlan&&PRICE.last){
+    try{
+      const o=byId(ctx.moves[0].outId),i=byId(ctx.moves[0].inId);
+      if(o&&i){const econ=priceMoveHeadroom(o,i,bank()),v=pricePlanVerdict(o,i,econ);
+        if(v&&v.cls!=='wait')ctx.priceRisk={severity:v.cls==='risk'?'act':'watch',
+          cost:v.cls==='risk'?Math.max(0,num(ctx.firstPlan.netGain,0)):0,
+          title:v.cls==='risk'?'Planned move is at risk of becoming unaffordable':'Price pressure favours acting early',
+          evidence:`${v.text} Headroom is £${num(econ?.headroom,0).toFixed(1)}m now, £${num(econ?.worst,0).toFixed(1)}m in the worst case (target rises, seller falls).`};
+      }
+    }catch(e){}
+  }
+
+  /* role evidence on owned players */
+  ctx.roleShifts=[];
+  try{
+    for(const o of xi){const ri=roleIntelFor(o.p);
+      const shift=num(ri?.shift,0);if(!ri||Math.abs(shift)<0.15||!ri.events.length)continue;
+      /* shift is a log-odds adjustment to start probability. Near the current
+         operating point the probability change is approximately p(1-p)·shift,
+         which is enough to rank the effect without overstating its precision. */
+      const ps=clamp(num(o.md.pStart,0),0,1),dp=ps*(1-ps)*shift;
+      ctx.roleShifts.push({p:o.p,cost:Math.abs(dp)*o.r.x,
+        text:`${ri.events.length} role event(s) shift ${esc(o.p.n)}'s start log-odds by ${signed(shift,2)} — roughly ${signed(dp*100,0)} percentage points of start probability at his current ${Math.round(ps*100)}%. This is scout and manual evidence, not the official payload, and is only as good as its source.`})}
+    ctx.roleShifts.sort((a,b)=>b.cost-a.cost);
+  }catch(e){ctx.roleShifts=[]}
+
+  /* Worker news ahead of the official payload (F4) */
+  ctx.newsDivergence=[];
+  try{
+    const evs=(NEWS.last?.events||[]).filter(e=>e.kind==='status'||e.kind==='chance');
+    const seen=new Set();
+    for(const e of evs){
+      const p=players.find(x=>Number(x.apiId)===Number(e.player_id));
+      if(!p||seen.has(p.id))continue;
+      const cur=e.kind==='status'?String(p.live?.status||'a'):String(num(p.live?.chance,100));
+      const nv=String(e.new_value==null?'':e.new_value);
+      if(!nv||nv===cur)continue;
+      seen.add(p.id);
+      const r=rows.find(x=>x.p.id===p.id);
+      ctx.newsDivergence.push({p,cost:r?r.r.x*0.25:0,
+        text:`The news feed reports ${e.kind==='status'?`status ${esc(STATUS_LABEL[nv]||nv)}`:`chance of playing ${esc(nv)}%`} (${relTime(e.detected_at)}), but the official payload still says ${e.kind==='status'?esc(STATUS_LABEL[cur]||cur):esc(cur)+'%'}.`});
+    }
+    ctx.newsDivergence.sort((a,b)=>b.cost-a.cost);
+  }catch(e){ctx.newsDivergence=[]}
+
+  /* chip windows from the advisor's cached result — no recomputation */
+  ctx.chips=[];
+  try{
+    const recs=CHIP_ADVISOR_LAST?.recommendations||{};
+    for(const k of ['WC1','BB1','TC1','FH1']){const r=recs[k];
+      if(r&&r.gw&&r.gw>=S.gw&&r.gw<=S.gw+2)ctx.chips.push({key:k,label:chipAdvisorLabel(k),gw:r.gw,score:num(r.score,0),reason:r.reason||''})}
+  }catch(e){ctx.chips=[]}
+
+  /* schedule outlook — ranked on fixture quality, NOT on how many players you
+     own from a club. Exposure is reported alongside, never mixed into the rank. */
+  ctx.schedule={rows:[],best:null,worst:null};
+  try{
+    const rows=[...new Set(players.map(p=>p.t))].map(t=>{
+      const st=scheduleTeamStats(t,gws),ex=scheduleExposure(t,gws);
+      return st?{code:t,st,ex,quality:num(st.avgOverall,0)}:null}).filter(Boolean)
+      .sort((a,b)=>b.quality-a.quality);
+    ctx.schedule={rows,best:rows[0]||null,worst:rows[rows.length-1]||null};
+  }catch(e){ctx.schedule={rows:[],best:null,worst:null}}
+
+  ctx.divergence=verdictMarketDivergence(S.gw);
+  ctx.ownership=verdictOwnership(xi);
+  ctx.readiness=verdictReadiness(ctx);
+  ctx.queue=verdictQueue(ctx);
+  return ctx;
+}
+
+/* ── Render ─────────────────────────────────────────────────────────── */
+/* VERDICT_RENDER_KEY is declared with the other caches near the top of the file
+   and cleared by bumpCache(), so a projection change invalidates the verdict. */
+function vSev(s){return s==='block'?'block':s==='act'?'act':'watch'}
+function verdictActionRow(item,i){
+  const cost=item.blocking?'BLOCKING':(num(item.cost,0)>=0.05?num(item.cost).toFixed(1)+' pts':'—');
+  return `<div class="vq-item vq-${vSev(item.severity)}" data-vq="${esc(item.id)}">
+    <div class="vq-head"><span class="vq-rank">${i+1}</span><span class="vq-title">${esc(item.title)}</span><span class="vq-cost">${cost}</span></div>
+    <div class="vq-ev">${item.evidence}</div>
+    ${item.panel?`<div class="vq-act"><a href="#" data-vqpanel="${esc(item.panel)}"${item.playerId?` data-vqplayer="${item.playerId}"`:''}${item.capId?` data-vqcap="${item.capId}"`:''}>${esc(item.action||'Open')} →</a></div>`:''}
+  </div>`;
+}
+function verdictFeedStrip(feeds){
+  const dot=s=>s==='ok'?'●':s==='warn'?'▲':s==='cached'?'◐':s==='off'?'○':'✕';
+  return `<div class="vfeed">${feeds.map(f=>`<div class="vfeed-cell vf-${f.state}" data-vfeed="${esc(f.panel)}" title="${esc(f.detail)}">
+    <span class="vf-dot">${dot(f.state)}</span><span class="vf-label">${esc(f.label)}</span><span class="vf-age">${esc(verdictAgeLabel(f.ageMin))}</span></div>`).join('')}</div>`;
+}
+
+/* RC5.0.0 V5 — opening Verdict used to refresh nothing. The tab handler warmed
+   News for the News tab, Prices for the Prices tab and the chip advisor for
+   Chips, but had no branch for Verdict — so the page intended as the single
+   destination was the one page that never pulled fresh data. A user who opened
+   the app and went straight here saw a verdict built on feeds that had never
+   been fetched in that session. Every feed Verdict consumes is warmed here. */
+function warmVerdictFeeds(){
+  if(navigator.onLine===false)return;
+  try{
+    const newsAge=verdictAgeMin(NEWS.last?.generatedAt);
+    if(!NEWS.last||newsAge==null||newsAge>20)refreshNewsFeed({silent:true}).then(()=>{bumpVerdict()});
+    const priceAge=verdictAgeMin(PRICE.last?.sampleEnd);
+    if(!PRICE.last||priceAge==null||priceAge>60)refreshPriceIntel({silent:true}).then(()=>{bumpVerdict()});
+    const mAge=marketAgeMinutes();
+    if(MARKET_BLEND&&(mAge==null||mAge>120))loadMarketData().then(ok=>{if(ok)render()});
+    if(!CHIP_ADVISOR_LAST)scheduleChipAdvisor(400);
+  }catch(e){console.warn('OTB verdict feed warm skipped:',e)}
+}
+function bumpVerdict(){VERDICT_RENDER_KEY='';try{renderVerdict()}catch(e){console.warn('OTB verdict re-render skipped:',e)}}
+
+function renderVerdict(){
+  const host=document.getElementById('verdictCommand');if(!host)return;
+  const key=[S.gw,S.squad.join(','),[...S.start].join(','),S.cap,S.vice,bank().toFixed(2),
+    verdictFeedFingerprint(),S.transfer.last?JSON.stringify(S.transfer.last.plan?.[0]||''):'',
+    Math.floor((verdictRegime().minsLeft??-1)/15)].join('|');
+  if(VERDICT_RENDER_KEY===key&&host.dataset.rendered==='1')return;
+
+  const players=squadPlayers();
+  if(players.length<15){
+    VERDICT_RENDER_KEY=key;host.dataset.rendered='1';
+    host.innerHTML=`<div class="verdict-hero vq-block"><div class="vh-top"><span class="vh-tag">NO VERDICT</span></div>
+      <div class="vh-line">Squad is ${players.length}/15</div>
+      <div class="vh-note">Verdict issues decisions, not estimates. Complete a legal 15-player squad and it will rank every action by what it is costing you.</div></div>`;
+    ['verdictActions','verdictHealth','verdictChanges','verdictReadiness','verdictIntel','verdicts','benchIntel','capList','upgrades'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=''});
+    return;
+  }
+
+  const ctx=verdictContext(),q=ctx.queue,regime=ctx.regime,feeds=verdictFeeds();
+  const blocking=q.filter(i=>i.blocking),top=q[0]||null;
+
+  const totalCost=q.filter(i=>!i.blocking).reduce((a,i)=>a+num(i.cost,0),0);
+  /* hero — the top item of the queue, not a separate priority ladder */
+  const heroTag=blocking.length?'BLOCKED':regime.key==='LOCK'?'LOCK — FINALISE':regime.key==='REVIEW'?'GAMEWEEK UNDER WAY':
+    top&&top.severity==='act'?'ACTION REQUIRED':'HOLD — SQUAD READY';
+  const heroLine=blocking.length?blocking[0].title:top&&top.severity==='act'?top.title:
+    ctx.routeRolled?`Roll the transfer · captain ${byId(S.cap)?.n||'—'}`:`Squad is ready · captain ${byId(S.cap)?.n||'—'}`;
+  const heroNote=blocking.length?blocking[0].evidence:top&&top.severity==='act'?top.evidence:
+    (totalCost>=0.1
+      ?`The largest remaining item is worth ${num(q[0]?.cost,0).toFixed(1)} points; ${totalCost.toFixed(1)} in total is on the table. ${regime.note}`
+      :`Nothing detected is costing a measurable number of points. ${regime.note}`);
+
+  const heroCls=blocking.length?'vq-block':top&&top.severity==='act'?'vq-act':'vq-ok';
+
+  host.innerHTML=`<div class="verdict-hero ${heroCls}">
+    <div class="vh-top"><span class="vh-tag">GW${S.gw} · ${esc(heroTag)}</span>
+      <span class="vh-clock">${regime.key==='REVIEW'?'deadline passed':verdictCountdown(regime.minsLeft)+' to deadline'}${regime.verified?'':' · unverified'}</span></div>
+    <div class="vh-line">${esc(heroLine)}</div>
+    <div class="vh-note">${heroNote}</div>
+    <div class="vh-meta">
+      <span><b>${ctx.xiTotal.toFixed(1)}</b> xP projected XI <span class="vh-band">± ${ctx.xiSd.toFixed(1)}</span></span>
+      <span><b>${ctx.readiness.score}</b>/100 readiness</span>
+      <span><b>${totalCost.toFixed(1)}</b> pts on the table</span>
+      <span class="vh-regime">${esc(regime.label)} mode</span>
+    </div></div>`;
+  host.dataset.rendered='1';
+
+  /* feed strip */
+  const fh=document.getElementById('verdictHealth');
+  if(fh)fh.innerHTML=`<div class="vsec-h">Intelligence health<span>${feeds.filter(f=>f.state==='ok').length}/${feeds.length} feeds current</span></div>`+verdictFeedStrip(feeds)+
+    (feeds.some(f=>f.state==='fail'||f.state==='cached')?`<div class="vfeed-warn">Verdict is degraded: ${esc(feeds.filter(f=>f.state==='fail'||f.state==='cached').map(f=>f.label).join(', '))}. Affected evidence has been excluded rather than used silently.</div>`:'');
+
+  /* action queue */
+  const ah=document.getElementById('verdictActions');
+  if(ah){
+    const shown=q.slice(0,6),rest=q.length-shown.length;
+    ah.innerHTML=`<div class="vsec-h">Action queue<span>ranked by expected points at stake</span></div>`+
+      (shown.length?shown.map(verdictActionRow).join(''):`<div class="vq-item vq-ok"><div class="vq-head"><span class="vq-title">No action required</span></div><div class="vq-ev">Every check passed and no item is costing a measurable number of points. ${esc(regime.note)}</div></div>`)+
+      (rest>0?`<div class="vq-more">${rest} further signal${rest>1?'s':''} detected below the action threshold — not strong enough to change any decision.</div>`:'')+
+      (regime.key==='LOCK'?`<div class="vq-more">Speculative items (chips, market disagreement, price pressure, transfer routing) are suppressed inside the lock window — they cannot be acted on now.</div>`:'');
+  }
+
+  /* what changed */
+  const ch=document.getElementById('verdictChanges');
+  if(ch){
+    const now=verdictSnapshot(ctx),chg=verdictChanges(verdictLoadSeen(),now);
+    ch.innerHTML=chg&&chg.items.length
+      ?`<div class="vsec-h">Since your last check<span>${esc(relTime(new Date(chg.since).toISOString()))}</span></div>
+        <div class="vchg">${chg.items.map(c=>`<div class="vchg-row vchg-${c.dir}"><span class="vchg-ar">${c.dir==='up'?'↑':c.dir==='down'?'↓':'•'}</span><span>${c.text}</span></div>`).join('')}</div>
+        <div class="vchg-note">${chg.items.some(c=>c.w>=8)?'These changes are material. Re-check the action queue above — it has already been recalculated with them.':'None of these changes were large enough to alter the ranking above.'}</div>`
+      :`<div class="vsec-h">Since your last check<span>${verdictLoadSeen()?'no material change':'first look this gameweek'}</span></div>`;
+    verdictSaveSeen(now);
+  }
+
+  /* readiness decomposition + calibration */
+  const rh=document.getElementById('verdictReadiness');
+  if(rh){
+    const cal=verdictCalibration();
+    const bars=ctx.readiness.parts.map(p=>`<div class="vrd-row"><span class="vrd-k">${esc(p.k)}</span>
+      <span class="vrd-bar"><i style="width:${Math.round(100*p.got/p.max)}%"></i></span>
+      <span class="vrd-v">${p.got}/${p.max}</span><span class="vrd-n">${esc(p.note)}</span></div>`).join('');
+    const unc=ctx.uncertainty.top;
+    rh.innerHTML=`<div class="vsec-h">Readiness ${ctx.readiness.score}/100<span>state completeness — not a prediction</span></div>
+      <div class="vrd">${bars}</div>
+      ${unc?`<div class="vrd-unc"><b>Main uncertainty:</b> ${esc(unc.p.n)} accounts for ${Math.round(unc.share*100)}% of the variance in your XI projection (${Math.round(unc.exp)} expected minutes, ${Math.round(num(unc.pStart,0)*100)}% start probability)${unc.captain?' — and he has the armband, which doubles it':''}.</div>`:''}
+      <div class="vsec-h" style="margin-top:14px">Model calibration<span>${cal?cal.gwCount+' gameweeks scored':'locked until GW'+(VERDICT_MIN_CALIB_GWS)}</span></div>
+      ${cal?`<div class="vcal">
+        <div class="vcal-row"><span>Interval coverage</span><b class="${cal.coverage!=null&&Math.abs(cal.coverage-.8)>.12?'bad':''}">${cal.coverage==null?'—':Math.round(cal.coverage*100)+'%'}</b><span class="vcal-n">of actuals fell inside the 80% band (target 80%)</span></div>
+        <div class="vcal-row"><span>Bias</span><b>${cal.bias==null?'—':signed(cal.bias,2)}</b><span class="vcal-n">points per player — positive means the model runs optimistic</span></div>
+        <div class="vcal-row"><span>Rank quality</span><b>${cal.rank==null?'—':cal.rank.toFixed(2)}</b><span class="vcal-n">Spearman ρ across ${cal.n} scored player-gameweeks</span></div>
+        ${cal.coverage!=null&&cal.coverage<.68?`<div class="vcal-warn">Coverage is materially below target: the ± band shown above is too narrow and should be read as optimistic. This is the outcome-variance defect, measured rather than assumed.</div>`:''}
+      </div>`:`<div class="vcal-wait">No calibration is shown until ${VERDICT_MIN_CALIB_GWS} gameweeks have been scored. Anything fitted to less than that would be noise, and a confidence figure with nothing behind it is worse than none.</div>`}
+      <div class="vrd-actions"><button class="btn ghost" id="btnVerdictSens">Test how robust the captain call is</button><button class="btn ghost" id="btnVerdictJournal">Record this gameweek's decision</button></div>
+      <div id="verdictSensOut">${VERDICT_SENSITIVITY?verdictSensHtml(VERDICT_SENSITIVITY):''}</div>`;
+  }
+
+  /* intelligence: market disagreement, ownership, horizon, schedule */
+  const ih=document.getElementById('verdictIntel');
+  if(ih){
+    const d=ctx.divergence,ow=ctx.ownership;
+    const sched=ctx.schedule.rows,bestF=ctx.schedule.best,worstF=ctx.schedule.worst;
+    ih.innerHTML=`<div class="vsec-h">Evidence<span>signals that inform the queue above</span></div>
+      <div class="vint">
+        ${d?`<div class="vint-card"><b>Model vs market</b>
+          <div>${esc(TEAMS[d.max.code]?.n||d.max.code)}: OTB ${d.max.modelXg.toFixed(2)} xG · market ${d.max.marketXg.toFixed(2)} · <span class="${Math.abs(d.max.diff)>=.1?'bad':''}">${signed(d.max.diff*100,0)}%</span></div>
+          <div class="vint-n">${d.rows.length} of your clubs' fixtures are priced. The blend already applies ${Math.round(MARKET_WEIGHT*100)}% of the market view — this is the residual disagreement, not an unused signal.</div></div>`:
+          `<div class="vint-card"><b>Model vs market</b><div class="vint-n">${MARKET_BLEND?'No live odds — comparison unavailable and projections are model-only.':'Market blend is disabled in this build.'}</div></div>`}
+
+        ${bestF?`<div class="vint-card"><b>Fixture exposure</b>
+          <div>Best run: ${esc(TEAMS[bestF.code]?.n||bestF.code)} (${num(bestF.st.avgOverall,0).toFixed(2)}) · ${bestF.ex.count} owned</div>
+          <div>Worst run: ${esc(TEAMS[worstF.code]?.n||worstF.code)} (${num(worstF.st.avgOverall,0).toFixed(2)}) · ${worstF.ex.count} owned</div>
+          <div class="vint-n">Ranked on fixture difficulty over GW${ctx.gws[0]}–${ctx.gws[ctx.gws.length-1]}, with ownership reported separately. The previous version ranked clubs by the summed xP of players you owned, which meant the club you owned most of always came top regardless of its fixtures.</div></div>`:''}
+
+        ${ow?`<div class="vint-card"><b>Ownership exposure</b>
+          <div>${ow.template.length} of your XI above 30% owned · average ${ow.avg.toFixed(1)}%</div>
+          ${ow.missing.length?`<div>Not owned: ${ow.missing.map(m=>esc(m.p.n)+' ('+m.own.toFixed(0)+'%)').join(', ')}</div>`:''}
+          ${ow.diffs.length?`<div>Your differentials: ${ow.diffs.map(m=>esc(m.p.n)+' ('+m.own.toFixed(0)+'%)').join(', ')}</div>`:''}
+          <div class="vint-n">These are raw ownership figures. FPL publishes selection percentage but not captaincy share, so true effective ownership cannot be computed here and is not claimed. High template exposure lowers variance — right when protecting a rank, wrong when chasing one.</div></div>`:''}
+
+        <div class="vint-card"><b>Five-gameweek outlook</b>
+          <div>${ctx.horizon.map(h=>`GW${h.gw} ${h.ok?h.x.toFixed(0):'—'}`).join(' · ')}</div>
+          <div>Total ${ctx.horizonTotal.toFixed(0)} xP</div>
+          <div class="vint-n">Each gameweek is scored on that week's best legal XI plus captain, re-picked per gameweek. The previous version summed all 15 players, counting bench fodder that can never score.</div></div>
+      </div>`;
+  }
+
+  renderVerdictDetail(ctx);
+  VERDICT_RENDER_KEY=key;
+
+  /* wiring */
+  document.querySelectorAll('[data-vqpanel]').forEach(a=>a.onclick=e=>{e.preventDefault();
+    const pl=a.dataset.vqplayer,cap=a.dataset.vqcap;
+    if(cap){S.cap=+cap;S.capManual=true;saveUserState();bumpCache();render();flash('Captain updated from the action queue.');return}
+    if(pl){inspectPlayer(+pl);return}
+    uxOpenPanel(a.dataset.vqpanel)});
+  document.querySelectorAll('[data-vfeed]').forEach(a=>a.onclick=()=>uxOpenPanel(a.dataset.vfeed));
+  const sb=document.getElementById('btnVerdictSens');
+  if(sb)sb.onclick=()=>{const out=document.getElementById('verdictSensOut');if(out)out.innerHTML='<div class="vsens">Probing…</div>';
+    setTimeout(()=>{VERDICT_SENSITIVITY=verdictCaptainSensitivity();const o=document.getElementById('verdictSensOut');
+      if(o)o.innerHTML=VERDICT_SENSITIVITY?verdictSensHtml(VERDICT_SENSITIVITY):'<div class="vsens">Not enough of a squad to test a captaincy flip.</div>'},30)};
+  const jb=document.getElementById('btnVerdictJournal');
+  if(jb)jb.onclick=()=>{verdictJournalCapture(ctx,{manual:true});flash(`GW${S.gw} decision recorded. After the gameweek this can be read against the accuracy ledger to separate a bad decision from a bad outcome.`)};
+
+  /* auto-capture the decision once inside the lock window, so post-gameweek
+     review is possible without remembering to press anything */
+  if(regime.key==='LOCK')try{verdictJournalCapture(ctx)}catch(e){}
+}
+function verdictSensHtml(s){
+  return `<div class="vsens ${s.robust?'ok':'warn'}"><b>${esc(s.player.n)} — ${s.robust?'robust':'marginal'}</b>
+    <div>The armband moves to ${esc(s.rival.n)} if ${esc(s.player.n)}'s availability falls below <b>${Math.round(s.flipAt*100)}%</b>. He is currently at ${Math.round(s.current*100)}%, a margin of ${Math.round(s.margin*100)} points.</div>
+    <div class="vint-n">${s.robust?'A normal Friday injury doubt would not overturn this call.':'This call is fragile — a single press-conference doubt could flip it. Re-check after team news.'} Availability is the only input varied; role and fixture evidence are held fixed.</div></div>`;
+}
+/* ── Detailed evidence (retained from RC4, now fed from the shared context) ──
+   These panels were fine; what was wrong was that they recomputed everything
+   the hero had already computed. They now read from ctx. */
+function renderVerdictDetail(ctx){
+  const {players,xi,benchRows,rows}=ctx;
+
+  const vh=document.getElementById('verdicts');
+  if(vh){
+    const out=[];
+    const low=ctx.xiTotal-1.2816*ctx.xiSd,high=ctx.xiTotal+1.2816*ctx.xiSd;
+    if(ctx.xiOk)out.push(`<div class="verdict">XI range including captain: <b>${low.toFixed(1)}–${high.toFixed(1)}</b> (80% model range). Use the floor when protecting rank and the ceiling when chasing one.${verdictCalibration()?.coverage!=null&&verdictCalibration().coverage<.68?' <b>Measured coverage is below target — read this band as narrower than reality.</b>':''}</div>`);
+    if(!ctx.budgetOk)out.push(`<div class="verdict warn">You are <b>£${Math.abs(bank()).toFixed(1)}m over budget</b>.</div>`);
+    if(ctx.risk.length)out.push(`<div class="verdict warn"><b>Minutes/availability risk:</b> ${ctx.risk.map(r=>esc(r.p.n)+' ('+r.cost.toFixed(1)+' xP exposed)').join(', ')}.</div>`);
+    vh.innerHTML=out.join('')||'<div class="verdict">Squad is legal and funded.</div>';
+  }
+
+  const bh=document.getElementById('benchIntel');
+  if(bh){
+    if(ctx.xiOk){
+      const bi=expectedAutosub({xi,benchRows});
+      const order=bi.order.map((o,i)=>`<span class="bench-role">${i+1}. ${esc(o.p.n)} · ${(100*(bi.calls.get(o.p.id)||0)).toFixed(0)}% call</span>`).join('');
+      bh.innerHTML=`<div class="bench-intel">Expected autosub contribution in GW${S.gw}: <b>${bi.mean.toFixed(2)} points</b> · goalkeeper ${bi.gkMean.toFixed(2)} · outfield ${bi.outfieldMean.toFixed(2)}.<br>Optimal outfield priority: ${order||'—'}<br>${ctx.benchGap>0.01?`Your current order returns <b>${ctx.benchCurrent.toFixed(2)}</b> — a gap of <b>${ctx.benchGap.toFixed(2)}</b> points.`:'Your current order matches the optimal one.'}<br>Full Bench Boost projection: <b>${bi.fullMean.toFixed(1)} points</b>.</div>`;
+    }else bh.innerHTML='<div class="help">Complete a legal XI to calculate expected autosubs and bench priority.</div>';
+  }
+
+  const ch=document.getElementById('capList');
+  if(ch)ch.innerHTML=ctx.capRanked.slice(0,7).map((o,i)=>`<div class="lrow"><span><span class="rank">${i+1}</span>${esc(o.p.n)} <span style="color:var(--muted);font-size:10px">${esc(o.p.t)}</span>${o.p.id===S.cap?' <b style="color:var(--mint)">C</b>':''}</span><span class="r mono" style="color:${i===0?'var(--mint)':'var(--paper)'}">${(o.r.x*2).toFixed(1)} · ${(o.r.high*2).toFixed(1)}</span></div>`).join('')||'<div class="help">Pick an XI first.</div>';
+
+  const uh=document.getElementById('upgrades');
+  if(uh){
+    const cands=[];
+    for(const own of players){const ownR=project(own,S.gw);
+      for(const cand of POOL){
+        if(S.squad.includes(cand.id)||cand.p!==own.p||!TEAMS[cand.t]||cand.c>own.c+bank()+.001)continue;
+        if(players.filter(p=>p.id!==own.id&&p.t===cand.t).length>=3)continue;
+        const cr=project(cand,S.gw),g=cr.x-ownR.x;
+        if(g>.05)cands.push({own,cand,g,sd:Math.sqrt(cr.sd**2+ownR.sd**2)});
+      }}
+    cands.sort((a,b)=>b.g-a.g);
+    uh.innerHTML=cands.slice(0,8).map(o=>`<div class="lrow"><span style="font-size:11px">${esc(o.own.n)} → <b>${esc(o.cand.n)}</b></span><span class="r mono">+${o.g.toFixed(1)} ±${o.sd.toFixed(1)}</span></div>`).join('')||'<div class="help">No positive legal swap inside budget.</div>';
+  }
+}
+
 /* ============================ CHIP SQUAD BUILDER ============================
    Produces the actual 15 a Free Hit or Wildcard would buy, rather than only
    asserting that a chip week has "upside".
@@ -1814,6 +2681,95 @@ try{const settings=accuracyProjectionSettings(),fp=accuracyHashValue(settings);a
 try{add('Final-result gate waits for FPL data checks',accuracyEventFinal({finished:true,data_checked:true})&&!accuracyEventFinal({finished:true,data_checked:false})&&!accuracyEventFinal({finished:false,data_checked:true}),'finished + data checked required','engineering')}catch(e){add('Final-result gate waits for FPL data checks',false,e.message,'engineering')}
 try{const now=Date.now(),rows=Array.from({length:300},(_,i)=>[i+1,2,0,5,80,70,.8,.9,1,null,1]),snap={gw:1,release:MODEL_RELEASE,capturedAt:now,deadline:now+864e5,modelFingerprint:'abc12345',rows};snap.checksum=accuracySnapshotChecksum(snap);const clean=sanitizeAccuracyLedger({season:EXPECTED_SEASON,snapshots:{1:snap}}).snapshots[1];add('Projection snapshot checksum survives ledger round-trip',clean.integrity==='verified'&&clean.accountable===true,`${clean.integrity} · ${clean.rows.length} rows`,'engineering')}catch(e){add('Projection snapshot checksum survives ledger round-trip',false,e.message,'engineering')}
 try{const oldShot=!!S.shotMode,bench=document.getElementById('benchBox'),pitch=document.getElementById('pitchBox');S.shotMode=true;applyShotMode();const ok=bench.classList.contains('compact-bench')&&!bench.classList.contains('compact-hidden')&&pitch.classList.contains('compact');S.shotMode=oldShot;applyShotMode();add('Compact screenshot view keeps the four-player bench visible',ok,ok?'bench visible and compact':'bench hidden or compact styling missing','engineering')}catch(e){add('Compact screenshot view keeps the four-player bench visible',false,e.message,'engineering')}try{const b=document.getElementById('btnClearSquad');add('Squad view exposes a dedicated Clear All action',!!b&&b.textContent.includes('Clear All')&&typeof clearCurrentSquad==='function','visible squad reset control','engineering')}catch(e){add('Squad view exposes a dedicated Clear All action',false,e.message,'engineering')}
+/* ═══ RC5.0.0 — Verdict Brain acceptance tests ═══════════════════════════════
+   These exist because the Verdict page now issues decisions rather than
+   describing state. Governance rule: every feed the Brain consumes must appear
+   in the render key AND the freshness strip, or the page can silently freeze on
+   stale evidence — which is exactly the failure the strip was built to expose. */
+try{const before=verdictFeedFingerprint(),savedMode=DATA.mode;DATA.mode=DATA.mode==='LIVE'?'CACHE':'LIVE';const after=verdictFeedFingerprint();DATA.mode=savedMode;
+  add('Verdict render key responds to feed change',before!==after&&verdictFeedFingerprint()===before,'data-mode probe inverted and restored','engineering')}
+catch(e){add('Verdict render key responds to feed change',false,e.message,'engineering')}
+
+/* The invariant is that the visible health strip and the render key cover the
+   SAME feeds. A hardcoded expected list would have to be edited by hand every
+   time a feed is added, which is exactly the drift this is meant to catch — so
+   expected is derived from the fingerprint registry itself. */
+try{const shown=verdictFeeds().map(f=>f.key).sort().join(','),declared=VERDICT_FEED_KEYS.slice().sort().join(',');
+  add('Freshness strip covers every feed in the render key',shown===declared,shown===declared?`${VERDICT_FEED_KEYS.length} feeds`:`strip[${shown}] vs key[${declared}]`,'data')}
+catch(e){add('Freshness strip covers every feed in the render key',false,e.message,'data')}
+
+try{const iso=new Date(Date.now()-72*3600e3).toISOString(),lbl=relTime(iso);
+  add('Relative time reports days, not zero',lbl==='3d ago',`72h ago → ${lbl}`,'engineering')}
+catch(e){add('Relative time reports days, not zero',false,e.message,'engineering')}
+
+try{const saved={loaded:MARKET.loaded,age:MARKET.ageMinutes,at:MARKET.fetchedAt};
+  MARKET.loaded=true;MARKET.ageMinutes=60;MARKET.fetchedAt=Date.now()-90*60000;
+  const eff=marketAgeMinutes();MARKET.loaded=saved.loaded;MARKET.ageMinutes=saved.age;MARKET.fetchedAt=saved.at;
+  add('Market age advances with wall clock',Math.abs(eff-150)<2,`reported 60m → effective ${eff?.toFixed(0)}m`,'data')}
+catch(e){add('Market age advances with wall clock',false,e.message,'data')}
+
+try{const savedSus=MARKET_SUSPEND,savedAge=MARKET.ageMinutes,savedAt=MARKET.fetchedAt,savedLoaded=MARKET.loaded;
+  MARKET.loaded=true;MARKET.ageMinutes=MARKET_MAX_AGE_MIN+120;MARKET.fetchedAt=Date.now();MARKET_SUSPEND=false;
+  const blocked=marketFor('ARS',{opp:'CHE',home:true})===null&&marketStale()&&!marketActive();
+  MARKET_SUSPEND=savedSus;MARKET.ageMinutes=savedAge;MARKET.fetchedAt=savedAt;MARKET.loaded=savedLoaded;
+  add('Stale odds are excluded from projections',blocked,'past cutoff → blend inactive','model')}
+catch(e){add('Stale odds are excluded from projections',false,e.message,'model')}
+
+try{const c=verdictCalibration(),gwc=accuracyCompletedGws().length;
+  add('Calibration is withheld below three completed gameweeks',gwc>=3?!!c:c===null,`${gwc} completed GW`,'model')}
+catch(e){add('Calibration is withheld below three completed gameweeks',false,e.message,'model')}
+
+try{if(S.squad.length!==15)skip('Every action-queue item is costed in expected points','no full user squad','engineering');
+  else{const q=verdictQueue(verdictContext()),bad=q.filter(i=>!Number.isFinite(i.cost)||i.cost<0);
+    add('Every action-queue item is costed in expected points',bad.length===0,bad.length?bad.map(i=>i.title).join(' · '):`${q.length} items costed`,'engineering')}}
+catch(e){add('Every action-queue item is costed in expected points',false,e.message,'engineering')}
+
+try{if(S.squad.length!==15)skip('Action queue is ordered by cost within severity','no full user squad','engineering');
+  else{const q=verdictQueue(verdictContext()),rank={block:0,act:1,watch:2};let ok=true;
+    for(let i=1;i<q.length;i++){const a=q[i-1],b=q[i];const ra=rank[vSev(a.severity)],rb=rank[vSev(b.severity)];if(rb<ra||(ra===rb&&b.cost>a.cost+1e-9)){ok=false;break}}
+    add('Action queue is ordered by cost within severity',ok,`${q.length} items`,'engineering')}}
+catch(e){add('Action queue is ordered by cost within severity',false,e.message,'engineering')}
+
+/* Asserts BEHAVIOUR, not source text: the gate lives in verdictQueue, so
+   grepping renderVerdict for 'releaseReadiness' tested nothing real. */
+try{const savedMode=DATA.mode;DATA.mode='SEED';
+  let item=null;
+  try{item=(verdictQueue(verdictContext())||[]).find(i=>i.id==='data'&&i.blocking)}catch(err){item=null}
+  DATA.mode=savedMode;
+  add('Verdict refuses to decide on uncertified data',!!item,item?'SEED raises a blocking queue item':'no blocking item raised on SEED data','data')}
+catch(e){add('Verdict refuses to decide on uncertified data',false,e.message,'data')}
+
+/* The blocking message must name the ACTUAL cause. A wrong reason on a blocking
+   item sends the reader to the wrong panel, which is worse than a vague one. */
+try{const savedMode=DATA.mode,savedVal=DATA.validation;
+  DATA.mode='SEED';const seedTxt=verdictBlockReason();
+  DATA.mode='LIVE';DATA.validation={structuralPass:false,seasonPass:true,structural:['probe: structural failure'],season:[]};
+  const structTxt=verdictBlockReason();
+  DATA.mode=savedMode;DATA.validation=savedVal;
+  const ok=/SEED mode/.test(seedTxt)&&/structural/i.test(structTxt)&&!/LIVE mode/.test(structTxt);
+  add('Blocking message names the real reason, not just the data mode',ok,ok?'mode and validation causes distinguished':`seed="${seedTxt.slice(0,40)}" struct="${structTxt.slice(0,40)}"`,'data')}
+catch(e){add('Blocking message names the real reason, not just the data mode',false,e.message,'data')}
+
+try{const gws=scheduleGws(S.gw,3),codes=Object.keys(TEAMS).slice(0,2);
+  if(codes.length<2)skip('Schedule outlook is independent of squad concentration','no club data','model');
+  else{const a=scheduleTeamStats(codes[0],gws),b=scheduleTeamStats(codes[1],gws);
+    const indep=!String(scheduleTeamStats).includes('squadPlayers')&&Number.isFinite(a.avgOverall)&&Number.isFinite(b.avgOverall);
+    add('Schedule outlook is independent of squad concentration',indep,'fixture stats carry no ownership term','model')}}
+catch(e){add('Schedule outlook is independent of squad concentration',false,e.message,'model')}
+
+try{let id=940000;const row=(pos,mean,appear)=>({p:{id:id++,p:pos,n:pos+id},mean,x:mean,appear}),
+  xi=[row('GK',4,.9),row('DEF',4,.9),row('DEF',4,.9),row('DEF',4,.6),row('MID',5,.9),row('MID',5,.9),row('MID',5,.9),row('MID',5,.6),row('FWD',5,.9),row('FWD',5,.9),row('FWD',5,.6)],
+  benchRows=[row('GK',3,.9),row('DEF',6,.95),row('MID',1,.95),row('FWD',1,.95)],
+  best=expectedAutosub({xi,benchRows}),out=benchRows.filter(o=>o.p.p!=='GK'),
+  worst=expectedAutosub({xi,benchRows},[out[2],out[1],out[0]]);
+  add('Bench order is priced, not just displayed',best.mean>=worst.mean-1e-9&&Number.isFinite(worst.mean),`best ${best.mean.toFixed(2)} vs forced ${worst.mean.toFixed(2)}`,'model')}
+catch(e){add('Bench order is priced, not just displayed',false,e.message,'model')}
+
+try{if(S.squad.length!==15)skip('Readiness decomposes into inspectable components','no full user squad','engineering');
+  else{const r=verdictReadiness(verdictContext()),sum=r.parts.reduce((a,p)=>a+p.max,0);
+    add('Readiness decomposes into inspectable components',r.parts.length>=4&&sum===100&&r.score<=100&&r.score>=0,`${r.parts.length} parts · ${r.score}/100`,'engineering')}}
+catch(e){add('Readiness decomposes into inspectable components',false,e.message,'engineering')}
+
 const pass=tests.filter(t=>t.status==='PASS').length,fail=tests.filter(t=>t.status==='FAIL').length,skipped=tests.filter(t=>t.status==='SKIP').length,total=tests.length;document.getElementById('hTests').textContent=skipped?`${pass}P · ${skipped}S`:`${pass}/${total}`;document.getElementById('hTests').className='v mono '+(fail===0?'good':'bad');const testRow=t=>{const icon=t.status==='PASS'?'✓':t.status==='SKIP'?'○':'✕',cls=t.status==='FAIL'?'test-bad':t.status==='SKIP'?'unverified':'test-ok';return`<div class="lrow"><span>${icon} ${esc(String(t.name||''))}</span><span class="mono ${cls}">${esc(String(t.detail||t.status))}</span></div>`};const catLabel={data:'DATA HEALTH — is the input data complete and structurally sound',model:'MODEL CONSISTENCY — internal math checks only, NOT proof of predictive accuracy. '+'These confirm the projection doesn’t contradict itself; they cannot confirm it’s RIGHT. '+'That requires backtesting against real results, not yet possible before a ball is kicked.',engineering:'ENGINEERING — application logic, security, structural correctness'};document.getElementById('testNote').innerHTML=['data','model','engineering'].map(cat=>{const inCat=tests.filter(t=>(t.cat||'engineering')===cat);if(!inCat.length)return '';return `<div class="test-cat-lab">${catLabel[cat]}</div>`+inCat.map(testRow).join('')}).join('');window.__FPL_TESTS__={pass,fail,skipped,total,tests,dataMode:DATA.mode};return window.__FPL_TESTS__}
 function tick(){const el=document.getElementById('hClock');if(!DEADLINE_VERIFIED||!Number.isFinite(DEADLINE)){el.textContent='UNVERIFIED';el.className='v mono unverified';return}const d=DEADLINE-Date.now();if(d<=0){el.textContent='PASSED';el.className='v mono bad';return}el.className='v mono';const day=Math.floor(d/864e5),hr=Math.floor(d/36e5)%24,mi=Math.floor(d/6e4)%60;el.textContent=`${day}d ${String(hr).padStart(2,'0')}h ${String(mi).padStart(2,'0')}m`}
 
@@ -1825,7 +2781,8 @@ document.getElementById('gwSel').onchange=e=>{S.gw=+e.target.value;S.gwPinned=tr
 ['oBudget','oHorizon','oRisk','oDisplay'].forEach(id=>document.getElementById(id).onchange=()=>{syncControls();render();saveUserState()});
 let __sliderDebounce=null;
 [['wFix','fix','lFix'],['wHome','home','lHome'],['wCS','cs','lCS'],['wDC','dc','lDC'],['wOfficial','official','lOfficial'],['wForm','form','lForm']].forEach(([el,key,lab])=>document.getElementById(el).oninput=e=>{S.w[key]=+e.target.value;document.getElementById(lab).textContent=S.w[key].toFixed(2);bumpCache();if(columnVisible('colPool'))queuePoolRender();if(columnVisible('colCentre'))requestAnimationFrame(()=>{renderPitch();renderSpine()});clearTimeout(__sliderDebounce);__sliderDebounce=setTimeout(()=>{scheduleSelfTests(500);saveUserState();scheduleAccuracyCapture()},260)});
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-selected','false');x.tabIndex=-1});b.classList.add('on');b.setAttribute('aria-selected','true');b.tabIndex=0;const map={build:'pBuild',transfers:'pTransfers',prices:'pPrices',verdict:'pVerdict',model:'pModel',roles:'pRoles',news:'pNews',fixtures:'pFixtures',accuracy:'pAccuracy',squads:'pSquads',chips:'pChips',data:'pData'};Object.values(map).forEach(id=>document.getElementById(id).classList.add('hide'));document.getElementById(map[b.dataset.t]).classList.remove('hide');if(b.dataset.t==='news')refreshNewsFeed({silent:true});if(b.dataset.t==='prices')refreshPriceIntel({silent:true});if(b.dataset.t==='chips')scheduleChipAdvisor(80);renderActiveRailPanel(b.dataset.t)});
+let USER_TOUCHED_RAIL=false;
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-selected','false');x.tabIndex=-1});b.classList.add('on');b.setAttribute('aria-selected','true');b.tabIndex=0;const map={build:'pBuild',transfers:'pTransfers',prices:'pPrices',verdict:'pVerdict',model:'pModel',roles:'pRoles',news:'pNews',fixtures:'pFixtures',accuracy:'pAccuracy',squads:'pSquads',chips:'pChips',data:'pData'};Object.values(map).forEach(id=>document.getElementById(id).classList.add('hide'));document.getElementById(map[b.dataset.t]).classList.remove('hide');if(b.dataset.t==='news')refreshNewsFeed({silent:true});if(b.dataset.t==='prices')refreshPriceIntel({silent:true});if(b.dataset.t==='chips')scheduleChipAdvisor(80);if(b.dataset.t==='verdict')warmVerdictFeeds();USER_TOUCHED_RAIL=true;renderActiveRailPanel(b.dataset.t)});
 document.querySelectorAll('.mobile-tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.mobile-tabs button').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-selected','false');x.tabIndex=-1});b.classList.add('on');b.setAttribute('aria-selected','true');b.tabIndex=0;['colPool','colCentre','colRail'].forEach(id=>document.getElementById(id).classList.add('mhide'));document.getElementById({pool:'colPool',centre:'colCentre',rail:'colRail'}[b.dataset.m]).classList.remove('mhide');if(b.dataset.m==='pool')renderPool();else if(b.dataset.m==='centre'){renderPitch();renderSpine()}else renderActiveRailPanel()});
 function syncMobile(){const small=matchMedia('(max-width:1080px)').matches;['colPool','colCentre','colRail'].forEach(id=>document.getElementById(id).classList.remove('mhide'));if(small){const on=document.querySelector('.mobile-tabs button.on').dataset.m;['colPool','colCentre','colRail'].forEach(id=>{if(id!=={pool:'colPool',centre:'colCentre',rail:'colRail'}[on])document.getElementById(id).classList.add('mhide')})}}
 addEventListener('resize',()=>{syncMobile();resetPoolRender();requestAnimationFrame(render)});document.getElementById('modalClose').onclick=closeModal;document.getElementById('playerModal').onclick=e=>{if(e.target.id==='playerModal')closeModal()};document.addEventListener('keydown',e=>{const modal=document.getElementById('playerModal');if(modal.classList.contains('hide'))return;if(e.key==='Escape'){closeModal();return}if(e.key==='Tab'){const f=[...modal.querySelectorAll('button,input,select,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled&&el.offsetParent!==null);if(!f.length)return;const first=f[0],last=f[f.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
@@ -2023,7 +2980,7 @@ document.getElementById('fxSyncExternal').onclick=syncExternalCalendar;
    RC2.3.6 — compact screenshot view includes the complete bench.
    RC2.3.5 — public-release certification, history-eligible assurance and restored-XI header refresh.
    RC2.3.4 — audited projection ledger, reproducible snapshots and final-result backtesting. */
-const APP_RELEASE='RC4.8.0',APP_RELEASE_SLUG='RC4.8.0-role-split';
+const APP_RELEASE='RC5.0.0',APP_RELEASE_SLUG='RC5.0.0-verdict-brain';
 const ACCURACY_LEDGER_KEY='fpl-engine-projection-ledger-rc233-v1',ACCURACY_SCHEMA=2,MODEL_RELEASE=APP_RELEASE;  /* stamped into every accuracy snapshot - must track the real model build */
 
 function emptyAccuracyLedger(){return{schema:ACCURACY_SCHEMA,season:EXPECTED_SEASON,snapshots:{},actuals:{},catalog:{}}}
@@ -2175,11 +3132,35 @@ function runRC4HealthCheck(){
  return{ok,missing,dom};
 }
 function scheduleRC4HealthCheck(){const run=()=>runRC4HealthCheck();if('requestIdleCallback'in window)requestIdleCallback(run,{timeout:1800});else setTimeout(run,900)}
-document.documentElement.dataset.release=APP_RELEASE_SLUG;pipelineEvent('APP','ok','RC4.8.0 JavaScript initialised');scheduleRC4HealthCheck();loadExternalCalendar();loadAccuracyLedger();renderExternalCalendarStatus();renderStrengths();populateTeamFilter();applyShotMode();render();syncMobile();tick();setInterval(tick,30000);const hadCache=loadCachedData();render();maybeAutoCaptureProjection();scheduleSelfTests(1400);if(navigator.onLine!==false)setTimeout(()=>maybeAutoSyncAccuracyActuals(),1800);/* Market data is optional: the engine renders immediately and re-renders
+document.documentElement.dataset.release=APP_RELEASE_SLUG;pipelineEvent('APP','ok','RC5.0.0 JavaScript initialised');scheduleRC4HealthCheck();loadExternalCalendar();loadAccuracyLedger();renderExternalCalendarStatus();renderStrengths();populateTeamFilter();applyShotMode();render();syncMobile();tick();setInterval(tick,30000);const hadCache=loadCachedData();render();maybeAutoCaptureProjection();scheduleSelfTests(1400);if(navigator.onLine!==false)setTimeout(()=>maybeAutoSyncAccuracyActuals(),1800);/* Market data is optional: the engine renders immediately and re-renders
    if it arrives. loadMarketData() calls bumpCache() itself, so projections
    recompute with the blend applied. Refreshed hourly; the worker serves a
    cache so this costs no credits. */
 if(navigator.onLine!==false)setTimeout(()=>{loadMarketData().then(ok=>{if(ok)render()})},600);
-setInterval(()=>{if(navigator.onLine!==false&&document.visibilityState==='visible')loadMarketData().then(ok=>{if(ok)render()})},60*60*1000);if(DATA.auto&&navigator.onLine!==false)setTimeout(()=>refreshLiveData(false),250);setInterval(()=>{if(DATA.auto&&navigator.onLine!==false&&document.visibilityState==='visible')refreshLiveData(false)},30*60*1000);
+setInterval(()=>{if(navigator.onLine!==false&&document.visibilityState==='visible')loadMarketData().then(ok=>{if(ok)render()})},60*60*1000);
+/* RC5.0.0 F2 — the hourly market poll only fires while the tab is visible. On
+   mobile the app is backgrounded almost all of the time, so odds could silently
+   pass the 12h cutoff and be dropped from projections with no notice. Returning
+   to the app now forces a refresh whenever effective age exceeds two hours. */
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible'||navigator.onLine===false)return;const a=marketAgeMinutes();if(a==null||a>120)loadMarketData().then(ok=>{if(ok)render()})});
+/* RC5.0.0 — Verdict-first landing. The rail still defaults to the builder,
+   because landing a new or half-built squad on a page that can only say
+   "NO VERDICT" is worse than not landing there at all. Once there is a legal
+   15 and the data is certified, the intended destination becomes the default:
+   you open OTB into the decision, and Verdict tells you whether any other
+   panel is worth visiting. Fires once, after live data settles, and never
+   overrides a tab the user has already chosen. */
+let VERDICT_LANDING_DONE=false;
+function maybeLandOnVerdict(){
+  if(VERDICT_LANDING_DONE||USER_TOUCHED_RAIL||activeRailTab()!=='build')return;
+  try{
+    if(!Array.isArray(S.squad)||S.squad.length!==15)return;
+    if(!legal(squadPlayers())||!productionDataReady())return;
+    const btn=document.querySelector('.tabs button[data-t="verdict"]');
+    if(!btn)return;
+    VERDICT_LANDING_DONE=true;btn.click();
+  }catch(e){console.warn('OTB verdict landing skipped:',e)}
+}
+if(DATA.auto&&navigator.onLine!==false)setTimeout(()=>refreshLiveData(false),250);setTimeout(maybeLandOnVerdict,2600);setInterval(()=>{if(DATA.auto&&navigator.onLine!==false&&document.visibilityState==='visible')refreshLiveData(false)},30*60*1000);
 </script>
 </body></html>
