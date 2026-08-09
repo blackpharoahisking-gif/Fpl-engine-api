@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%2337003C%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2720%27 fill=%27%2300FF87%27/%3E%3Cpath d=%27M32 17l9 7-3 11H26l-3-11zM26 35l-7 7 8 5 5-6 5 6 8-5-7-7%27 fill=%27%23160019%27/%3E%3C/svg%3E"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="OTB"><meta name="theme-color" content="#37003C">
-<title>FPL Engine — OTB 26/27 · RC5.0.12 Mobile Fast Path</title>
+<title>FPL Engine — OTB 26/27 · RC5.0.13 Verdict Wiring</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
@@ -100,6 +100,7 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
 .verdict-hero{border:1px solid rgba(0,255,135,.38);border-left:4px solid var(--mint);border-radius:6px;padding:12px;background:linear-gradient(135deg,rgba(0,255,135,.10),rgba(4,245,255,.04));margin-bottom:10px}.verdict-hero.warn{border-left-color:#FFC107;background:rgba(255,193,7,.08)}.verdict-hero.bad{border-left-color:var(--mag);background:rgba(233,0,82,.09)}.verdict-hero .vh-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.verdict-hero .vh-label{font-size:8px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:800}.verdict-hero .vh-title{font-family:Archivo,sans-serif;font-variation-settings:'wdth' 118,'wght' 800;font-size:19px;line-height:1.05;margin-top:4px;text-transform:uppercase}.verdict-hero .vh-conf{font:800 19px 'JetBrains Mono',monospace;color:var(--mint);white-space:nowrap}.verdict-hero.warn .vh-conf{color:#FFD75E}.verdict-hero.bad .vh-conf{color:#FF91B5}.verdict-hero .vh-note{font-size:11px;line-height:1.45;color:var(--paper);margin-top:8px}.verdict-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}.verdict-card{border:1px solid var(--line);border-radius:5px;padding:9px;background:rgba(0,0,0,.20);min-width:0}.verdict-card .vc-head{display:flex;justify-content:space-between;gap:7px;align-items:center;margin-bottom:6px}.verdict-card .vc-title{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:800}.verdict-card .vc-state{font:800 9px 'JetBrains Mono',monospace;color:var(--cyan)}.verdict-card .vc-main{font-size:12px;font-weight:800;line-height:1.35}.verdict-card .vc-sub{font-size:9px;line-height:1.4;color:var(--muted);margin-top:4px}.verdict-card.good{border-left:3px solid var(--mint)}.verdict-card.warn{border-left:3px solid #FFC107}.verdict-card.bad{border-left:3px solid var(--mag)}.verdict-card.info{border-left:3px solid var(--cyan)}.verdict-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:11px}.verdict-actions .btn{margin:0}.verdict-reason{border:1px solid var(--line);border-left:3px solid #B072FF;border-radius:5px;padding:10px;background:rgba(176,114,255,.06);font-size:11px;line-height:1.5;margin-bottom:10px}.verdict-reason b{color:#D7B7FF}.verdict-mini-list{margin-top:5px}.verdict-mini-list div{padding:4px 0;border-bottom:1px solid rgba(234,234,242,.06);font-size:10px}.verdict-mini-list div:last-child{border-bottom:0}.verdict-detail-toggle{margin:2px 0 10px;border:1px solid var(--line);border-radius:4px;background:rgba(0,0,0,.14)}.verdict-detail-toggle summary{cursor:pointer;padding:9px 10px;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan)}.verdict-detail-toggle[open] summary{border-bottom:1px solid var(--line)}.verdict-detail-body{padding:10px}@media(max-width:560px){.verdict-grid,.verdict-actions{grid-template-columns:1fr}.verdict-hero .vh-title{font-size:17px}}
 
 
+/* RC5.0.13 — Verdict Wiring: market-first mobile hydration + working evidence navigation. */
 /* RC5.0.12 — Mobile Fast Path: user-facing work wins over background certification. */
 /* RC5.0.11 — Startup Responsiveness: single boot render + progressive non-critical hydration. */
 /* RC5.0.8 — final decision strip: the action queue says what needs attention; this says exactly what the manager is doing. */
@@ -176,6 +177,12 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
 .vint-card b{font:800 9.5px 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:4px}
 .vint-card .bad{color:var(--mag);font-weight:800}
 .vint-n{font-size:9.5px;color:var(--muted);line-height:1.45;margin-top:5px;font-style:italic}
+.market-match-list{margin-top:8px;border-top:1px solid rgba(255,255,255,.08)}
+.market-alert{margin:7px 0 2px;padding:7px 8px;border:1px solid rgba(233,0,82,.45);border-left:3px solid var(--mag);border-radius:3px;background:rgba(233,0,82,.09);font-size:9px;line-height:1.4;color:#FFB0C9}.market-alert strong{color:#FF91B5;letter-spacing:.06em}
+.market-match-row{display:grid;grid-template-columns:76px 1fr 1fr 70px;gap:5px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font:700 8px/1.25 'JetBrains Mono',monospace;color:var(--muted)}
+.market-match-row.head{color:var(--paper);font-size:7.5px;letter-spacing:.05em;text-transform:uppercase}
+.market-match-row.wide{color:var(--paper);background:rgba(233,0,82,.06)}
+.market-match-row .fixture{color:var(--cyan)}.market-match-row .gap{text-align:right}.market-match-row.wide .gap{color:#FF91B5;font-weight:800}
 @media(min-width:700px){.vint{grid-template-columns:1fr 1fr}}
 
 /* RC3.2 — Live Data Pipeline Audit: lightweight client-side tracing, explicit connection test and actionable startup states. */
@@ -1050,9 +1057,10 @@ const MARKET_BLEND=true;
    accuracy ledger. Never persisted, never user-facing. */
 let MARKET_SUSPEND=false;
 const MARKET_WEIGHT=.5;
+const MARKET_ALERT_GAP=.15;        // 15% model/market xG gap is material enough to flag
 const MARKET_MAX_AGE_MIN=720;      // ignore data older than 12h
 const MARKET_LEAGUE_XG=1.45;       // matches the engine's own base lambda
-const MARKET={loaded:false,ageMinutes:null,fetchedAt:0,byKey:new Map(),fixtures:0,unmatched:0,error:''};
+const MARKET={loading:false,loaded:false,ageMinutes:null,fetchedAt:0,byKey:new Map(),slate:[],fixtures:0,unmatched:0,error:''};
 /* RC5.0.0 F1 — ageMinutes is the server-reported age at fetch time and never
    advanced locally. Between hourly refreshes that understated true age by up to
    60 minutes, right against a 720-minute cutoff. Effective age now adds the
@@ -1071,6 +1079,8 @@ function marketFor(team,fx){
 }
 
 async function loadMarketData(){
+  if(MARKET.loading)return false;
+  MARKET.loading=true;
   try{
     const r=await fetch(SCOUT_API_BASE+'/api/market/teams',{cache:'no-store'});
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -1081,6 +1091,7 @@ async function loadMarketData(){
     MARKET.fetchedAt=Date.now();
     MARKET.fixtures=(d.fixtures||[]).length;
     MARKET.unmatched=(d.unmatched||[]).length;
+    MARKET.slate=(d.fixtures||[]).map(f=>({home:String(f.home||''),away:String(f.away||''),commence:f.commence||null})).filter(f=>f.home&&f.away);
     MARKET.error='';
     for(const f of d.fixtures||[]){
       // Same fixture indexed from both clubs' point of view.
@@ -1097,6 +1108,8 @@ async function loadMarketData(){
   }catch(err){
     MARKET.loaded=false;MARKET.error=err&&err.message?err.message:String(err);renderMarketStatus();
     if(typeof pipelineEvent==='function')pipelineEvent('MARKET','WARN',MARKET.error);
+  }finally{
+    MARKET.loading=false;
   }
   return MARKET.loaded;
 }
@@ -1749,7 +1762,7 @@ function verdictFeeds(){
   const mAge=marketAgeMinutes();
   add('market','Market odds',mAge,
     !MARKET_BLEND?'off':MARKET.error?'fail':!MARKET.loaded?'warn':marketStale()?'warn':'ok',
-    !MARKET_BLEND?'blend disabled in build':MARKET.error?esc(MARKET.error):!MARKET.loaded?'no odds loaded — projections are model-only':marketStale()?'past '+(MARKET_MAX_AGE_MIN/60)+'h cutoff — EXCLUDED from projections':MARKET.fixtures+' fixtures blended at '+Math.round(MARKET_WEIGHT*100)+'%',false,'schedule');
+    !MARKET_BLEND?'blend disabled in build':MARKET.error?esc(MARKET.error):!MARKET.loaded?'no odds loaded — projections are model-only':marketStale()?'past '+(MARKET_MAX_AGE_MIN/60)+'h cutoff — EXCLUDED from projections':MARKET.fixtures+' fixtures blended at '+Math.round(MARKET_WEIGHT*100)+'%',false,'fixtures');
 
   const roleEvents=(S.roleIntel?.events||[]).length,scoutAge=verdictAgeMin(SCOUT.last?.generatedAt);
   const scoutLimited=!SCOUT.last||SCOUT.last?.evidenceAuthoritative===false||SCOUT.last?.evidenceCarriedForward;
@@ -1831,26 +1844,51 @@ function verdictUncertainty(xi,capId){
    the exact inverse of the blend performed in fixtureContext itself. */
 function verdictMarketDivergence(gw){
   if(!marketActive())return null;
-  const codes=[...new Set(squadPlayers().map(p=>p.t))],rows=[];
+  const rows=[],matches=[];
   const prev=MARKET_SUSPEND;
   try{
-    for(const code of codes){
-      for(const fx of fixtureListFor(code,gw)){
-        MARKET_SUSPEND=true;const model=fixtureContext(code,fx);
-        MARKET_SUSPEND=prev;const blended=fixtureContext(code,fx);
-        if(!blended.marketApplied)continue;
-        const mkt=marketFor(code,fx);if(!mkt||!Number.isFinite(mkt.xgFor))continue;
-        const modelXg=model.attackM*MARKET_LEAGUE_XG,marketXg=mkt.xgFor;
-        if(modelXg<=0)continue;
-        rows.push({code,opp:fx.opp,home:fx.home,modelXg,marketXg,diff:(marketXg-modelXg)/modelXg,
-          owned:squadPlayers().filter(p=>p.t===code).length});
-      }
+    const owned=squadPlayers().reduce((a,p)=>(a[p.t]=(a[p.t]||0)+1,a),{});
+    const modelSide=(code,fx,fixtureGw)=>{
+      MARKET_SUSPEND=true;const model=fixtureContext(code,fx);
+      MARKET_SUSPEND=prev;const mkt=marketFor(code,fx);
+      if(!mkt||!Number.isFinite(mkt.xgFor))return null;
+      const modelXg=model.attackM*MARKET_LEAGUE_XG,marketXg=mkt.xgFor;
+      if(modelXg<=0)return null;
+      return{gw:fixtureGw,code,opp:fx.opp,home:fx.home,modelXg,marketXg,
+        diff:(marketXg-modelXg)/modelXg,owned:num(owned[code])};
+    };
+    /* Audit the quoted market slate, not merely the Gameweek selected in the
+       squad controls. Odds often exist for GW1 while the user is exploring
+       GW2; every quote is mapped back to its real FPL Gameweek and labelled. */
+    const fallback=Object.keys(TEAMS).flatMap(home=>fixtureListFor(home,gw).filter(f=>f.home).map(f=>({home,away:f.opp,gw})));
+    for(const quoted of (MARKET.slate.length?MARKET.slate:fallback)){
+      const home=quoted.home,away=quoted.away;let fixtureGw=num(quoted.gw,0),homeFx=null;
+      const candidateGws=fixtureGw?[fixtureGw]:Array.from({length:38},(_,i)=>i+1);
+      for(const g of candidateGws){const f=fixtureListFor(home,g).find(x=>x.home&&x.opp===away);if(f){fixtureGw=g;homeFx=f;break}}
+      if(!homeFx||!fixtureGw)continue;
+      const awayFx=fixtureListFor(away,fixtureGw).find(f=>f.opp===home&&!f.home);
+      if(!awayFx)continue;
+      const homeSide=modelSide(home,homeFx,fixtureGw),awaySide=modelSide(away,awayFx,fixtureGw);
+      if(!homeSide&&!awaySide)continue;
+      if(homeSide)rows.push(homeSide);if(awaySide)rows.push(awaySide);
+      const sides=[homeSide,awaySide].filter(Boolean).sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
+      matches.push({gw:fixtureGw,home,away,commence:quoted.commence||null,homeSide,awaySide,max:sides[0]||null,
+        wide:sides.some(s=>Math.abs(s.diff)>=MARKET_ALERT_GAP)});
     }
   }finally{MARKET_SUSPEND=prev}
   if(!rows.length)return null;
   rows.sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
-  return{rows,max:rows[0]};
+  return{rows,matches,max:rows[0],wide:rows.filter(r=>Math.abs(r.diff)>=MARKET_ALERT_GAP),
+    gws:[...new Set(matches.map(m=>m.gw))].sort((a,b)=>a-b)};
 }
+
+function verdictMarketMatrixHTML(d){
+  if(!d?.matches?.length)return'';
+  const rows=d.matches.map(m=>{const h=m.homeSide,a=m.awaySide,top=m.max,gap=top?`${top.code} ${signed(top.diff*100,0)}%`:'—';return`<div class="market-match-row ${m.wide?'wide':''}" title="GW${m.gw} · ${esc(TEAMS[m.home]?.n||m.home)} vs ${esc(TEAMS[m.away]?.n||m.away)}"><span class="fixture">GW${m.gw} ${esc(m.home)}–${esc(m.away)}</span><span>${h?h.modelXg.toFixed(2):'—'}–${a?a.modelXg.toFixed(2):'—'}</span><span>${h?h.marketXg.toFixed(2):'—'}–${a?a.marketXg.toFixed(2):'—'}</span><span class="gap">${esc(gap)}</span></div>`}).join('');
+  return`<div class="market-match-list"><div class="market-match-row head"><span>Match</span><span>OTB xG</span><span>Market xG</span><span class="gap">Largest gap</span></div>${rows}</div>`;
+}
+function verdictMarketSlateLabel(d){const g=d?.gws||[];return g.length?g.map(x=>'GW'+x).join(', '):'unmapped slate'}
+function verdictWideMarketMatchCount(d){return new Set((d?.wide||[]).map(r=>[r.gw,r.home?r.code:r.opp,r.home?r.opp:r.code].join('|'))).size}
 
 /* ── Ownership exposure ─────────────────────────────────────────────────
    NOTE ON HONESTY: FPL publishes selected_by_percent, NOT captaincy share.
@@ -2022,16 +2060,19 @@ function verdictQueue(ctx){
   /* — market state and disagreement — */
   if(MARKET_BLEND&&!marketActive())add({id:'mktoff',severity:'watch',cost:0,title:'Market blend is not active',
     evidence:MARKET.loaded?`Odds are ${verdictAgeLabel(marketAgeMinutes())} old, past the ${MARKET_MAX_AGE_MIN/60}-hour cutoff, so they have been excluded. Projections are running model-only and will differ from what you saw when odds were live.`:'No odds loaded this session. Projections are running model-only.',
-    action:'Open schedule',panel:'schedule'});
-  if(ctx.divergence&&Math.abs(ctx.divergence.max.diff)>=0.10){
-    const d=ctx.divergence.max;
-    add({id:'mktdiv',severity:'watch',cost:0,title:`Model and market disagree on ${TEAMS[d.code]?.n||d.code}`,
-      evidence:`OTB projects ${d.modelXg.toFixed(2)} expected goals ${d.home?'at home to':'away at'} ${TEAMS[d.opp]?.n||d.opp}; the market implies ${d.marketXg.toFixed(2)} — a ${(d.diff*100).toFixed(0)}% ${d.diff>0?'bullish':'bearish'} gap. You own ${d.owned} player(s) here. The blend already applies ${Math.round(MARKET_WEIGHT*100)}% of this; treat the residual as a reason to check minutes and role evidence, not to override them.`,
-      action:'Open schedule',panel:'schedule'});
+    action:'Inspect schedule',panel:'fixtures'});
+  if(ctx.divergence?.wide?.length){
+    const d=ctx.divergence.max,wideMatches=verdictWideMarketMatchCount(ctx.divergence);
+    add({id:'mktdiv',severity:'watch',cost:0,priority:1,title:`${verdictMarketSlateLabel(ctx.divergence)} market alert: ${wideMatches} fixture${wideMatches===1?'':'s'} exceed the ${Math.round(MARKET_ALERT_GAP*100)}% gap threshold`,
+      evidence:`Largest gap in GW${d.gw}: ${TEAMS[d.code]?.n||d.code} ${d.home?'at home to':'away at'} ${TEAMS[d.opp]?.n||d.opp}. OTB's unblended attack model is ${d.modelXg.toFixed(2)} xG; the market is ${d.marketXg.toFixed(2)} — ${Math.abs(d.diff*100).toFixed(0)}% ${d.diff>0?'higher':'lower'}. ${d.owned?`You own ${d.owned} player${d.owned===1?'':'s'} from that side. `:''}The blend applies ${Math.round(MARKET_WEIGHT*100)}% only when that exact fixture is projected; this warning is the remaining disagreement, not a command to override the model.`,
+      action:'Inspect all matches',panel:'fixtures'});
   }
 
   const rank={block:0,act:1,watch:2};
-  q.sort((a,b)=>(rank[a.severity]-rank[b.severity])||(b.cost-a.cost));
+  /* A market alert must stay visible even when several ordinary WATCH notes
+     have a larger numeric cost. Severity still wins; explicit alert priority
+     then decides which same-severity items make the six-row action queue. */
+  q.sort((a,b)=>(rank[a.severity]-rank[b.severity])||(num(b.priority)-num(a.priority))||(b.cost-a.cost));
   /* In LOCK, speculative items are suppressed: at T-2h you cannot act on a
      chip window three gameweeks out or a market disagreement. */
   if(regime==='LOCK')return q.filter(i=>i.blocking||['captain','vice','bench','xi','nocap','novice'].includes(i.id)||i.id.startsWith('risk_')||i.id.startsWith('news_'));
@@ -2307,18 +2348,22 @@ async function warmVerdictFeeds(){
     const newsAge=verdictAgeMin(NEWS.last?.generatedAt);
     const priceAge=verdictAgeMin(PRICE.last?.sampleEnd);
     const mAge=marketAgeMinutes();
+    const marketDue=!MARKET.loaded||mAge==null||(mAge>120&&Date.now()-MARKET.fetchedAt>10*60*1000);
     if(lowPowerMode()){
       const yieldFrame=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,120)));
+      /* Market is a tiny 10-fixture payload and directly powers the first
+         evidence card. Fetch it before the larger News and Price responses so
+         a phone does not sit on a false "No live odds" state for 20+ seconds. */
+      if(marketDue){const ok=await loadMarketData();bumpVerdict();if(ok)await yieldFrame()}
       if(!NEWS.last||newsAge==null||newsAge>20){await refreshNewsFeed({silent:true});bumpVerdict();await yieldFrame()}
       if(!PRICE.last||priceAge==null||priceAge>60){await refreshPriceIntel({silent:true});bumpVerdict();await yieldFrame()}
-      if(MARKET_BLEND&&(mAge==null||mAge>120)){const ok=await loadMarketData();if(ok)render()}
       /* Chip payload construction projects the full player pool across the
          remaining season. On a phone it stays behind the explicit Chips tab. */
       return;
     }
+    if(marketDue)loadMarketData().then(()=>{render()});
     if(!NEWS.last||newsAge==null||newsAge>20)refreshNewsFeed({silent:true}).then(()=>{bumpVerdict()});
     if(!PRICE.last||priceAge==null||priceAge>60)refreshPriceIntel({silent:true}).then(()=>{bumpVerdict()});
-    if(MARKET_BLEND&&(mAge==null||mAge>120))loadMarketData().then(ok=>{if(ok)render()});
     if(!CHIP_ADVISOR_LAST)scheduleChipAdvisor(400);
   }catch(e){console.warn('OTB verdict feed warm skipped:',e)}
 }
@@ -2444,9 +2489,11 @@ function renderVerdict(){
     ih.innerHTML=`<div class="vsec-h">Evidence<span>signals that inform the queue above</span></div>
       <div class="vint">
         ${d?`<div class="vint-card"><b>Model vs market</b>
-          <div>${esc(TEAMS[d.max.code]?.n||d.max.code)}: OTB ${d.max.modelXg.toFixed(2)} xG · market ${d.max.marketXg.toFixed(2)} · <span class="${Math.abs(d.max.diff)>=.1?'bad':''}">${signed(d.max.diff*100,0)}%</span></div>
-          <div class="vint-n">${d.rows.length} of your clubs' fixtures are priced. The blend already applies ${Math.round(MARKET_WEIGHT*100)}% of the market view — this is the residual disagreement, not an unused signal.</div></div>`:
-          `<div class="vint-card"><b>Model vs market</b><div class="vint-n">${MARKET_BLEND?'No live odds — comparison unavailable and projections are model-only.':'Market blend is disabled in this build.'}</div></div>`}
+          <div>${esc(TEAMS[d.max.code]?.n||d.max.code)} ${d.max.home?'vs':'at'} ${esc(TEAMS[d.max.opp]?.n||d.max.opp)} (GW${d.max.gw}): OTB ${d.max.modelXg.toFixed(2)} xG · market ${d.max.marketXg.toFixed(2)} · <span class="${Math.abs(d.max.diff)>=.1?'bad':''}">${signed(d.max.diff*100,0)}%</span></div>
+          <div class="vint-n">All ${d.matches.length} priced matches are audited for ${verdictMarketSlateLabel(d)}. ${d.wide.length} team-side gap${d.wide.length===1?'':'s'} meet the ${Math.round(MARKET_ALERT_GAP*100)}% alert threshold.${d.gws.includes(S.gw)?'':` Your selected projection is GW${S.gw}; these quoted odds belong to ${verdictMarketSlateLabel(d)} and do not alter GW${S.gw}.`} Matching fixtures blend ${Math.round(MARKET_WEIGHT*100)}% of the market view, so these are residual disagreements.</div>
+          ${d.wide.length?`<div class="market-alert"><strong>${esc(verdictMarketSlateLabel(d))} MARKET ALERT</strong> · ${verdictWideMarketMatchCount(d)} fixture${verdictWideMarketMatchCount(d)===1?'':'s'} contain a material gap. Red rows below identify every affected match.</div>`:''}
+          ${verdictMarketMatrixHTML(d)}</div>`:
+          `<div class="vint-card"><b>Model vs market</b><div class="vint-n">${MARKET.loading?'Loading the current live odds…':MARKET.error?'Live odds could not load: '+esc(MARKET.error):MARKET.loaded?`Live odds loaded for ${MARKET.fixtures} fixtures, but none matched the current FPL fixture calendar.`:MARKET_BLEND?'No live odds loaded yet — open Verdict while online to fetch them.':'Market blend is disabled in this build.'}</div></div>`}
 
         ${bestF?`<div class="vint-card"><b>Fixture exposure</b>
           <div>Best run: ${esc(TEAMS[bestF.code]?.n||bestF.code)} (${num(bestF.st.avgOverall,0).toFixed(2)}) · ${bestF.ex.count} owned</div>
@@ -3168,6 +3215,11 @@ let __sliderDebounce=null;
 let USER_TOUCHED_RAIL=false;
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-selected','false');x.tabIndex=-1});b.classList.add('on');b.setAttribute('aria-selected','true');b.tabIndex=0;const map={build:'pBuild',transfers:'pTransfers',prices:'pPrices',verdict:'pVerdict',model:'pModel',roles:'pRoles',news:'pNews',fixtures:'pFixtures',accuracy:'pAccuracy',squads:'pSquads',chips:'pChips',data:'pData'};Object.values(map).forEach(id=>document.getElementById(id).classList.add('hide'));document.getElementById(map[b.dataset.t]).classList.remove('hide');if(b.dataset.t==='news')refreshNewsFeed({silent:true});if(b.dataset.t==='prices')refreshPriceIntel({silent:true});if(b.dataset.t==='chips')scheduleChipAdvisor(80);if(b.dataset.t==='verdict')warmVerdictFeeds();USER_TOUCHED_RAIL=true;renderActiveRailPanel(b.dataset.t)});
 document.querySelectorAll('.mobile-tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.mobile-tabs button').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-selected','false');x.tabIndex=-1});b.classList.add('on');b.setAttribute('aria-selected','true');b.tabIndex=0;['colPool','colCentre','colRail'].forEach(id=>document.getElementById(id).classList.add('mhide'));document.getElementById({pool:'colPool',centre:'colCentre',rail:'colRail'}[b.dataset.m]).classList.remove('mhide');if(b.dataset.m==='pool')renderPool();else if(b.dataset.m==='centre'){renderPitch();renderSpine()}else renderActiveRailPanel()});
+/* These persistent Verdict buttons are outside the dynamic action queue, so
+   they need their own navigation wiring. RC5.0.12 rendered them but never
+   attached a click handler. */
+document.getElementById('verdictOpenTransfers').onclick=()=>uxOpenPanel('transfers');
+document.getElementById('verdictOpenFixtures').onclick=()=>uxOpenPanel('fixtures');
 function syncMobile(){const small=matchMedia('(max-width:1080px)').matches;['colPool','colCentre','colRail'].forEach(id=>document.getElementById(id).classList.remove('mhide'));if(small){const on=document.querySelector('.mobile-tabs button.on').dataset.m;['colPool','colCentre','colRail'].forEach(id=>{if(id!=={pool:'colPool',centre:'colCentre',rail:'colRail'}[on])document.getElementById(id).classList.add('mhide')})}}
 addEventListener('resize',()=>{syncMobile();resetPoolRender();requestAnimationFrame(render)});document.getElementById('modalClose').onclick=closeModal;document.getElementById('playerModal').onclick=e=>{if(e.target.id==='playerModal')closeModal()};document.addEventListener('keydown',e=>{const modal=document.getElementById('playerModal');if(modal.classList.contains('hide'))return;if(e.key==='Escape'){closeModal();return}if(e.key==='Tab'){const f=[...modal.querySelectorAll('button,input,select,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled&&el.offsetParent!==null);if(!f.length)return;const first=f[0],last=f[f.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
 document.getElementById('btnRefresh').onclick=()=>refreshLiveData(true);document.getElementById('btnTestWorker').onclick=testWorkerConnection;document.getElementById('btnCopyPipeline').onclick=async()=>{const text=pipelineReport();try{await navigator.clipboard.writeText(text);flash('Pipeline diagnostic copied.')}catch(e){document.getElementById('importBox').value=text;flash('Clipboard blocked — diagnostic placed in the import box.')}};document.getElementById('btnImport').onclick=importPasted;document.getElementById('btnImportFplTeam').onclick=importFplTeamById;document.getElementById('fplTeamId').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();importFplTeamById()}};document.getElementById('btnBuild').onclick=runBuild;document.getElementById('btnUnlock').onclick=()=>{S.locks.clear();render();saveUserState();document.getElementById('buildOut').innerHTML='<div class="verdict">All locks cleared.</div>'};document.getElementById('autoRefresh').onchange=()=>{DATA.auto=document.getElementById('autoRefresh').checked;saveUserState()};
@@ -3364,7 +3416,7 @@ document.getElementById('fxSyncExternal').onclick=syncExternalCalendar;
    RC2.3.6 — compact screenshot view includes the complete bench.
    RC2.3.5 — public-release certification, history-eligible assurance and restored-XI header refresh.
    RC2.3.4 — audited projection ledger, reproducible snapshots and final-result backtesting. */
-const APP_RELEASE='RC5.0.12',APP_RELEASE_SLUG='RC5.0.12-mobile-fast-path';
+const APP_RELEASE='RC5.0.13',APP_RELEASE_SLUG='RC5.0.13-verdict-wiring';
 const ACCURACY_LEDGER_KEY='fpl-engine-projection-ledger-rc233-v1',ACCURACY_SCHEMA=2,MODEL_RELEASE=APP_RELEASE;  /* stamped into every accuracy snapshot - must track the real model build */
 
 function emptyAccuracyLedger(){return{schema:ACCURACY_SCHEMA,season:EXPECTED_SEASON,snapshots:{},actuals:{},catalog:{}}}
@@ -3540,7 +3592,7 @@ function schedulePostLiveHydration(){
   runWhenIdle(()=>{if(current())refreshPriceIntel({silent:true})},{delay:2250,timeout:5000});
   runWhenIdle(()=>{if(current())saveUserState()},{delay:2500,timeout:5000});
 }
-document.documentElement.dataset.release=APP_RELEASE_SLUG;pipelineEvent('APP','ok','RC5.0.12 JavaScript initialised');scheduleRC4HealthCheck();reconcileTransferStrategy();loadExternalCalendar();loadAccuracyLedger();const hadCache=loadCachedData();syncMobile();renderExternalCalendarStatus();if(!hadCache){renderStrengths();populateTeamFilter()}applyShotMode();render({deferPool:lowPowerMode()});tick();setInterval(tick,30000);scheduleSelfTests();if(!lowPowerMode())runWhenIdle(()=>maybeAutoCaptureProjection(),{delay:1200,timeout:4500});if(navigator.onLine!==false&&!lowPowerMode())runWhenIdle(()=>maybeAutoSyncAccuracyActuals(),{delay:2400,timeout:5000});/* Market data is optional: the engine renders immediately and re-renders
+document.documentElement.dataset.release=APP_RELEASE_SLUG;pipelineEvent('APP','ok','RC5.0.13 JavaScript initialised');scheduleRC4HealthCheck();reconcileTransferStrategy();loadExternalCalendar();loadAccuracyLedger();const hadCache=loadCachedData();syncMobile();renderExternalCalendarStatus();if(!hadCache){renderStrengths();populateTeamFilter()}applyShotMode();render({deferPool:lowPowerMode()});tick();setInterval(tick,30000);scheduleSelfTests();if(!lowPowerMode())runWhenIdle(()=>maybeAutoCaptureProjection(),{delay:1200,timeout:4500});if(navigator.onLine!==false&&!lowPowerMode())runWhenIdle(()=>maybeAutoSyncAccuracyActuals(),{delay:2400,timeout:5000});/* Market data is optional: the engine renders immediately and re-renders
    if it arrives. loadMarketData() calls bumpCache() itself, so projections
    recompute with the blend applied. Refreshed hourly; the worker serves a
    cache so this costs no credits. */
