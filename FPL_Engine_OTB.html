@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%2337003C%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2720%27 fill=%27%2300FF87%27/%3E%3Cpath d=%27M32 17l9 7-3 11H26l-3-11zM26 35l-7 7 8 5 5-6 5 6 8-5-7-7%27 fill=%27%23160019%27/%3E%3C/svg%3E"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="OTB"><meta name="theme-color" content="#37003C">
-<title>FPL Engine — OTB 26/27 · RC5.0.18 Evidence Attribution Complete</title>
+<title>FPL Engine — OTB 26/27 · RC5.0.19 Outfield Role Reconciliation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
@@ -100,6 +100,7 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
 .verdict-hero{border:1px solid rgba(0,255,135,.38);border-left:4px solid var(--mint);border-radius:6px;padding:12px;background:linear-gradient(135deg,rgba(0,255,135,.10),rgba(4,245,255,.04));margin-bottom:10px}.verdict-hero.warn{border-left-color:#FFC107;background:rgba(255,193,7,.08)}.verdict-hero.bad{border-left-color:var(--mag);background:rgba(233,0,82,.09)}.verdict-hero .vh-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.verdict-hero .vh-label{font-size:8px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:800}.verdict-hero .vh-title{font-family:Archivo,sans-serif;font-variation-settings:'wdth' 118,'wght' 800;font-size:19px;line-height:1.05;margin-top:4px;text-transform:uppercase}.verdict-hero .vh-conf{font:800 19px 'JetBrains Mono',monospace;color:var(--mint);white-space:nowrap}.verdict-hero.warn .vh-conf{color:#FFD75E}.verdict-hero.bad .vh-conf{color:#FF91B5}.verdict-hero .vh-note{font-size:11px;line-height:1.45;color:var(--paper);margin-top:8px}.verdict-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}.verdict-card{border:1px solid var(--line);border-radius:5px;padding:9px;background:rgba(0,0,0,.20);min-width:0}.verdict-card .vc-head{display:flex;justify-content:space-between;gap:7px;align-items:center;margin-bottom:6px}.verdict-card .vc-title{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:800}.verdict-card .vc-state{font:800 9px 'JetBrains Mono',monospace;color:var(--cyan)}.verdict-card .vc-main{font-size:12px;font-weight:800;line-height:1.35}.verdict-card .vc-sub{font-size:9px;line-height:1.4;color:var(--muted);margin-top:4px}.verdict-card.good{border-left:3px solid var(--mint)}.verdict-card.warn{border-left:3px solid #FFC107}.verdict-card.bad{border-left:3px solid var(--mag)}.verdict-card.info{border-left:3px solid var(--cyan)}.verdict-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:11px}.verdict-actions .btn{margin:0}.verdict-reason{border:1px solid var(--line);border-left:3px solid #B072FF;border-radius:5px;padding:10px;background:rgba(176,114,255,.06);font-size:11px;line-height:1.5;margin-bottom:10px}.verdict-reason b{color:#D7B7FF}.verdict-mini-list{margin-top:5px}.verdict-mini-list div{padding:4px 0;border-bottom:1px solid rgba(234,234,242,.06);font-size:10px}.verdict-mini-list div:last-child{border-bottom:0}.verdict-detail-toggle{margin:2px 0 10px;border:1px solid var(--line);border-radius:4px;background:rgba(0,0,0,.14)}.verdict-detail-toggle summary{cursor:pointer;padding:9px 10px;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan)}.verdict-detail-toggle[open] summary{border-bottom:1px solid var(--line)}.verdict-detail-body{padding:10px}@media(max-width:560px){.verdict-grid,.verdict-actions{grid-template-columns:1fr}.verdict-hero .vh-title{font-size:17px}}
 
 
+/* RC5.0.19 — Outfield Role Reconciliation: strict one-slot GK calibration retained; DEF/MID/FWD restored to soft evidence-weighted calibration with starter compression protection. */
 /* RC5.0.18 — Evidence Attribution Complete: all Scout/Role selection render paths use semantic evidence direction; constrained before/after projections remain xMin truth. */
 /* RC5.0.17 — Evidence Attribution: selection cards describe evidence direction; constrained before/after projections remain the source of xMin truth. */
 /* RC5.0.16 — Role Constraint: role evidence is calibrated inside every club-position slot target; friendly lineups are weak evidence. */
@@ -886,13 +887,14 @@ const LIMITS={GK:2,DEF:5,MID:5,FWD:3},GOALPTS={GK:6,DEF:6,MID:5,FWD:4},CSPTS={GK
 const PROFILE={GK:{app:.50,cs:.27,atk:.02,bon:.10,oth:.11},DEF:{app:.42,cs:.22,atk:.20,bon:.10,oth:.06},MID:{app:.36,cs:.04,atk:.45,bon:.10,oth:.05},FWD:{app:.36,cs:0,atk:.49,bon:.10,oth:.05}};
 /* Position-aware usage assumptions. Starter probabilities are calibrated within each club/position group so the model cannot create more likely starters than the formation permits. */
 const POSITION_USAGE={
-  /* GK is a true one-slot competition. Broader outfield FPL positions use
-     formation ranges, but the chosen target is still a hard probability-mass
-     constraint: evidence changes who owns the slots, never how many exist. */
-  GK:{defaultSlots:1,minSlots:1,maxSlots:1,minPeers:2,priorGames:5,defaultStartMinutes:90,minStartMinutes:78,subBase:.003,subRotation:.006,subMin:.001,subMax:.012,subMinutes:35,priceMin:4.0,priceMax:6.5},
-  DEF:{defaultSlots:4,minSlots:3,maxSlots:5,minPeers:5,priorGames:4,defaultStartMinutes:82,minStartMinutes:55,subBase:.16,subRotation:.30,subMin:.10,subMax:.48,subMinutes:18,priceMin:4.0,priceMax:7.5},
-  MID:{defaultSlots:4.5,minSlots:2,maxSlots:5,minPeers:5,priorGames:4,defaultStartMinutes:78,minStartMinutes:48,subBase:.28,subRotation:.43,subMin:.20,subMax:.75,subMinutes:22,priceMin:4.5,priceMax:12.5},
-  FWD:{defaultSlots:1.5,minSlots:1,maxSlots:3,minPeers:3,priorGames:4,defaultStartMinutes:76,minStartMinutes:45,subBase:.34,subRotation:.47,subMin:.26,subMax:.84,subMinutes:24,priceMin:4.5,priceMax:15.5}
+  /* GK is a true one-slot competition and remains a strict probability-mass
+     constraint. Outfield FPL positions are broad fantasy labels rather than
+     tactical roles, so DEF/MID/FWD are calibrated softly toward formation
+     targets and protected against implausible preseason compression. */
+  GK:{defaultSlots:1,minSlots:1,maxSlots:1,minPeers:2,priorGames:5,defaultStartMinutes:90,minStartMinutes:78,subBase:.003,subRotation:.006,subMin:.001,subMax:.012,subMinutes:35,priceMin:4.0,priceMax:6.5,preseasonCalibration:1.00,liveCalibrationGames:2},
+  DEF:{defaultSlots:4,minSlots:3,maxSlots:5,minPeers:5,priorGames:4,defaultStartMinutes:82,minStartMinutes:55,subBase:.16,subRotation:.30,subMin:.10,subMax:.48,subMinutes:18,priceMin:4.0,priceMax:7.5,preseasonCalibration:.75,liveCalibrationGames:8},
+  MID:{defaultSlots:4.5,minSlots:2,maxSlots:5,minPeers:5,priorGames:4,defaultStartMinutes:78,minStartMinutes:48,subBase:.28,subRotation:.43,subMin:.20,subMax:.75,subMinutes:22,priceMin:4.5,priceMax:12.5,preseasonCalibration:.80,liveCalibrationGames:8},
+  FWD:{defaultSlots:1.5,minSlots:1,maxSlots:3,minPeers:3,priorGames:4,defaultStartMinutes:76,minStartMinutes:45,subBase:.34,subRotation:.47,subMin:.26,subMax:.84,subMinutes:24,priceMin:4.5,priceMax:15.5,preseasonCalibration:.80,liveCalibrationGames:8}
 };
 /* Small, reviewable role-intelligence adjustments for cases where public club evidence is stronger than backward-looking PPG. These are deltas, not fixed probabilities, so team competition and future starts still govern the result. */
 const START_INTEL={
@@ -1228,16 +1230,53 @@ function roleConstrainedInput(pl){
   return{...base,p:clamp(p,0,1),intel,evidenceApplied:!!intel.events.length,
     source:base.source+(intel.events.length?' + constrained role intelligence':'')};
 }
+function roleCalibrationStrength(pos,played){
+  const cfg=POSITION_USAGE[pos]||POSITION_USAGE.MID,
+    base=clamp(num(cfg.preseasonCalibration,1),0,1),
+    progress=clamp(played/Math.max(1,num(cfg.liveCalibrationGames,8)),0,1);
+  return clamp(base+(1-base)*progress,0,1);
+}
+function roleCompressionFloor(pl,played){
+  if(pl.p==='GK')return 0;
+  const evidence=starterEvidenceStrength(pl),progress=clamp(played/8,0,1);
+  let preseason=evidence>=.78?.94:evidence>=.60?.86:evidence>=.44?.76:.60;
+  const intel=startIntel(pl);
+  if(intel?.delta<0)preseason=Math.min(preseason,.70);
+  return clamp(preseason*(1-progress)+.58*progress,.55,.95);
+}
 function teamRoleStartMap(team,pos){
   const key=`${team}|${pos}`;
   if(ROLE_CACHE[key])return ROLE_CACHE[key];
-  const peers=POOL.filter(p=>p.t===team&&p.p===pos),played=Math.max(0,num(DATA.teamPlayed[team]));
-  const target=roleStarterTarget(pos,peers,played),rows=peers.map(p=>({id:p.id,player:p,...roleConstrainedInput(p)}));
-  const raw=Object.fromEntries(rows.map(r=>[r.id,r.p])),rawSum=rows.reduce((a,r)=>a+r.p,0);
-  const probs=calibrateRoleRows(rows,target),sum=Object.values(probs).reduce((a,v)=>a+v,0);
-  return ROLE_CACHE[key]={probs,raw,hard:{...probs},rawSum,hardSum:sum,sum,
-    peerCount:peers.length,target,calibrated:peers.length>0,strength:1,
-    mode:'strict club/position slot constraint'};
+  const cfg=POSITION_USAGE[pos]||POSITION_USAGE.MID,
+    peers=POOL.filter(p=>p.t===team&&p.p===pos),
+    played=Math.max(0,num(DATA.teamPlayed[team])),
+    target=roleStarterTarget(pos,peers,played),
+    rows=peers.map(p=>({id:p.id,player:p,...roleConstrainedInput(p)})),
+    raw=Object.fromEntries(rows.map(r=>[r.id,r.p])),
+    rawSum=rows.reduce((a,r)=>a+r.p,0);
+  let probs={...raw},hard={...raw},strength=0;
+  if(peers.length>=cfg.minPeers){
+    hard=calibrateRoleRows(rows,target);
+    strength=roleCalibrationStrength(pos,played);
+    if(pos==='GK'){
+      /* Critical invariant: goalkeeper is the one genuinely exclusive slot.
+         Even conflicting role/manual evidence must finish on the one-slot target. */
+      probs={...hard};
+    }else{
+      probs={};
+      for(const r of rows){
+        if(r.locked){probs[r.id]=r.p;continue}
+        let blended=r.p+strength*((hard[r.id]??r.p)-r.p);
+        if(blended<r.p)blended=Math.max(blended,r.p*roleCompressionFloor(r.player,played));
+        probs[r.id]=clamp(blended,0,1);
+      }
+    }
+  }
+  const sum=Object.values(probs).reduce((a,v)=>a+v,0),
+    hardSum=Object.values(hard).reduce((a,v)=>a+v,0);
+  return ROLE_CACHE[key]={probs,raw,hard,rawSum,hardSum,sum,
+    peerCount:peers.length,target,calibrated:peers.length>=cfg.minPeers,strength,
+    mode:peers.length<cfg.minPeers?'individual prior':pos==='GK'?'strict one-slot calibration':'soft evidence-weighted calibration'};
 }
 function teamRoleStartProbability(pl){const role=teamRoleStartMap(pl.t,pl.p);return clamp(role.probs[pl.id]??roleConstrainedInput(pl).p,0,1)}
 
@@ -1345,7 +1384,7 @@ function minuteDetailCore(pl){
     override:o.minutes!==undefined&&o.minutes!=='',startOverride,roleTarget:role.target,rolePeers:role.peerCount,
     roleCalibrated:role.calibrated,roleModel:role.mode,roleRawStart:role.raw[pl.id]??baseStart.p,
     roleHardStart:role.hard[pl.id]??baseStart.p,roleCalibrationStrength:role.strength,roleSum:role.sum,
-    roleRawSum:role.rawSum,starterEvidence:starterEvidenceStrength(pl),
+    roleRawSum:role.rawSum,roleCompressionFloor:roleCompressionFloor(pl,played),starterEvidence:starterEvidenceStrength(pl),
     startSource:startOverride?'manual start override':baseStart.source+(roleIntel.events.length?' + constrained role intelligence':''),
     intel:startIntel(pl)?.label||'',roleIntelDelta:num(role.raw[pl.id],baseStart.p)-baseStart.p,roleIntelEvents:roleIntel.events};
 }
@@ -3241,24 +3280,47 @@ function roleEventFromControls(){const key=document.getElementById('riAffected')
 function addRoleEvent(e){if(!S.roleIntel)S.roleIntel={events:[]};S.roleIntel.events.push(e);bumpCache();saveUserState();renderRoleIntelligence();render()}
 function roleProjectionWithoutIntel(p,gw){ROLE_INTEL.suspend=true;bumpCache();const md=minuteDetail(p),r=project(p,gw);ROLE_INTEL.suspend=false;bumpCache();return{md,r}}
 function roleImpactRows(){const keys=[...new Set(roleIntelEvents().map(e=>e.affectedKey))];return keys.map(key=>{const p=POOL.find(x=>stableKey(x)===key);if(!p)return null;const base=roleProjectionWithoutIntel(p,S.gw),nowMd=minuteDetail(p),now=project(p,S.gw);return{p,baseMd:base.md,base:base.r,nowMd,now,delta:nowMd.exp-base.md.exp,xDelta:now.x-base.r.x,events:roleIntelFor(p).events}}).filter(Boolean)}
-function renderRoleIntelligence(){populateRolePlayers();const eventHost=document.getElementById('roleEvents'),impact=document.getElementById('roleImpact');if(!eventHost||!impact)return;const events=roleIntelEvents();const autoCount=events.filter(e=>e.worker).length,manualCount=events.length-autoCount;const clearBar=events.length?`<div class="role-clearbar"><span>${events.length} active · ${autoCount} scanned · ${manualCount} manual</span><span>${autoCount?'<button type="button" data-role-clear="auto">Clear scanned</button>':''}<button type="button" data-role-clear="all">Clear all</button></span></div>`:'';eventHost.innerHTML=clearBar+(events.length?events.slice().reverse().map(e=>{const pres=roleEventPresentation(e),badge=roleEvidenceLabel(e),note=pres.selection?'<div class="source-note" style="margin-top:5px">Directional selection evidence. Net constrained xMin/xPts impact is shown in the player impact panel below.</div>':'';return`<div class="role-event ${pres.tone}"><div class="re-head"><span class="role-badge ${badge}">${badge}</span><b>${esc(e.affected)} ${e.oop?'<span class="pflag flag-doubt">OOP</span>':''}</b><span class="re-delta" style="color:${pres.direction>=0?'var(--mint)':'#FF91B5'}">${pres.label}</span></div><div class="re-meta">${esc(e.team)} · ${esc(e.role||'role n/a')} · ${esc(e.type)}${e.auto?' · AUTO-SCANNED':''} · overlap ${Math.round(100*num(e.overlap))}% · hierarchy ${Math.round(100*num(e.hierarchy))}% · confidence ${Math.round(100*num(e.confidence))}%</div><div class="re-note"><b>${esc(e.subject)}</b> · ${esc(e.source)}</div>${note}<button type="button" data-role-remove="${esc(e.id)}">Remove event</button></div>`}).join(''):'<div class="accuracy-empty">No role events are active. Run the Barnes test or add structured evidence.</div>');const rows=roleImpactRows();impact.innerHTML=rows.length?rows.map(x=>`<div class="role-intel"><div class="re-head"><b>${esc(x.p.n)} · ${x.p.t}</b><span class="re-delta" style="color:${x.delta>=0?'var(--mint)':'#FF91B5'}">${x.delta>=0?'+':''}${x.delta.toFixed(1)} xMin · ${x.xDelta>=0?'+':''}${x.xDelta.toFixed(2)} xPts</span></div><div class="role-impact"><div class="xbox"><div class="k">Baseline xMins</div><div class="v">${x.baseMd.exp.toFixed(1)}</div></div><div class="xbox"><div class="k">Intelligence xMins</div><div class="v">${x.nowMd.exp.toFixed(1)}</div></div><div class="xbox"><div class="k">Baseline GW${S.gw} xPts</div><div class="v">${x.base.x.toFixed(2)}</div></div><div class="xbox"><div class="k">Revised GW${S.gw} xPts</div><div class="v">${x.now.x.toFixed(2)}</div></div></div><div class="source-note">${x.events.length} active evidence item${x.events.length===1?'':'s'}. Manual minutes overrides remain authoritative and suppress automatic role-minute adjustments.</div></div>`).join(''):'<div class="role-intel"><b>No calculated impacts yet.</b><div class="source-note">Events will show before/after xMins and xPts here.</div></div>';eventHost.querySelectorAll('[data-role-remove]').forEach(b=>b.onclick=()=>{S.roleIntel.events=S.roleIntel.events.filter(e=>e.id!==b.dataset.roleRemove);bumpCache();saveUserState();renderRoleIntelligence();render()});eventHost.querySelectorAll('[data-role-clear]').forEach(b=>b.onclick=()=>{const mode=b.dataset.roleClear,current=roleIntelEvents();const doomed=mode==='auto'?current.filter(e=>e.worker):current;if(!doomed.length)return;if(!confirm(`Remove ${doomed.length} ${mode==='auto'?'scanned':'role'} event(s)? This cannot be undone, though a fresh scan can re-import scanned evidence.`))return;S.roleIntel.events=mode==='auto'?current.filter(e=>!e.worker):[];if(mode!=='auto')SCOUT.last=null;SCOUT.retained=false;bumpCache();saveUserState();renderRoleIntelligence();render()})}
+function renderRoleIntelligence(){populateRolePlayers();const eventHost=document.getElementById('roleEvents'),impact=document.getElementById('roleImpact');if(!eventHost||!impact)return;const events=roleIntelEvents();const autoCount=events.filter(e=>e.worker).length,manualCount=events.length-autoCount;const clearBar=events.length?`<div class="role-clearbar"><span>${events.length} active · ${autoCount} scanned · ${manualCount} manual</span><span>${autoCount?'<button type="button" data-role-clear="auto">Clear scanned</button>':''}<button type="button" data-role-clear="all">Clear all</button></span></div>`:'';eventHost.innerHTML=clearBar+(events.length?events.slice().reverse().map(e=>{const pres=roleEventPresentation(e),badge=roleEvidenceLabel(e),note=pres.selection?'<div class="source-note" style="margin-top:5px">Directional selection evidence. Net constrained xMin/xPts impact is shown in the player impact panel below.</div>':'';return`<div class="role-event ${pres.tone}"><div class="re-head"><span class="role-badge ${badge}">${badge}</span><b>${esc(e.affected)} ${e.oop?'<span class="pflag flag-doubt">OOP</span>':''}</b><span class="re-delta" style="color:${pres.direction>=0?'var(--mint)':'#FF91B5'}">${pres.label}</span></div><div class="re-meta">${esc(e.team)} · ${esc(e.role||'role n/a')} · ${esc(e.type)}${e.auto?' · AUTO-SCANNED':''} · overlap ${Math.round(100*num(e.overlap))}% · hierarchy ${Math.round(100*num(e.hierarchy))}% · confidence ${Math.round(100*num(e.confidence))}%</div><div class="re-note"><b>${esc(e.subject)}</b> · ${esc(e.source)}</div>${note}<button type="button" data-role-remove="${esc(e.id)}">Remove event</button></div>`}).join(''):'<div class="accuracy-empty">No role events are active. Run the Barnes test or add structured evidence.</div>');const rows=roleImpactRows();impact.innerHTML=rows.length?rows.map(x=>`<div class="role-intel"><div class="re-head"><b>${esc(x.p.n)} · ${x.p.t}</b><span class="re-delta" style="color:${x.delta>=0?'var(--mint)':'#FF91B5'}">${x.delta>=0?'+':''}${x.delta.toFixed(1)} xMin · ${x.xDelta>=0?'+':''}${x.xDelta.toFixed(2)} xPts</span></div><div class="role-impact"><div class="xbox"><div class="k">Baseline xMins</div><div class="v">${x.baseMd.exp.toFixed(1)}</div></div><div class="xbox"><div class="k">Intelligence xMins</div><div class="v">${x.nowMd.exp.toFixed(1)}</div></div><div class="xbox"><div class="k">Baseline GW${S.gw} xPts</div><div class="v">${x.base.x.toFixed(2)}</div></div><div class="xbox"><div class="k">Revised GW${S.gw} xPts</div><div class="v">${x.now.x.toFixed(2)}</div></div></div><div class="source-note">${x.events.length} active evidence item${x.events.length===1?'':'s'}. ${x.nowMd.override||x.nowMd.startOverride?'A manual minutes/start override is active for this player and remains authoritative.':'No manual minutes/start override is active; the displayed change is the automatic constrained role model.'}</div></div>`).join(''):'<div class="role-intel"><b>No calculated impacts yet.</b><div class="source-note">Events will show before/after xMins and xPts here.</div></div>';eventHost.querySelectorAll('[data-role-remove]').forEach(b=>b.onclick=()=>{S.roleIntel.events=S.roleIntel.events.filter(e=>e.id!==b.dataset.roleRemove);bumpCache();saveUserState();renderRoleIntelligence();render()});eventHost.querySelectorAll('[data-role-clear]').forEach(b=>b.onclick=()=>{const mode=b.dataset.roleClear,current=roleIntelEvents();const doomed=mode==='auto'?current.filter(e=>e.worker):current;if(!doomed.length)return;if(!confirm(`Remove ${doomed.length} ${mode==='auto'?'scanned':'role'} event(s)? This cannot be undone, though a fresh scan can re-import scanned evidence.`))return;S.roleIntel.events=mode==='auto'?current.filter(e=>!e.worker):[];if(mode!=='auto')SCOUT.last=null;SCOUT.retained=false;bumpCache();saveUserState();renderRoleIntelligence();render()})}
 function importRoleEvents(){const box=document.getElementById('riJson'),status=document.getElementById('riImportStatus');try{const raw=JSON.parse(box.value),arr=Array.isArray(raw)?raw:[raw],added=[];for(const z of arr){const p=rolePlayerByName(z.team,z.affected);if(!p)throw new Error(`Affected player not found: ${z.affected}`);added.push({id:'ri-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),createdAt:Date.now(),team:p.t,type:String(z.type||'departure'),subject:String(z.subject||'Structured event'),affected:p.n,affectedKey:stableKey(p),overlap:clamp(num(z.overlap,.8),0,1),hierarchy:clamp(num(z.hierarchy,.8),0,1),confidence:clamp(num(z.confidence,.7),0,1),source:String(z.source||'Structured import')})}S.roleIntel.events.push(...added);bumpCache();saveUserState();renderRoleIntelligence();render();status.className='schedule-import-status good';status.textContent=`Imported ${added.length} role event${added.length===1?'':'s'}.`}catch(e){status.className='schedule-import-status bad';status.textContent=e.message}}
 function runBarnesRoleTest(signing=false){const p=rolePlayerByName('NEW','Barnes');if(!p){flash('Barnes is not present in the current player pool. Refresh live data or import a structured event for another player.');return}const e=signing?{type:'signing',subject:'Elite left-wing signing (test)',overlap:.95,hierarchy:.95,confidence:1,source:'Scenario test · direct high-status competitor'}:{type:'departure',subject:'Anthony Gordon',overlap:.92,hierarchy:.90,confidence:1,source:'Scenario test · confirmed direct competitor departure'};addRoleEvent({id:'ri-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),createdAt:Date.now(),team:'NEW',affected:p.n,affectedKey:stableKey(p),...e})}
 function runHumeRoleTest(){const p=rolePlayerByName('SUN','Hume');if(!p){flash('Hume is not present in the current FPL player pool. Refresh live data, then rerun the test.');return}addRoleEvent({id:'ri-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),createdAt:Date.now(),team:'SUN',type:'observed_role',subject:p.n,role:'RW',affected:p.n,affectedKey:stableKey(p),overlap:1,hierarchy:.82,confidence:.7,source:'Scenario test · two consecutive preseason starts at right wing',auto:true,oop:p.p!=='MID'&&p.p!=='FWD',observed:true})}
 function wireRoleIntelligence(){const team=document.getElementById('riTeam');if(!team)return;populateRolePlayers();team.onchange=()=>{cancelScoutPoll();populateRolePlayers();const out=document.getElementById('roleScanOut');if(out)out.innerHTML='<div class="source-note">Club changed. Tap Load latest scout report.</div>'};for(const id of ['riOverlap','riHierarchy']){const el=document.getElementById(id);if(el)el.oninput=e=>{const lab=document.getElementById(id+'Label');if(lab)lab.textContent=e.target.value+'%'}}document.getElementById('btnRoleScan').onclick=()=>fetchScoutTeam(false);document.getElementById('btnRoleForceRefresh').onclick=()=>fetchScoutTeam(true);document.getElementById('riScoutFilter').onchange=()=>{if(SCOUT.last){const mapped=roleIntelEvents().filter(e=>e.worker&&e.team===SCOUT.last.team);renderScoutReport(SCOUT.last,mapped)}};document.getElementById('btnRoleLocalScan').onclick=()=>{try{scanAndApplyRoleEvent()}catch(e){flash(e.message)}};document.getElementById('btnRoleApply').onclick=()=>{try{addRoleEvent(roleEventFromControls())}catch(e){flash(e.message)}};document.getElementById('btnRoleBarnesTest').onclick=()=>runBarnesRoleTest(false);document.getElementById('btnRoleSigningTest').onclick=()=>runBarnesRoleTest(true);document.getElementById('btnRoleHumeTest').onclick=runHumeRoleTest;document.getElementById('btnRoleClear').onclick=()=>{if(!confirm('Clear every active role-intelligence event?'))return;cancelScoutPoll();S.roleIntel.events=[];SCOUT.last=null;bumpCache();saveUserState();renderRoleIntelligence();render();const out=document.getElementById('roleScanOut');if(out)out.innerHTML='<div class="source-note">No scout report is currently applied.</div>'};document.getElementById('btnRoleImport').onclick=importRoleEvents;renderRoleIntelligence()}
 function runSelfTests(){const USER_TEST_HORIZON=S.horizon;if(S.horizon>2){S.horizon=2;bumpCache()}const tests=[],add=(name,ok,detail='',cat='engineering',status=null)=>{const state=status||((!!ok)?'PASS':'FAIL');tests.push({name,ok:state==='PASS',status:state,detail,cat})},skip=(name,detail='',cat='engineering')=>add(name,false,detail,cat,'SKIP'),matches=Object.values(FIX).flat().length;add('Fixture schedule usable',matches>=300,`${matches} scheduled`,'data');const staticRound=Object.values(STATIC_FIX).every(g=>g.length===10&&new Set(g.flat()).size===20);add('Embedded 380-fixture fallback valid',Object.values(STATIC_FIX).flat().length===380&&staticRound,'','data');const sample=POOL.slice(0,Math.min(POOL.length,120));let finite=true,balanced=true,interval=true;for(const p of sample)for(let g=1;g<=Math.min(38,Object.keys(FIX).length);g++){const r=project(p,g);if(!Number.isFinite(r.x)||!Number.isFinite(r.sd))finite=false;if(Math.abs(sumParts(r.parts)-r.x)>1e-6)balanced=false;if(r.low>r.x||r.high<r.x)interval=false}add('xPts finite',finite,'','model');add('Components reconcile to xPts',balanced,'','model');add('Uncertainty intervals valid',interval,'','model');const newcomers=POOL.filter(p=>!p.histPts).slice(0,20);add('New-player price priors non-zero',newcomers.every(p=>pricePrior(p)>0),'','data');const h=POOL.find(p=>normalName(p.n)==='haaland');add('No raw 0.88 minutes penalty',!h||minuteDetail(h).relative>.85, h?minuteDetail(h).relative.toFixed(2):'not found','model');try{const thresholds={GK:150,DEF:175,MID:185,FWD:170},elite=POOL.filter(p=>availability(p)>=.99&&num(p.histPts)>=thresholds[p.p]&&(!p.histTeam||p.histTeam===p.t)),bad=elite.filter(p=>minuteDetail(p).pAppear<.85);add('Elite available players retain a credible appearance floor',bad.length===0,bad.length?bad.slice(0,5).map(p=>`${p.n} ${(100*minuteDetail(p).pAppear).toFixed(0)}%`).join(' · '):`${elite.length} elite players checked`,'model')}catch(e){add('Elite available players retain a credible appearance floor',false,e.message,'model')}try{const probe={p:'GK'},gk=positionUsage(probe),def=POSITION_USAGE.DEF,mid=POSITION_USAGE.MID,fwd=POSITION_USAGE.FWD;add('Position-specific substitution profiles are ordered realistically',gk.subMax<=.012&&def.subMax<mid.subMax&&mid.subMax<fwd.subMax,`GK ${(100*gk.subMax).toFixed(1)}% max · DEF ${(100*def.subMax).toFixed(0)}% · MID ${(100*mid.subMax).toFixed(0)}% · FWD ${(100*fwd.subMax).toFixed(0)}%`,'model')}catch(e){add('Position-specific substitution profiles are ordered realistically',false,e.message,'model')}try{
-  const positions=['GK','DEF','MID','FWD'],teams=Object.keys(TEAMS),failures=[],missing=[],clubsChecked=new Set;let checked=0;
-  for(const team of teams)for(const pos of positions){
-    const peers=POOL.filter(p=>p.t===team&&p.p===pos),role=teamRoleStartMap(team,pos);
-    if(!peers.length){missing.push(`${team} ${pos}`);continue}
-    const displayed=peers.reduce((a,p)=>a+minuteDetail(p).pStart,0);checked++;clubsChecked.add(team);
-    if(Math.abs(displayed-role.target)>1e-6)failures.push(`${team} ${pos} ${displayed.toFixed(3)}≠${role.target.toFixed(3)}`);
+  const teams=Object.keys(TEAMS),failures=[],checked=[];
+  for(const team of teams){
+    const peers=POOL.filter(p=>p.t===team&&p.p==='GK');
+    if(!peers.length)continue;
+    const role=teamRoleStartMap(team,'GK'),displayed=peers.reduce((a,p)=>a+minuteDetail(p).pStart,0);
+    checked.push(team);
+    if(role.calibrated&&Math.abs(displayed-role.target)>1e-6)failures.push(`${team} ${displayed.toFixed(3)}≠${role.target.toFixed(3)}`);
   }
-  const ok=teams.length===20&&clubsChecked.size===20&&!failures.length;
-  add('Final displayed start probabilities obey every club-position slot target',ok,
-    ok?`${checked} populated groups across ${clubsChecked.size}/20 clubs constrained · ${missing.length} empty feed groups skipped`:
-      (failures.slice(0,6).join(' · ')||`${clubsChecked.size}/20 clubs represented`),'model');
-}catch(e){add('Final displayed start probabilities obey every club-position slot target',false,e.message,'model')}
+  add('Goalkeeper start probabilities obey the strict one-slot target',checked.length>=18&&!failures.length,
+    failures.length?failures.slice(0,6).join(' · '):`${checked.length} goalkeeper groups checked`,'model');
+}catch(e){add('Goalkeeper start probabilities obey the strict one-slot target',false,e.message,'model')}
+try{
+  const positions=['DEF','MID','FWD'],groups=[],failures=[];
+  for(const team of Object.keys(TEAMS))for(const pos of positions){
+    const role=teamRoleStartMap(team,pos);
+    if(!role.calibrated)continue;
+    groups.push(`${team} ${pos}`);
+    const before=Math.abs(role.rawSum-role.target),after=Math.abs(role.sum-role.target);
+    if(after>before+1e-6)failures.push(`${team} ${pos} moved away ${before.toFixed(2)}→${after.toFixed(2)}`);
+    if(role.mode!=='soft evidence-weighted calibration'||role.strength>=1-1e-9&&Math.max(0,num(DATA.teamPlayed[team]))<8)
+      failures.push(`${team} ${pos} ${role.mode} strength ${role.strength.toFixed(2)}`);
+  }
+  add('Outfield role calibration is soft and moves toward formation targets',groups.length>=40&&!failures.length,
+    failures.length?failures.slice(0,6).join(' · '):`${groups.length} DEF/MID/FWD groups checked without hard equality`,'model');
+}catch(e){add('Outfield role calibration is soft and moves toward formation targets',false,e.message,'model')}
+try{
+  const protectedRows=POOL.filter(p=>p.p!=='GK'&&starterEvidenceStrength(p)>=.78&&teamRoleStartMap(p.t,p.p).calibrated),
+    failures=protectedRows.filter(p=>{
+      const role=teamRoleStartMap(p.t,p.p),raw=num(role.raw[p.id]),shown=teamRoleStartProbability(p),
+        floor=roleCompressionFloor(p,Math.max(0,num(DATA.teamPlayed[p.t])));
+      return shown+1e-9<raw*floor;
+    });
+  add('Strong outfield starter priors are protected from excessive compression',failures.length===0,
+    failures.length?failures.slice(0,5).map(p=>`${p.n} ${(100*teamRoleStartProbability(p)).toFixed(0)}%`).join(' · '):`${protectedRows.length} strong starter rows protected`,'model');
+}catch(e){add('Strong outfield starter priors are protected from excessive compression',false,e.message,'model')}
 try{
   const constrained=calibrateRoleRows([{id:1,p:.97,locked:true},{id:2,p:.94,locked:true}],1),
     sum=num(constrained[1])+num(constrained[2]);
@@ -3742,7 +3804,7 @@ document.getElementById('fxSyncExternal').onclick=syncExternalCalendar;
    RC2.3.6 — compact screenshot view includes the complete bench.
    RC2.3.5 — public-release certification, history-eligible assurance and restored-XI header refresh.
    RC2.3.4 — audited projection ledger, reproducible snapshots and final-result backtesting. */
-const APP_RELEASE='RC5.0.16',APP_RELEASE_SLUG='RC5.0.16-role-constraint';
+const APP_RELEASE='RC5.0.19',APP_RELEASE_SLUG='RC5.0.19-outfield-role-reconciliation';
 const ACCURACY_LEDGER_KEY='fpl-engine-projection-ledger-rc233-v1',ACCURACY_SCHEMA=2,MODEL_RELEASE=APP_RELEASE;  /* stamped into every accuracy snapshot - must track the real model build */
 
 function emptyAccuracyLedger(){return{schema:ACCURACY_SCHEMA,season:EXPECTED_SEASON,snapshots:{},actuals:{},catalog:{}}}
