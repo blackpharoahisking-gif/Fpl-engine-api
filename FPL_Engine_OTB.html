@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-build="2026.08.11.1">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%2337003C%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2720%27 fill=%27%2300FF87%27/%3E%3Cpath d=%27M32 17l9 7-3 11H26l-3-11zM26 35l-7 7 8 5 5-6 5 6 8-5-7-7%27 fill=%27%23160019%27/%3E%3C/svg%3E"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="OTB"><meta name="theme-color" content="#37003C">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="otb-build" content="2026.08.11.1"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%2337003C%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2720%27 fill=%27%2300FF87%27/%3E%3Cpath d=%27M32 17l9 7-3 11H26l-3-11zM26 35l-7 7 8 5 5-6 5 6 8-5-7-7%27 fill=%27%23160019%27/%3E%3C/svg%3E"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="OTB"><meta name="theme-color" content="#37003C">
 <title>FPL Engine — OTB 26/27 · RC5.0.19 Outfield Role Reconciliation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -236,12 +236,16 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
 
 /* RC4.6 — Role Intelligence Engine prototype */
 .role-intel{border:1px solid rgba(176,114,255,.34);border-left:3px solid #B072FF;border-radius:5px;padding:10px;background:rgba(176,114,255,.055);margin-bottom:11px}.role-intel-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.role-intel-grid .field{margin:0}.role-event-list{margin-top:10px}.role-scan-out{margin:8px 0 10px;border:1px solid rgba(4,245,255,.28);border-left:3px solid var(--cyan);border-radius:4px;padding:9px;background:rgba(4,245,255,.05)}.role-scan-row{display:grid;grid-template-columns:minmax(0,1fr) 62px 62px;gap:7px;padding:6px 0;border-bottom:1px solid rgba(234,234,242,.07);font-size:10px}.role-scan-row:last-child{border-bottom:0}.role-scan-row b{font-size:11px}.role-scan-row span:nth-child(n+2){text-align:right;font-family:'JetBrains Mono',monospace}.chip-squad-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.chip-squad-actions button{padding:8px 12px;font-size:11px;border:1px solid var(--line);border-radius:7px;background:transparent;color:var(--paper);cursor:pointer}.chip-squad-actions button:hover{background:rgba(234,234,242,.08)}.chip-squad-meta{font-size:11px;color:var(--muted);margin:6px 0}.chip-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:5px 0;font-size:11px}.chip-row>b{width:34px;color:var(--muted);font-size:10px;letter-spacing:.06em}.chip-pick{padding:4px 7px;border-radius:6px;border:1px solid var(--line);background:rgba(234,234,242,.04)}.chip-pick.is-xi{border-color:rgba(0,255,135,.45);color:var(--paper)}.chip-pick.is-bench{opacity:.55}.chip-pick small{color:var(--muted);font-size:9px}#btnApplyChipSquad{margin-top:8px;padding:8px 12px;font-size:11px;border:1px solid rgba(0,255,135,.5);border-radius:7px;background:transparent;color:var(--mint);cursor:pointer}.role-clearbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 8px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:rgba(234,234,242,.04);font-size:11px;color:var(--muted)}.role-clearbar button{margin-left:6px;padding:5px 10px;font-size:10px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--paper);cursor:pointer}.role-clearbar button[data-role-clear="all"]{border-color:rgba(233,0,82,.55);color:#FF91B5}.role-clearbar button:hover{background:rgba(234,234,242,.08)}.role-event{border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:4px;padding:9px;margin-bottom:7px;background:rgba(0,0,0,.2)}.role-event.positive{border-left-color:var(--mint)}.role-event.negative{border-left-color:var(--mag)}.role-event .re-head{display:flex;gap:7px;align-items:center}.role-event .re-head b{font-size:11px}.role-event .re-delta{margin-left:auto;font:800 12px 'JetBrains Mono',monospace}.role-event .re-meta{font:9px/1.45 'JetBrains Mono',monospace;color:var(--muted);margin-top:5px}.role-event .re-note{font-size:10px;line-height:1.45;margin-top:5px}.role-event button{margin-top:7px;padding:5px 7px;border:1px solid var(--line);border-radius:3px;font-size:9px;color:#FF91B5}.role-impact{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:9px 0}.role-impact .xbox .v{font-size:15px}.role-feed{width:100%;min-height:135px}.role-badge{display:inline-block;padding:2px 5px;border-radius:2px;font:800 8px 'JetBrains Mono',monospace}.role-badge.confirmed{background:rgba(0,255,135,.15);color:var(--mint)}.role-badge.provisional{background:rgba(255,193,7,.15);color:#FFD75E}.role-badge.speculative{background:rgba(233,0,82,.14);color:#FF91B5}@media(max-width:560px){.role-intel-grid,.role-impact{grid-template-columns:1fr}.role-event .re-head{flex-wrap:wrap}.role-event .re-delta{margin-left:0}}
+.build-badge{border:1px solid rgba(4,245,255,.35);border-radius:999px;padding:2px 6px;color:var(--cyan);font-size:7.5px;font-weight:800;letter-spacing:.06em;background:rgba(4,245,255,.06);white-space:nowrap}.build-badge:hover{border-color:var(--cyan);background:rgba(4,245,255,.12)}.build-badge.checking{color:var(--muted);border-color:var(--line)}
+.build-update-banner{position:fixed;right:16px;top:76px;z-index:500;width:min(390px,calc(100vw - 24px));display:flex;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--mint);border-left:4px solid var(--mint);border-radius:6px;background:#24002A;box-shadow:0 18px 50px rgba(0,0,0,.55)}.build-update-banner div{min-width:0;flex:1}.build-update-banner b{display:block;color:var(--mint);font-size:12px}.build-update-banner span{display:block;margin-top:2px;color:var(--muted);font-size:10px;line-height:1.4}.build-update-banner button{flex:0 0 auto;padding:7px 9px;border-radius:3px;background:var(--mint);color:var(--pl-ink);font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.dm-shell{border:1px solid rgba(4,245,255,.18);border-radius:5px;background:rgba(4,245,255,.025);overflow:hidden}.dm-empty{padding:10px;font-size:10.5px;line-height:1.5;color:var(--muted)}.dm-list{display:flex;flex-direction:column}.dm-entry{padding:9px 10px;border-top:1px solid rgba(255,255,255,.07)}.dm-entry:first-child{border-top:0}.dm-head{display:flex;align-items:baseline;gap:7px}.dm-time{font:700 9px 'JetBrains Mono',monospace;color:var(--cyan)}.dm-kind{font:800 8px 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.dm-build{margin-left:auto;font:600 8px 'JetBrains Mono',monospace;color:var(--muted)}.dm-reason{margin-top:5px;font-size:10.5px;line-height:1.45;color:var(--paper)}.dm-reason span{display:block}.dm-state{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.dm-pill{padding:2px 5px;border:1px solid var(--line);border-radius:999px;font:600 8px 'JetBrains Mono',monospace;color:var(--muted)}.dm-trigger{margin-top:6px;padding-left:7px;border-left:2px solid #FFC107;font-size:9.5px;line-height:1.45;color:var(--muted)}.dm-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:8px 10px;border-top:1px solid rgba(255,255,255,.07)}.dm-actions .btn{margin:0;font-size:9px;padding:7px}.dm-actions .btn.danger{background:transparent;border:1px solid rgba(233,0,82,.55);color:#FF91B5}
+@media(max-width:560px){.build-badge{font-size:7px;padding:2px 5px}.build-update-banner{top:auto;right:12px;bottom:14px}.dm-actions{grid-template-columns:1fr}.dm-build{display:none}}
 </style>
 <!-- OTB RC4.4 Strategy Laboratory & Six-Style Comparison -->
 </head>
 <body>
 <header>
-  <div class="brand"><h1 class="display">FPL Engine</h1><span class="season mono">OTB &middot; 26/27</span></div>
+  <div class="brand"><h1 class="display">FPL Engine</h1><span class="season mono">OTB &middot; 26/27</span><button type="button" class="build-badge mono" id="buildBadge" title="Check for a newer OTB build">BUILD 0811.1</button></div>
   <div class="hdr-spacer"></div>
   <div class="chipstat"><span class="k">Data</span><span class="v mono" id="hData" style="font-size:12px">SEED</span></div>
   <div class="chipstat"><span class="k">Squad</span><span class="v mono" id="hSquad">0/15</span></div>
@@ -255,6 +259,7 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
   <div class="mode-switch" role="group" aria-label="Interface mode"><button type="button" id="uxBeginner">Simple</button><button type="button" id="uxExpert">Expert</button></div>
 </header>
 <div id="appStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+<div id="buildUpdateBanner" class="build-update-banner hide-control" role="status" aria-live="polite"><div><b>New OTB build available</b><span id="buildUpdateCopy">Refresh once to put every device on the same version.</span></div><button type="button" id="btnApplyBuildUpdate">Refresh now</button></div>
 <div class="mobile-tabs" role="tablist" aria-label="View"><button type="button" class="on" data-m="pool" role="tab" aria-selected="true">Players</button><button type="button" data-m="centre" role="tab" aria-selected="false">Squad</button><button type="button" data-m="rail" role="tab" aria-selected="false">Engine</button></div>
 <div class="wrap">
 <section class="col pool" id="colPool">
@@ -399,7 +404,7 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
     <div class="price-section-title"><span>Transfer-plan exposure</span><span>move now vs wait</span></div><div id="pricePlanExposure"></div>
     <div class="price-section-title"><span>Market pressure</span><span id="priceResultCount">—</span></div><div id="priceIntel" aria-live="polite"></div>
   </div>
-  <div class="pane hide" id="pVerdict"><div id="verdictCommand"></div><div id="verdictDecisionStrip"></div><div id="verdictActions"></div><div id="verdictHealth"></div><div id="verdictChanges"></div><div id="verdictReadiness"></div><div id="verdictIntel"></div><div class="verdict-actions"><button type="button" class="btn" id="verdictOpenTransfers">Open Transfer Plan</button><button type="button" class="btn ghost" id="verdictOpenFixtures">Inspect Schedule</button></div><details class="verdict-detail-toggle"><summary>Detailed squad evidence</summary><div class="verdict-detail-body"><div id="verdicts"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Bench intelligence</h2><span class="note">expected autosubs</span></div><div id="benchIntel"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Captain ranking</h2><span class="note">mean · ceiling</span></div><div id="capList"></div><div class="sechead" style="margin:16px -10px 10px;position:static"><h2>Best available upgrades</h2><span class="note">gross gain</span></div><div class="help">Legal swaps ranked by expected-points gain. The heuristic range matters: a narrow +0.5 may be more dependable than a volatile +1.0.</div><div id="upgrades"></div></div></details></div>
+  <div class="pane hide" id="pVerdict"><div id="verdictCommand"></div><div id="verdictDecisionStrip"></div><div id="verdictActions"></div><div id="verdictHealth"></div><div id="verdictChanges"></div><div id="verdictDecisionMemory"></div><div id="verdictReadiness"></div><div id="verdictIntel"></div><div class="verdict-actions"><button type="button" class="btn" id="verdictOpenTransfers">Open Transfer Plan</button><button type="button" class="btn ghost" id="verdictOpenFixtures">Inspect Schedule</button></div><details class="verdict-detail-toggle"><summary>Detailed squad evidence</summary><div class="verdict-detail-body"><div id="verdicts"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Bench intelligence</h2><span class="note">expected autosubs</span></div><div id="benchIntel"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Captain ranking</h2><span class="note">mean · ceiling</span></div><div id="capList"></div><div class="sechead" style="margin:16px -10px 10px;position:static"><h2>Best available upgrades</h2><span class="note">gross gain</span></div><div class="help">Legal swaps ranked by expected-points gain. The heuristic range matters: a narrow +0.5 may be more dependable than a volatile +1.0.</div><div id="upgrades"></div></div></details></div>
   <div class="pane hide" id="pModel">
     <div class="help"><b>OTB hybrid xPts.</b> Historical output is retained as a prior, not multiplied again by old minutes or the player’s own club strength. Current-season xG, xA, expected minutes, clean-sheet probability, saves, goals-conceded deductions, cards, DefCon threshold probability and bonus are introduced gradually as evidence accumulates. Official FPL xPts and recent form are calibration layers, not extra points added on top. Bonus specifically also carries a 2026/27 BPS rule adjustment on the historical prior — CBI-reliant defenders are scaled down (clearances/blocks/interceptions now earn less per action), goalkeepers and attacking players scaled up slightly (tackled-suffered penalty removed; save scoring enhanced) — since last season’s bonus rate was earned under different rules. This correction fades out automatically as real 2026/27 bonus data accumulates.</div>
     <div class="field"><label>Fixture sensitivity <b id="lFix">0.30</b></label><input type="range" id="wFix" min="0" max="0.6" step="0.02" value="0.30"></div>
@@ -912,7 +917,38 @@ const PIPELINE={run:0,startedAt:0,events:[],status:'IDLE',lastReport:''};
 function pipelineReset(label='Live refresh'){PIPELINE.run++;PIPELINE.startedAt=performance.now();PIPELINE.events=[];PIPELINE.status='RUN';pipelineEvent('START','run',label);renderPipelineAudit();}
 function pipelineEvent(step,state,detail='',ms=null){PIPELINE.events.push({step:String(step),state:String(state),detail:String(detail||''),ms:Number.isFinite(ms)?Math.round(ms):null,at:new Date().toISOString()});if(PIPELINE.events.length>40)PIPELINE.events.shift();renderPipelineAudit();}
 function pipelineFinish(state,detail){PIPELINE.status=state;pipelineEvent('END',state==='OK'?'ok':state==='WARN'?'warn':'fail',detail,performance.now()-PIPELINE.startedAt);PIPELINE.lastReport=pipelineReport();renderPipelineAudit();}
-function pipelineReport(){return [`OTB ${APP_RELEASE} Live Data Pipeline Audit`,`Page: ${location.href}`,`Worker: ${API_BASE}`,`Online: ${navigator.onLine!==false}`,`Run: ${PIPELINE.run}`,`Status: ${PIPELINE.status}`,...PIPELINE.events.map((e,i)=>`${i+1}. ${e.step} [${e.state.toUpperCase()}] ${e.detail}${e.ms!=null?' · '+e.ms+'ms':''}`)].join('\n');}
+function pipelineReport(){return [`OTB ${APP_RELEASE} Live Data Pipeline Audit`,`Build: ${APP_BUILD}`,`Page: ${location.href}`,`Worker: ${API_BASE}`,`Online: ${navigator.onLine!==false}`,`Run: ${PIPELINE.run}`,`Status: ${PIPELINE.status}`,...PIPELINE.events.map((e,i)=>`${i+1}. ${e.step} [${e.state.toUpperCase()}] ${e.detail}${e.ms!=null?' · '+e.ms+'ms':''}`)].join('\n');}
+const BUILD_CHECK_INTERVAL_MS=5*60*1000,BUILD_CHECK_COOLDOWN_MS=90*1000;
+let BUILD_CHECKING=false,BUILD_LAST_CHECK=0,BUILD_REMOTE='';
+function buildParts(value){return String(value||'').match(/\d+/g)?.map(Number)||[]}
+function compareBuilds(a,b){const aa=buildParts(a),bb=buildParts(b),n=Math.max(aa.length,bb.length);for(let i=0;i<n;i++){const d=(aa[i]||0)-(bb[i]||0);if(d)return d>0?1:-1}return 0}
+function buildFromHtml(html){return /<html[^>]*\bdata-build=["']([^"']+)["']/i.exec(String(html||''))?.[1]||/<meta[^>]*name=["']otb-build["'][^>]*content=["']([^"']+)["']/i.exec(String(html||''))?.[1]||''}
+function buildShort(value=APP_BUILD){const p=buildParts(value);return p.length>=4?`${String(p[1]).padStart(2,'0')}.${String(p[2]).padStart(2,'0')}.${p[3]}`:String(value||'—')}
+function showBuildUpdate(remote){BUILD_REMOTE=remote;const box=document.getElementById('buildUpdateBanner'),copy=document.getElementById('buildUpdateCopy');if(copy)copy.textContent=`This device is on ${APP_BUILD}; the live site is ${remote}. Refresh once to load it without cached HTML.`;box?.classList.remove('hide-control')}
+async function checkBuildFreshness({manual=false,force=false}={}){
+  if(BUILD_CHECKING||navigator.onLine===false||!/^https?:$/.test(location.protocol))return false;
+  if(!force&&Date.now()-BUILD_LAST_CHECK<BUILD_CHECK_COOLDOWN_MS)return false;
+  const badge=document.getElementById('buildBadge');BUILD_CHECKING=true;BUILD_LAST_CHECK=Date.now();badge?.classList.add('checking');
+  try{
+    const url=new URL(location.href);url.hash='';url.search='';url.searchParams.set('otb-build-check',Date.now());
+    const response=await fetch(url.toString(),{cache:'no-store',headers:{Accept:'text/html'}});
+    if(!response.ok)throw new Error(`HTTP ${response.status}`);
+    const remote=buildFromHtml(await response.text());
+    if(!remote)throw new Error('build metadata missing');
+    if(remote&&compareBuilds(remote,APP_BUILD)>0){showBuildUpdate(remote);return true}
+    if(manual)flash(`This device is current — OTB build ${APP_BUILD}.`);
+    return false
+  }catch(e){if(manual)flash('Build check could not reach GitHub Pages. Your current session remains available.');return false}
+  finally{BUILD_CHECKING=false;badge?.classList.remove('checking')}
+}
+function applyFreshBuild(){const url=new URL(location.href);url.hash='';url.search='';url.searchParams.set('build',BUILD_REMOTE||Date.now());location.replace(url.toString())}
+function initBuildFreshness(){
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent=`BUILD ${buildShort()}`;badge.onclick=()=>checkBuildFreshness({manual:true,force:true})}
+  const apply=document.getElementById('btnApplyBuildUpdate');if(apply)apply.onclick=applyFreshBuild;
+  setTimeout(()=>checkBuildFreshness({force:true}),3500);
+  setInterval(()=>{if(document.visibilityState==='visible')checkBuildFreshness()},BUILD_CHECK_INTERVAL_MS);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkBuildFreshness()})
+}
 /* An invisible feature that fails silently is a liability: if the key
    expires, the quota runs out, or a club name stops matching, projections
    quietly revert with no signal at all. This is the signal. */
@@ -967,7 +1003,7 @@ async function testWorkerConnection(){
     renderDataStatus();pipelineFinish('OK','Required Worker routes and Scout contract are reachable · starting full live refresh');setTimeout(()=>refreshLiveData(true),120);
   }else pipelineFinish('WARN','Worker root is unavailable but required routes may still work');
 }
-const API_BASE='https://fpl-engine-api.blackpharoahisking.workers.dev',SCOUT_API_BASE='https://otb-role-intelligence.blackpharoahisking.workers.dev',CACHE_KEY='fpl-engine-cache-v2',STATE_KEY='fpl-engine-user-v2',LEGACY_CACHE_KEY='fpl-engine-rc3-live-cache-v1',LEGACY_STATE_KEY='fpl-engine-rc3-user-v1',EXTERNAL_FIXTURE_KEY='fpl-engine-external-calendar-rc232-v1';
+const APP_BUILD='2026.08.11.1',API_BASE='https://fpl-engine-api.blackpharoahisking.workers.dev',SCOUT_API_BASE='https://otb-role-intelligence.blackpharoahisking.workers.dev',CACHE_KEY='fpl-engine-cache-v2',STATE_KEY='fpl-engine-user-v2',LEGACY_CACHE_KEY='fpl-engine-rc3-live-cache-v1',LEGACY_STATE_KEY='fpl-engine-rc3-user-v1',EXTERNAL_FIXTURE_KEY='fpl-engine-external-calendar-rc232-v1';
 const EXT_CAL={fixtures:[],source:'none',updatedAt:null,error:''};
 const EXPECTED_SEASON='2026/27',SEASON_START=Date.parse('2026-08-21T00:00:00Z'),SEASON_END=Date.parse('2027-05-30T23:59:59Z'),FIRST_DEADLINE_MIN=Date.parse('2026-08-14T00:00:00Z'),FIRST_DEADLINE_MAX=Date.parse('2026-08-22T23:59:59Z'),LAST_DEADLINE_MIN=Date.parse('2027-05-23T00:00:00Z'),LAST_DEADLINE_MAX=Date.parse('2027-05-31T23:59:59Z'),WORKER_SCHEMA_MIN=3,SCOUT_SCHEMA_MIN='1.30.0',MAX_DATA_AGE_HOURS=24;
 /* RC5.0.9 — semver-aware comparison for the Scout schema gate. The previous
@@ -1971,9 +2007,9 @@ function renderSpine(){const xi=squadPlayers().filter(p=>S.start.has(p.id)),tot=
       Stale feeds are declared, never silently used.
    ═══════════════════════════════════════════════════════════════════════ */
 
-const VERDICT_SEEN_KEY='otb_verdict_seen_v1',VERDICT_JOURNAL_KEY='otb_verdict_journal_v1';
+const VERDICT_SEEN_KEY='otb_verdict_seen_v1',VERDICT_JOURNAL_KEY='otb_decision_memory_v2',VERDICT_JOURNAL_LEGACY_KEY='otb_verdict_journal_v1';
 const VERDICT_LOCK_MIN=180,VERDICT_DECIDE_MIN=2880,VERDICT_LOCK_FEED_MAX_MIN=45,VERDICT_MIN_CALIB_GWS=3;
-let VERDICT_SENSITIVITY=null;
+let VERDICT_SENSITIVITY=null,DECISION_CAPTURE_TIMER=null;
 
 /* ── Feed registry ──────────────────────────────────────────────────────
    One declared list of everything Verdict depends on. The freshness strip,
@@ -2384,26 +2420,71 @@ function verdictChanges(prev,now){
    returning does not make benching him wrong; that judgement needs the
    information available before the deadline, which is exactly what is stored
    here. Read it alongside the accuracy ledger, not instead of it. */
-function verdictLoadJournal(){try{const j=JSON.parse(localStorage.getItem(VERDICT_JOURNAL_KEY)||'null');return (j&&j.season===EXPECTED_SEASON)?j:{season:EXPECTED_SEASON,entries:{}}}catch(e){return{season:EXPECTED_SEASON,entries:{}}}}
-function verdictSaveJournal(j){try{localStorage.setItem(VERDICT_JOURNAL_KEY,JSON.stringify(j))}catch(e){}}
+function verdictBenchOne(ctx){const out=ctx.benchRows.filter(o=>o.p.p!=='GK'),find=key=>out.find(o=>o.p.id===Number(key)||stableKey(o.p)===key),order=(S.benchOrder||[]).map(find).filter(Boolean);return(order[0]||out.slice().sort((a,b)=>b.r.x-a.r.x)[0])?.p||null}
+function verdictDecisionState(ctx){
+  const cap=byId(S.cap),vice=byId(S.vice),bench1=verdictBenchOne(ctx),blocking=(ctx.queue||[]).filter(i=>i.blocking),
+    chipNow=(ctx.chips||[]).find(c=>c.gw===S.gw),top=(ctx.queue||[])[0]||null,
+    transfer=ctx.planStale?'RE-RUN':ctx.firstPlan?ctx.planLabel:ctx.routeRolled?'ROLL':'NOT RUN',
+    readiness=blocking.length?'BLOCKED':ctx.readiness.score>=90?'READY':'REVIEW',capRow=ctx.rows.find(o=>o.p.id===S.cap);
+  return{gw:S.gw,transfer,captain:cap?{id:cap.id,n:cap.n,x:+num(capRow?.r?.x).toFixed(2),avail:+availability(cap).toFixed(2),minutes:Math.round(num(capRow?.md?.exp))}:null,
+    vice:vice?{id:vice.id,n:vice.n}:null,bench1:bench1?{id:bench1.id,n:bench1.n}:null,chip:chipNow?chipNow.label:'HOLD',
+    readiness,readinessScore:ctx.readiness.score,regime:ctx.regime.key,projectedXI:+ctx.xiTotal.toFixed(2),projectedSd:+ctx.xiSd.toFixed(2),
+    transferGain:ctx.firstPlan?+num(ctx.firstPlan.netGain,0).toFixed(2):0,planStale:!!ctx.planStale,
+    topAction:top?{id:top.id,title:top.title,evidence:top.evidence||'',cost:+num(top.cost,0).toFixed(2),severity:top.severity}:null}
+}
+function verdictEmptyJournal(){return{schema:2,season:EXPECTED_SEASON,entries:[]}}
+function verdictNormaliseJournalEntry(e){
+  if(e?.state){const row={...e};row.reasons=Array.isArray(row.reasons)&&row.reasons.length?row.reasons:['Decision checkpoint recorded.'];row.fingerprint=row.fingerprint||verdictDecisionFingerprint(row);return row}
+  const top=Array.isArray(e?.queue)?e.queue[0]||null:null,state={gw:num(e?.gw),transfer:e?.transfer||'ROLL',captain:e?.captain||null,vice:e?.vice||null,bench1:null,
+    chip:e?.chip&&e.chip!=='NONE'?e.chip:'HOLD',readiness:num(e?.readiness)>=90?'READY':'REVIEW',readinessScore:num(e?.readiness),regime:e?.regime||'—',
+    projectedXI:num(e?.projectedXI),projectedSd:num(e?.projectedSd),transferGain:num(e?.transferGain),planStale:false,topAction:top};
+  const row={...e,id:e?.id||`legacy-${e?.gw||0}-${Date.parse(e?.at)||0}`,manual:!!e?.locked,build:e?.build||'',release:e?.release||'',state,
+    reasons:['Imported from the original OTB verdict journal.']};row.fingerprint=verdictDecisionFingerprint(row);return row
+}
+function verdictLoadJournal(){
+  try{
+    let raw=JSON.parse(localStorage.getItem(VERDICT_JOURNAL_KEY)||'null');
+    if(!raw){raw=JSON.parse(localStorage.getItem(VERDICT_JOURNAL_LEGACY_KEY)||'null')}
+    if(!raw||raw.season!==EXPECTED_SEASON)return verdictEmptyJournal();
+    const rows=Array.isArray(raw.entries)?raw.entries:Object.values(raw.entries||{});
+    return{schema:2,season:EXPECTED_SEASON,entries:rows.filter(e=>e&&fplEventNumber(e.gw)).map(verdictNormaliseJournalEntry).slice(-120)}
+  }catch(e){return verdictEmptyJournal()}
+}
+function verdictSaveJournal(j){try{localStorage.setItem(VERDICT_JOURNAL_KEY,JSON.stringify(j));return true}catch(e){return false}}
+function verdictDecisionFingerprint(entry){const s=entry.state||{};return accuracyHashValue(['decision-v2',entry.gw,s.transfer,s.captain?.id||0,s.vice?.id||0,s.bench1?.id||0,s.chip,s.readiness,s.topAction?.id||'',Math.round(num(s.projectedXI)*10)/10,Math.round(num(s.transferGain)*10)/10])}
+function verdictDecisionReasons(previous,current){
+  if(!previous)return['Baseline decision recorded for this gameweek.'];
+  const a=previous.state||{},b=current.state||{},out=[],change=(label,oldValue,newValue)=>{if(oldValue!==newValue)out.push(`${label}: ${oldValue||'—'} → ${newValue||'—'}`)};
+  change('Transfer',a.transfer,b.transfer);change('Captain',a.captain?.n,b.captain?.n);change('Vice',a.vice?.n,b.vice?.n);change('Bench 1',a.bench1?.n,b.bench1?.n);change('Chip',a.chip,b.chip);change('Decision state',a.readiness,b.readiness);
+  const xp=num(b.projectedXI)-num(a.projectedXI);if(Math.abs(xp)>=.2)out.push(`Projected XI: ${num(a.projectedXI).toFixed(1)} → ${num(b.projectedXI).toFixed(1)} xP (${signed(xp,1)})`);
+  if(a.topAction?.id!==b.topAction?.id&&b.topAction?.title)out.push(`Priority changed to: ${b.topAction.title}`);
+  if(!out.length)out.push(current.manual?'Manual checkpoint recorded.':`Evidence changed while the endorsed configuration held${b.topAction?.title?`: ${b.topAction.title}`:'.'}`);
+  return out
+}
 function verdictJournalCapture(ctx,{manual=false}={}){
-  const j=verdictLoadJournal(),key='gw'+S.gw,existing=j.entries[key];
-  if(existing&&existing.locked&&!manual)return existing;
-  const cal=verdictCalibration();
-  const entry={gw:S.gw,at:new Date().toISOString(),regime:ctx.regime.key,locked:ctx.regime.key==='LOCK'||manual,
-    readiness:ctx.readiness.score,dataMode:DATA.mode,
-    captain:byId(S.cap)?{id:S.cap,n:byId(S.cap).n,x:+project(byId(S.cap),S.gw).x.toFixed(2)}:null,
-    vice:byId(S.vice)?{id:S.vice,n:byId(S.vice).n}:null,
-    altCaptain:ctx.bestCap&&ctx.bestCap.p.id!==S.cap?{id:ctx.bestCap.p.id,n:ctx.bestCap.p.n,x:+ctx.bestCap.r.x.toFixed(2)}:null,
-    xi:ctx.xi.map(o=>({id:o.p.id,n:o.p.n,x:+o.r.x.toFixed(2)})),
-    bench:ctx.benchRows.map(o=>({id:o.p.id,n:o.p.n,x:+o.r.x.toFixed(2)})),
-    transfer:ctx.planLabel||'ROLL',transferGain:ctx.firstPlan?+num(ctx.firstPlan.netGain,0).toFixed(2):0,
-    chip:Object.entries(S.chips||{}).filter(([,v])=>+v===S.gw).map(([k])=>k).join(',')||'NONE',
-    projectedXI:+ctx.xiTotal.toFixed(2),projectedSd:+ctx.xiSd.toFixed(2),
-    topUncertainty:ctx.uncertainty.top?{n:ctx.uncertainty.top.p.n,share:+ctx.uncertainty.top.share.toFixed(2)}:null,
-    marketActive:marketActive(),calibrationAtDecision:cal?{coverage:cal.coverage,bias:cal.bias,gws:cal.gwCount}:null,
-    queue:(ctx.queue||[]).slice(0,5).map(i=>({id:i.id,title:i.title,cost:+num(i.cost,0).toFixed(2),severity:i.severity}))};
-  j.entries[key]=entry;verdictSaveJournal(j);return entry;
+  const j=verdictLoadJournal(),state=verdictDecisionState(ctx),previous=[...j.entries].reverse().find(e=>e.gw===S.gw)||null,
+    entry={id:`${Date.now()}-${Math.random().toString(36).slice(2,7)}`,gw:S.gw,at:new Date().toISOString(),manual:!!manual,build:APP_BUILD,release:APP_RELEASE,dataMode:DATA.mode,state,
+      xi:ctx.xi.map(o=>({id:o.p.id,n:o.p.n,x:+o.r.x.toFixed(2)})),bench:ctx.benchRows.map(o=>({id:o.p.id,n:o.p.n,x:+o.r.x.toFixed(2)})),
+      topUncertainty:ctx.uncertainty.top?{n:ctx.uncertainty.top.p.n,share:+ctx.uncertainty.top.share.toFixed(2)}:null,
+      feeds:verdictFeeds().map(f=>({key:f.key,state:f.state,ageMin:f.ageMin==null?null:Math.round(f.ageMin)}))};
+  entry.fingerprint=verdictDecisionFingerprint(entry);
+  if(previous&&previous.fingerprint===entry.fingerprint)return{entry:previous,created:false};
+  entry.reasons=verdictDecisionReasons(previous,entry);j.entries.push(entry);j.entries=j.entries.slice(-120);const persisted=verdictSaveJournal(j);return{entry,created:persisted,error:persisted?'':'storage'}
+}
+function verdictDecisionMemoryExport(){
+  const j=verdictLoadJournal(),payload={...j,exportedAt:new Date().toISOString(),appRelease:APP_RELEASE,appBuild:APP_BUILD};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`OTB_decision_memory_${EXPECTED_SEASON.replace('/','-')}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)
+}
+function renderDecisionMemory(ctx){
+  const host=document.getElementById('verdictDecisionMemory');if(!host)return;
+  const rows=verdictLoadJournal().entries.filter(e=>e.gw===S.gw).slice(-8).reverse(),card=e=>{const s=e.state||{},time=new Date(e.at).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}),reasons=(e.reasons||['Decision checkpoint recorded.']).map(r=>`<span>${esc(r)}</span>`).join('');return`<div class="dm-entry"><div class="dm-head"><span class="dm-time">${esc(time)}</span><span class="dm-kind">${e.manual?'checkpoint':'automatic'}</span><span class="dm-build">build ${esc(buildShort(e.build))}</span></div><div class="dm-reason">${reasons}</div><div class="dm-state"><span class="dm-pill">T ${esc(s.transfer||'—')}</span><span class="dm-pill">C ${esc(s.captain?.n||'—')}</span><span class="dm-pill">VC ${esc(s.vice?.n||'—')}</span><span class="dm-pill">B1 ${esc(s.bench1?.n||'—')}</span><span class="dm-pill">${esc(s.chip||'HOLD')}</span><span class="dm-pill">${num(s.projectedXI).toFixed(1)} xP</span></div>${s.topAction?.title?`<div class="dm-trigger"><b>Evidence:</b> ${esc(s.topAction.title)}${s.topAction.cost>0?` · ${num(s.topAction.cost).toFixed(1)} xP at stake`:''}</div>`:''}</div>`};
+  host.innerHTML=`<div class="vsec-h">Decision Memory<span>${rows.length?`${rows.length} GW${S.gw} checkpoint${rows.length===1?'':'s'}`:'waiting for first checkpoint'}</span></div><div class="dm-shell">${rows.length?`<div class="dm-list">${rows.map(card).join('')}</div>`:`<div class="dm-empty">OTB will record the endorsed transfer, captain, vice, bench, chip and the evidence that caused a meaningful change. The history stays in this browser until you export it.</div>`}<div class="dm-actions"><button type="button" class="btn ghost" id="btnDecisionMemoryExport">Export memory</button><button type="button" class="btn danger" id="btnDecisionMemoryClearGw" ${rows.length?'':'disabled'}>Clear GW${S.gw} history</button></div></div>`;
+  const ex=document.getElementById('btnDecisionMemoryExport');if(ex)ex.onclick=verdictDecisionMemoryExport;
+  const clear=document.getElementById('btnDecisionMemoryClearGw');if(clear)clear.onclick=()=>{if(!confirm(`Clear every recorded GW${S.gw} decision from this browser? Export first if you want a backup.`))return;const j=verdictLoadJournal();j.entries=j.entries.filter(e=>e.gw!==S.gw);if(!verdictSaveJournal(j)){flash('Decision Memory could not update browser storage. Export remains available.');return}renderDecisionMemory(ctx);flash(`GW${S.gw} Decision Memory cleared.`)}
+}
+function scheduleDecisionMemoryCapture(){
+  clearTimeout(DECISION_CAPTURE_TIMER);if(document.visibilityState!=='visible'||activeRailTab()!=='verdict'||S.squad.length!==15)return;
+  DECISION_CAPTURE_TIMER=setTimeout(()=>{try{if(activeRailTab()!=='verdict'||S.squad.length!==15)return;const ctx=verdictContext(),saved=verdictJournalCapture(ctx);if(saved.created)renderDecisionMemory(ctx)}catch(e){console.warn('OTB Decision Memory capture skipped:',e)}},1800)
 }
 
 /* ── Decision sensitivity ───────────────────────────────────────────────
@@ -2642,12 +2723,12 @@ function renderVerdict(){
     host.innerHTML=`<div class="verdict-hero vq-block"><div class="vh-top"><span class="vh-tag">NO VERDICT</span></div>
       <div class="vh-line">Squad is ${players.length}/15</div>
       <div class="vh-note">Verdict issues decisions, not estimates. Complete a legal 15-player squad and it will rank every action by what it is costing you.</div></div>`;
-    ['verdictDecisionStrip','verdictActions','verdictHealth','verdictChanges','verdictReadiness','verdictIntel','verdicts','benchIntel','capList','upgrades'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=''});
+    ['verdictDecisionStrip','verdictActions','verdictHealth','verdictChanges','verdictDecisionMemory','verdictReadiness','verdictIntel','verdicts','benchIntel','capList','upgrades'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=''});
     return;
   }
 
   const ctx=verdictContext(),q=ctx.queue,regime=ctx.regime,feeds=verdictFeeds();
-  const blocking=q.filter(i=>i.blocking),top=q[0]||null;
+  const blocking=q.filter(i=>i.blocking),top=q[0]||null,decision=verdictDecisionState(ctx);
 
   /* Standalone action costs overlap (a transfer can also remove availability,
      role or price risk). Never sum them as if independent. */
@@ -2680,15 +2761,10 @@ function renderVerdict(){
   /* final gameweek decision strip — explicit configuration, not another priority score. */
   const ds=document.getElementById('verdictDecisionStrip');
   if(ds){
-    const cap=byId(S.cap),vice=byId(S.vice),benchOut=ctx.benchRows.filter(o=>o.p.p!=='GK'),
-      order=(S.benchOrder||[]).map(id=>benchOut.find(o=>o.p.id===id)).filter(Boolean),bench1=(order[0]||benchOut.slice().sort((a,b)=>b.r.x-a.r.x)[0])?.p,
-      transfer=ctx.planStale?'RE-RUN':ctx.firstPlan?ctx.planLabel:ctx.routeRolled?'ROLL':'NOT RUN',
-      chipNow=(ctx.chips||[]).find(c=>c.gw===S.gw),chip=chipNow?chipNow.label:'HOLD',
-      ready=blocking.length?'BLOCKED':ctx.readiness.score>=90?'READY':'REVIEW';
     const cell=(k,v,tone='info')=>`<div class="vdecision-cell ${tone}"><div class="k">${esc(k)}</div><div class="v">${esc(v||'—')}</div></div>`;
     ds.innerHTML=`<div class="vsec-h">Final GW decision<span>the configuration OTB is currently endorsing</span></div><div class="vdecision">
-      ${cell('Transfer',transfer,ctx.planStale?'warn':ctx.routeRolled?'good':'info')}${cell('Captain',cap?.n||'NOT SET',cap?'good':'warn')}${cell('Vice',vice?.n||'NOT SET',vice?'good':'warn')}
-      ${cell('Bench 1',bench1?.n||'—','info')}${cell('Chip',chip,chipNow?'warn':'good')}${cell('State',ready,blocking.length?'warn':ctx.readiness.score>=90?'good':'info')}
+      ${cell('Transfer',decision.transfer,ctx.planStale?'warn':ctx.routeRolled?'good':'info')}${cell('Captain',decision.captain?.n||'NOT SET',decision.captain?'good':'warn')}${cell('Vice',decision.vice?.n||'NOT SET',decision.vice?'good':'warn')}
+      ${cell('Bench 1',decision.bench1?.n||'—','info')}${cell('Chip',decision.chip,decision.chip==='HOLD'?'good':'warn')}${cell('State',decision.readiness,blocking.length?'warn':decision.readiness==='READY'?'good':'info')}
       <div class="vdecision-note">Action costs below are standalone estimates and may overlap. A stale transfer route is excluded until it is recomputed against the current feeds and projections.</div></div>`;
   }
 
@@ -2718,6 +2794,8 @@ function renderVerdict(){
       :`<div class="vsec-h">Since your last check<span>${verdictLoadSeen()?'no material change':'first look this gameweek'}</span></div>`;
     verdictSaveSeen(now);
   }
+
+  renderDecisionMemory(ctx);
 
   /* readiness decomposition + calibration */
   const rh=document.getElementById('verdictReadiness');
@@ -2788,11 +2866,12 @@ function renderVerdict(){
     setTimeout(()=>{VERDICT_SENSITIVITY=verdictCaptainSensitivity();const o=document.getElementById('verdictSensOut');
       if(o)o.innerHTML=VERDICT_SENSITIVITY?verdictSensHtml(VERDICT_SENSITIVITY):'<div class="vsens">Not enough of a squad to test a captaincy flip.</div>'},30)};
   const jb=document.getElementById('btnVerdictJournal');
-  if(jb)jb.onclick=()=>{verdictJournalCapture(ctx,{manual:true});flash(`GW${S.gw} decision recorded. After the gameweek this can be read against the accuracy ledger to separate a bad decision from a bad outcome.`)};
+  if(jb)jb.onclick=()=>{const saved=verdictJournalCapture(ctx,{manual:true});renderDecisionMemory(ctx);flash(saved.error?'Decision Memory could not write to browser storage. Use Export memory before clearing browser data.':saved.created?`GW${S.gw} decision checkpoint recorded.`:`GW${S.gw} Decision Memory already matches this configuration.`)};
 
-  /* auto-capture the decision once inside the lock window, so post-gameweek
-     review is possible without remembering to press anything */
-  if(regime.key==='LOCK')try{verdictJournalCapture(ctx)}catch(e){}
+  /* Meaningful configuration changes are captured after a short quiet period.
+     LOCK captures immediately so the pre-deadline state cannot be missed. */
+  if(regime.key==='LOCK')try{const saved=verdictJournalCapture(ctx);if(saved.created)renderDecisionMemory(ctx)}catch(e){}
+  else scheduleDecisionMemoryCapture()
 }
 function verdictSensHtml(s){
   return `<div class="vsens ${s.robust?'ok':'warn'}"><b>${esc(s.player.n)} — ${s.robust?'robust':'marginal'}</b>
@@ -3512,6 +3591,28 @@ try{const oldShot=!!S.shotMode,bench=document.getElementById('benchBox'),pitch=d
 try{const empty={picks:[]},full={picks:Array.from({length:15},(_,i)=>({element:i+1}))};add('FPL importer accepts only complete public pick payloads',!fplPicksAreComplete(empty)&&fplPicksAreComplete(full),'0 players rejected · 15 players accepted','engineering')}catch(e){add('FPL importer accepts only complete public pick payloads',false,e.message,'engineering')}
 try{const now=Date.now(),before=fplImportGwCandidates({current_event:null},[{id:1,deadline_time:new Date(now+864e5).toISOString()}],now,1),after=fplImportGwCandidates({current_event:2},[{id:1,deadline_time:new Date(now-2*864e5).toISOString()},{id:2,deadline_time:new Date(now-864e5).toISOString()}],now,3);add('FPL importer distinguishes private pre-deadline drafts from public gameweeks',before.length===0&&after.join(',')==='2,1',`before deadline ${before.length} · after deadline GW${after.join(', GW')}`,'engineering')}catch(e){add('FPL importer distinguishes private pre-deadline drafts from public gameweeks',false,e.message,'engineering')}
 
+try{const htmlBuild=document.documentElement.getAttribute('data-build'),metaBuild=document.querySelector('meta[name="otb-build"]')?.content;
+  add('Visible page and runtime build identifiers agree',htmlBuild===APP_BUILD&&metaBuild===APP_BUILD,`html ${htmlBuild||'missing'} · meta ${metaBuild||'missing'} · runtime ${APP_BUILD}`,'engineering')}
+catch(e){add('Visible page and runtime build identifiers agree',false,e.message,'engineering')}
+try{const parsed=buildFromHtml('<!doctype html><html data-build="2026.08.11.2"><head></head></html>'),newer=compareBuilds(parsed,APP_BUILD),older=compareBuilds('2026.08.10.9',APP_BUILD);
+  add('Build freshness comparator detects newer Pages HTML',parsed==='2026.08.11.2'&&newer>0&&older<0,`${APP_BUILD} → ${parsed}`,'engineering')}
+catch(e){add('Build freshness comparator detects newer Pages HTML',false,e.message,'engineering')}
+try{const badge=document.getElementById('buildBadge'),banner=document.getElementById('buildUpdateBanner'),apply=document.getElementById('btnApplyBuildUpdate');
+  add('Desktop cache recovery controls are present and wired',!!badge&&!!banner&&!!apply&&typeof badge.onclick==='function'&&typeof apply.onclick==='function','header build check · update banner · forced refresh','engineering')}
+catch(e){add('Desktop cache recovery controls are present and wired',false,e.message,'engineering')}
+try{const base={gw:1,manual:false,state:{transfer:'ROLL',captain:{id:1,n:'Haaland'},vice:{id:2,n:'B.Fernandes'},bench1:{id:3,n:'De Cuyper'},chip:'HOLD',readiness:'READY',projectedXI:56.4,transferGain:0,topAction:{id:'captain',title:'Hold captain'}}},same=JSON.parse(JSON.stringify(base)),changed=JSON.parse(JSON.stringify(base));changed.state.captain={id:4,n:'Saka'};
+  add('Decision Memory deduplicates identical states and detects real decisions',verdictDecisionFingerprint(base)===verdictDecisionFingerprint(same)&&verdictDecisionFingerprint(base)!==verdictDecisionFingerprint(changed),'same state stable · captain change recorded','engineering')}
+catch(e){add('Decision Memory deduplicates identical states and detects real decisions',false,e.message,'engineering')}
+try{const previous={state:{transfer:'ROLL',captain:{n:'Haaland'},vice:{n:'B.Fernandes'},bench1:{n:'De Cuyper'},chip:'HOLD',readiness:'READY',projectedXI:56.4,topAction:{id:'hold',title:'Hold'}}},current={manual:false,state:{...previous.state,captain:{n:'Saka'},projectedXI:57.1,topAction:{id:'captain',title:'Captain Saka'}}},reasons=verdictDecisionReasons(previous,current).join(' · ');
+  add('Decision Memory explains why an endorsement changed',reasons.includes('Captain: Haaland → Saka')&&reasons.includes('Projected XI: 56.4 → 57.1')&&reasons.includes('Priority changed to: Captain Saka'),reasons,'engineering')}
+catch(e){add('Decision Memory explains why an endorsement changed',false,e.message,'engineering')}
+try{const old=verdictNormaliseJournalEntry({gw:1,at:'2026-08-10T12:00:00.000Z',locked:true,regime:'LOCK',readiness:92,captain:{id:1,n:'Haaland'},vice:{id:2,n:'B.Fernandes'},transfer:'ROLL',chip:'NONE',projectedXI:56.4,projectedSd:10.3,queue:[{id:'hold',title:'Hold'}]});
+  add('Original verdict journal migrates into Decision Memory',old.state.captain?.n==='Haaland'&&old.state.chip==='HOLD'&&old.state.readiness==='READY'&&old.manual&&old.reasons[0].includes('original'),`GW${old.gw} · ${old.state.captain?.n} · ${old.state.readiness}`,'engineering')}
+catch(e){add('Original verdict journal migrates into Decision Memory',false,e.message,'engineering')}
+try{const host=document.getElementById('verdictDecisionMemory'),src=String(scheduleDecisionMemoryCapture);
+  add('Decision Memory capture is scoped to the visible Verdict tab',!!host&&src.includes("activeRailTab()!=='verdict'")&&src.includes('S.squad.length!==15'),'quiet-period capture guarded by tab and legal squad','engineering')}
+catch(e){add('Decision Memory capture is scoped to the visible Verdict tab',false,e.message,'engineering')}
+
 try{const payload={players:[{id:1,gw:{1:{mean:5,utility:5,pAppear:.9,sd:1,confidence:80}}}],gws:[1],squadIds:[1],purchase:{1:5},bank:0,free:1,maxMoves:1,maxHit:4,threshold:.25,lockedIds:[],chips:{},hybrid:{},sensitivity:null},same=JSON.parse(JSON.stringify(payload)),changed=JSON.parse(JSON.stringify(payload));changed.players[0].gw[1].mean=5.1;const a=verdictPlannerFingerprint(payload),b=verdictPlannerFingerprint(same),c=verdictPlannerFingerprint(changed);add('Transfer staleness hashes semantic worker inputs',a===b&&a!==c&&a.startsWith('tp2:'),'stable refreshes preserve route · projection changes invalidate it','engineering')}catch(e){add('Transfer staleness hashes semantic worker inputs',false,e.message,'engineering')}
 try{const src=String(runTransferPlanner);add('Transfer planner fingerprints the exact sent snapshot and guards in-flight changes',src.includes('payload=transferPlannerPayload()')&&src.includes('verdictPlannerFingerprint(payload)')&&src.includes('currentFingerprint!==plannerFingerprint'),'one snapshot · one guarded retry','engineering')}catch(e){add('Transfer planner fingerprints the exact sent snapshot and guards in-flight changes',false,e.message,'engineering')}
 
@@ -4133,7 +4234,7 @@ function schedulePostLiveHydration(){
   runWhenIdle(()=>{if(current())refreshPriceIntel({silent:true})},{delay:2250,timeout:5000});
   runWhenIdle(()=>{if(current())saveUserState()},{delay:2500,timeout:5000});
 }
-document.documentElement.dataset.release=APP_RELEASE_SLUG;pipelineEvent('APP','ok','RC5.0.16 JavaScript initialised');scheduleRC4HealthCheck();reconcileTransferStrategy();loadExternalCalendar();loadAccuracyLedger();const hadCache=loadCachedData();syncMobile();renderExternalCalendarStatus();if(!hadCache){renderStrengths();populateTeamFilter()}applyShotMode();render({deferPool:lowPowerMode()});tick();setInterval(tick,30000);scheduleSelfTests();if(!lowPowerMode())runWhenIdle(()=>maybeAutoCaptureProjection(),{delay:1200,timeout:4500});if(navigator.onLine!==false&&!lowPowerMode())runWhenIdle(()=>maybeAutoSyncAccuracyActuals(),{delay:2400,timeout:5000});/* Market data is optional: the engine renders immediately and re-renders
+document.documentElement.dataset.release=APP_RELEASE_SLUG;document.documentElement.dataset.build=APP_BUILD;pipelineEvent('APP','ok',`${APP_RELEASE} build ${APP_BUILD} JavaScript initialised`);initBuildFreshness();scheduleRC4HealthCheck();reconcileTransferStrategy();loadExternalCalendar();loadAccuracyLedger();const hadCache=loadCachedData();syncMobile();renderExternalCalendarStatus();if(!hadCache){renderStrengths();populateTeamFilter()}applyShotMode();render({deferPool:lowPowerMode()});tick();setInterval(tick,30000);scheduleSelfTests();if(!lowPowerMode())runWhenIdle(()=>maybeAutoCaptureProjection(),{delay:1200,timeout:4500});if(navigator.onLine!==false&&!lowPowerMode())runWhenIdle(()=>maybeAutoSyncAccuracyActuals(),{delay:2400,timeout:5000});/* Market data is optional: the engine renders immediately and re-renders
    if it arrives. loadMarketData() calls bumpCache() itself, so projections
    recompute with the blend applied. Refreshed hourly; the worker serves a
    cache so this costs no credits. */
