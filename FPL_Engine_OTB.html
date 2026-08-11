@@ -1667,18 +1667,12 @@ function initTransferControls(){const vals={tpStrategyStyle:S.transfer.style||'v
 function renderTransferPrices(){const host=document.getElementById('transferPrices');if(!host)return;const ps=squadPlayers();if(!ps.length){host.innerHTML='<div class="help">Build or load a squad first.</div>';return}let saleTotal=0;const rows=ps.slice().sort((a,b)=>['GK','DEF','MID','FWD'].indexOf(a.p)-['GK','DEF','MID','FWD'].indexOf(b.p)||a.c-b.c).map(p=>{const bought=transferBoughtPrice(p),sale=fplSellingPrice(p,bought);saleTotal+=sale;return`<div class="transfer-econ-row"><span class="player">${esc(p.n)} <span style="color:var(--muted)">${esc(p.t)} · ${p.p}</span></span><span class="mono">£${p.c.toFixed(1)}</span><input type="number" min="3.5" max="25" step="0.1" value="${bought.toFixed(1)}" data-buy-key="${esc(stableKey(p))}" aria-label="Price paid for ${esc(p.n)}"><span class="mono" data-sale-for="${esc(stableKey(p))}">£${sale.toFixed(1)}</span></div>`}).join('');const b=Math.max(0,num(document.getElementById('tpBank')?.value,bank()));host.innerHTML=`<div class="transfer-summary"><div class="transfer-kpi"><div class="k">Selling value</div><div class="v">£${saleTotal.toFixed(1)}</div></div><div class="transfer-kpi"><div class="k">Planner bank</div><div class="v">£${b.toFixed(1)}</div></div><div class="transfer-kpi"><div class="k">Total funds</div><div class="v">£${(saleTotal+b).toFixed(1)}</div></div></div><div class="transfer-econ"><div class="transfer-econ-head"><span>Player</span><span>Now</span><span>Bought</span><span>Sell</span></div>${rows}</div>`}
 function renderTransferPlanner(){const guard=document.getElementById('transferGuard'),btn=document.getElementById('btnPlanTransfers');if(!guard||!btn)return;const ready=productionDataReady(),full=S.squad.length===15&&legal(squadPlayers()),ok=ready&&full;guard.className='data-guard '+(ok?'ready':'');guard.innerHTML=!ready?'<b>Planner locked.</b> Refresh or import validated 2026/27 data.':!full?'<b>Complete a legal 15-player squad.</b> The planner needs 2 GK, 5 DEF, 5 MID and 3 FWD.':'<b>Transfer planning ready.</b> Purchase prices and bank can now be reviewed.';btn.disabled=!ok;renderTransferPrices()}
 function transferCandidatePool(gws){const current=squadPlayers(),out=[];for(const pos of ['GK','DEF','MID','FWD']){const all=POOL.filter(p=>p.p===pos&&TEAMS[p.t]&&availability(p)>.02).map(p=>({p,total:gws.reduce((a,g)=>a+project(p,g).x,0)})),byPts=[...all].sort((a,b)=>b.total-a.total).slice(0,38),byVal=[...all].sort((a,b)=>b.total/b.p.c-a.total/a.p.c).slice(0,26),byCheap=[...all].sort((a,b)=>a.p.c-b.p.c).slice(0,10),m=new Map;[...byPts,...byVal,...byCheap,...current.filter(p=>p.p===pos).map(p=>({p,total:0}))].forEach(o=>m.set(o.p.id,o.p));out.push(...m.values())}return[...new Map(out.map(p=>[p.id,p])).values()]}
-function verdictPlannerFingerprint(){
-  /* Conservative invalidation without clock drift: timestamps/versions change only
-     when inputs are actually refreshed or edited. This avoids making a valid route
-     stale merely because fifteen minutes passed. */
-  try{return [S.gw,[...S.squad].sort((a,b)=>a-b).join(','),bank().toFixed(2),
-    S.transfer?.free,S.transfer?.horizon,S.transfer?.maxMoves,S.transfer?.maxHit,S.transfer?.threshold,
-    S.transfer?.decay,S.transfer?.ftScale,S.transfer?.useFriction,S.transfer?.itbValue,S.transfer?.style,
-    S.w?.fix,S.w?.home,S.w?.cs,S.w?.dc,S.w?.official,S.w?.form,JSON.stringify(S.overrides||{}),
-    JSON.stringify(S.chips||{}),DATA.lastUpdated||0,NEWS.last?.generatedAt||0,
-    PRICE.last?.sampleEnd||PRICE.last?.generatedAt||0,MARKET.fetchedAt||0,
-    JSON.stringify((S.roleIntel?.events||[]).map(e=>[e.id,e.createdAt,e.type,e.affectedApiId,e.overlap,e.hierarchy,e.confidence])),
-    SCOUT.last?.generatedAt||0].join('|')}catch(e){return ''}
+function verdictPlannerFingerprint(payload=null){
+  /* Hash the exact semantic payload sent to the transfer worker. Retrieval times
+     such as News generatedAt and Market fetchedAt are deliberately excluded: a
+     background refresh with identical inputs must not invalidate a fresh route.
+     Any change that can alter the route changes the payload and therefore the hash. */
+  try{return 'tp2:'+accuracyHashValue(['transfer-planner-v2',payload||transferPlannerPayload()])}catch(e){return ''}
 }
 function transferPlanIsStale(last=S.transfer?.last){
   if(!last?.plan?.length)return false;
@@ -1704,7 +1698,51 @@ function renderTransferResult(result,t0,plannerFingerprint=''){
   document.getElementById('transferPlanOut').innerHTML=`${summary}${oppMarkup}${altMarkup}${projectionStressHTML(result.stress)}<div class="verdict"><b>Transfer route complete.</b> ${result.plan.length} gameweeks · final bank £${num(result.finalBank).toFixed(1)}m · final free transfers ${result.finalFt}. Calculated in ${Math.round(performance.now()-t0)}ms.</div>${rows}<button type="button" class="btn" id="btnApplyTransferStep" ${canApply?'':'disabled'}>Apply first permanent step</button><button type="button" class="btn ghost" id="btnCopyTransferPlan">Copy transfer route</button><div class="help">A roll verdict is a real recommendation, not a failed search. Objective stability tests alternative objective assumptions; input stress re-scores fixed candidate routes under forecast uncertainty. Neither is a guarantee of real-world results. The opportunity card shows the strongest rejected move whenever no transfer clears the route threshold.</div>`;
   document.getElementById('btnApplyTransferStep').onclick=applyFirstTransferStep;document.getElementById('btnCopyTransferPlan').onclick=()=>navigator.clipboard.writeText(transferPlanText(result)).then(()=>flash('Transfer route copied.'),()=>flash('Clipboard unavailable.'));saveUserState();
 }
-function runTransferPlanner(){if(!productionDataReady()||S.squad.length!==15||!legal(squadPlayers())){flash('A complete legal squad and validated data are required.');return}stopTransferPlanner('');syncTransferSettings();const plannerFingerprint=verdictPlannerFingerprint(),out=document.getElementById('transferPlanOut'),cancel=document.getElementById('btnCancelTransferPlan'),run=++TRANSFER_RUN,t0=performance.now();out.innerHTML='<div class="optimiser-progress"><b>Planning transfers…</b><div class="progress-track"><div class="progress-fill" id="tpProgress"></div></div><div class="progress-meta"><span id="tpDetail">Preparing candidate routes</span><span id="tpPct">0%</span></div></div>';cancel.classList.remove('hide-control');cancel.onclick=()=>{TRANSFER_RUN++;stopTransferPlanner('Transfer planning cancelled.')};let w;try{w=createTransferWorker()}catch(e){w=null}if(!w){stopTransferPlanner('This browser does not support the background transfer planner.');return}ACTIVE_TRANSFER_WORKER=w;/* RC5.0.10: the worker now enforces its own secondary-analysis budget and always returns the primary route, so this timeout is a true failsafe for a genuinely wedged worker rather than the normal completion path. Target ~10-20s, 30s as the degradation threshold. */const secondaryBudgetMs=S.transfer.sensitivityRuns>1?14000:9000,timeoutMs=30000,timer=setTimeout(()=>{if(run===TRANSFER_RUN){TRANSFER_RUN++;stopTransferPlanner(`Transfer planning exceeded ${Math.round(timeoutMs/1000)} seconds and was stopped.`)}},timeoutMs);w.onmessage=e=>{if(run!==TRANSFER_RUN)return;const d=e.data||{};if(d.type==='progress'){const pct=Math.min(96,Math.round(100*d.progress));const bar=document.getElementById('tpProgress'),lab=document.getElementById('tpPct'),det=document.getElementById('tpDetail');if(bar)bar.style.width=pct+'%';if(lab)lab.textContent=pct+'%';if(det)det.textContent=d.detail||'Planning'}else if(d.type==='result'){clearTimeout(timer);stopTransferPlanner('');renderTransferResult(d.result,t0,plannerFingerprint)}else if(d.type==='error'){clearTimeout(timer);stopTransferPlanner(d.error||'Transfer planner failed.')}};w.onerror=e=>{clearTimeout(timer);stopTransferPlanner('Background transfer planner failed.')};w.postMessage({type:'run',payload:{...transferPlannerPayload(),secondaryBudgetMs}})}
+function runTransferPlanner(retryCount=0){
+  retryCount=Number.isFinite(retryCount)?retryCount:0;
+  if(!productionDataReady()||S.squad.length!==15||!legal(squadPlayers())){
+    flash('A complete legal squad and validated data are required.');return
+  }
+  stopTransferPlanner('');
+  /* Build once, after controls are normalised, then fingerprint and send that
+     same immutable snapshot. This removes the pre-normalisation race. */
+  const payload=transferPlannerPayload(),plannerFingerprint=verdictPlannerFingerprint(payload),
+    out=document.getElementById('transferPlanOut'),cancel=document.getElementById('btnCancelTransferPlan'),
+    run=++TRANSFER_RUN,t0=performance.now();
+  out.innerHTML='<div class="optimiser-progress"><b>Planning transfers…</b><div class="progress-track"><div class="progress-fill" id="tpProgress"></div></div><div class="progress-meta"><span id="tpDetail">Preparing candidate routes</span><span id="tpPct">0%</span></div></div>';
+  cancel.classList.remove('hide-control');
+  cancel.onclick=()=>{TRANSFER_RUN++;stopTransferPlanner('Transfer planning cancelled.')};
+  let w;try{w=createTransferWorker()}catch(e){w=null}
+  if(!w){stopTransferPlanner('This browser does not support the background transfer planner.');return}
+  ACTIVE_TRANSFER_WORKER=w;
+  /* RC5.0.10: the worker now enforces its own secondary-analysis budget and always returns the primary route, so this timeout is a true failsafe for a genuinely wedged worker rather than the normal completion path. Target ~10-20s, 30s as the degradation threshold. */
+  const secondaryBudgetMs=S.transfer.sensitivityRuns>1?14000:9000,timeoutMs=30000,
+    timer=setTimeout(()=>{if(run===TRANSFER_RUN){TRANSFER_RUN++;stopTransferPlanner(`Transfer planning exceeded ${Math.round(timeoutMs/1000)} seconds and was stopped.`)}},timeoutMs);
+  w.onmessage=e=>{
+    if(run!==TRANSFER_RUN)return;
+    const d=e.data||{};
+    if(d.type==='progress'){
+      const pct=Math.min(96,Math.round(100*d.progress)),bar=document.getElementById('tpProgress'),
+        lab=document.getElementById('tpPct'),det=document.getElementById('tpDetail');
+      if(bar)bar.style.width=pct+'%';if(lab)lab.textContent=pct+'%';if(det)det.textContent=d.detail||'Planning'
+    }else if(d.type==='result'){
+      clearTimeout(timer);stopTransferPlanner('');
+      const currentFingerprint=verdictPlannerFingerprint();
+      if(currentFingerprint!==plannerFingerprint){
+        if(retryCount<1){
+          out.innerHTML='<div class="optimiser-progress"><b>Inputs refreshed during planning — recalculating once…</b></div>';
+          setTimeout(()=>runTransferPlanner(retryCount+1),0)
+        }else stopTransferPlanner('Planner inputs changed again while the route was running. Wait for live refreshes to finish, then re-run once.');
+        return
+      }
+      renderTransferResult(d.result,t0,plannerFingerprint)
+    }else if(d.type==='error'){
+      clearTimeout(timer);stopTransferPlanner(d.error||'Transfer planner failed.')
+    }
+  };
+  w.onerror=e=>{clearTimeout(timer);stopTransferPlanner('Background transfer planner failed.')};
+  w.postMessage({type:'run',payload:{...payload,secondaryBudgetMs}})
+}
 
 const STRATEGY_PROFILES={
  conservative:{icon:'🛡',label:'Conservative',note:'Low risk, stable minutes and budget safety.',risk:'safe',horizonScale:1.00,weights:{ownership:.03,availability:.80,value:.10,price:.00,fixture:.00},transfer:{threshold:.50,decay:.94,ftScale:1.20,useFriction:.40,itbValue:.15},riskLabel:'Low'},
@@ -3429,6 +3467,9 @@ try{const settings=accuracyProjectionSettings(),fp=accuracyHashValue(settings);a
 try{add('Final-result gate waits for FPL data checks',accuracyEventFinal({finished:true,data_checked:true})&&!accuracyEventFinal({finished:true,data_checked:false})&&!accuracyEventFinal({finished:false,data_checked:true}),'finished + data checked required','engineering')}catch(e){add('Final-result gate waits for FPL data checks',false,e.message,'engineering')}
 try{const now=Date.now(),rows=Array.from({length:300},(_,i)=>[i+1,2,0,5,80,70,.8,.9,1,null,1]),snap={gw:1,release:MODEL_RELEASE,capturedAt:now,deadline:now+864e5,modelFingerprint:'abc12345',rows};snap.checksum=accuracySnapshotChecksum(snap);const clean=sanitizeAccuracyLedger({season:EXPECTED_SEASON,snapshots:{1:snap}}).snapshots[1];add('Projection snapshot checksum survives ledger round-trip',clean.integrity==='verified'&&clean.accountable===true,`${clean.integrity} · ${clean.rows.length} rows`,'engineering')}catch(e){add('Projection snapshot checksum survives ledger round-trip',false,e.message,'engineering')}
 try{const oldShot=!!S.shotMode,bench=document.getElementById('benchBox'),pitch=document.getElementById('pitchBox');S.shotMode=true;applyShotMode();const ok=bench.classList.contains('compact-bench')&&!bench.classList.contains('compact-hidden')&&pitch.classList.contains('compact');S.shotMode=oldShot;applyShotMode();add('Compact screenshot view keeps the four-player bench visible',ok,ok?'bench visible and compact':'bench hidden or compact styling missing','engineering')}catch(e){add('Compact screenshot view keeps the four-player bench visible',false,e.message,'engineering')}try{const b=document.getElementById('btnClearSquad');add('Squad view exposes a dedicated Clear All action',!!b&&b.textContent.includes('Clear All')&&typeof clearCurrentSquad==='function','visible squad reset control','engineering')}catch(e){add('Squad view exposes a dedicated Clear All action',false,e.message,'engineering')}
+try{const payload={players:[{id:1,gw:{1:{mean:5,utility:5,pAppear:.9,sd:1,confidence:80}}}],gws:[1],squadIds:[1],purchase:{1:5},bank:0,free:1,maxMoves:1,maxHit:4,threshold:.25,lockedIds:[],chips:{},hybrid:{},sensitivity:null},same=JSON.parse(JSON.stringify(payload)),changed=JSON.parse(JSON.stringify(payload));changed.players[0].gw[1].mean=5.1;const a=verdictPlannerFingerprint(payload),b=verdictPlannerFingerprint(same),c=verdictPlannerFingerprint(changed);add('Transfer staleness hashes semantic worker inputs',a===b&&a!==c&&a.startsWith('tp2:'),'stable refreshes preserve route · projection changes invalidate it','engineering')}catch(e){add('Transfer staleness hashes semantic worker inputs',false,e.message,'engineering')}
+try{const src=String(runTransferPlanner);add('Transfer planner fingerprints the exact sent snapshot and guards in-flight changes',src.includes('payload=transferPlannerPayload()')&&src.includes('verdictPlannerFingerprint(payload)')&&src.includes('currentFingerprint!==plannerFingerprint'),'one snapshot · one guarded retry','engineering')}catch(e){add('Transfer planner fingerprints the exact sent snapshot and guards in-flight changes',false,e.message,'engineering')}
+
 /* ═══ RC5.0.0 — Verdict Brain acceptance tests ═══════════════════════════════
    These exist because the Verdict page now issues decisions rather than
    describing state. Governance rule: every feed the Brain consumes must appear
