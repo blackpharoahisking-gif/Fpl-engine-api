@@ -6,6 +6,12 @@
  * adding the News Intelligence contract required by the RC2.0.1 frontend.
  */
 
+import {
+  clubScheduleHealthFromMeta,
+  maybeRefreshClubSchedule,
+  readClubSchedule,
+} from './club-schedule.js';
+
 const FPL = 'https://fantasy.premierleague.com/api';
 const UA = 'FPLEngine/2.2B (personal fantasy tool)';
 
@@ -1344,6 +1350,7 @@ async function healthData(env) {
   ]);
 
   const m = Object.fromEntries(meta.results.map((r) => [r.key, r.value]));
+  const clubSchedule = clubScheduleHealthFromMeta(m);
   const lastSuccess = m.last_official_fetch || m.last_poll || null;
   const lastAttempt = recent.results[0]?.started_at || lastSuccess;
   const ageMin = lastSuccess
@@ -1379,12 +1386,13 @@ async function healthData(env) {
     evaluationLastActualGw: num(m.evaluation_last_actual_gw, null),
     evaluationLastError: m.evaluation_last_error || null,
     evaluationWriteProtected: Boolean(env.EVALUATION_KEY),
+    clubSchedule,
   };
 
   return {
     status,
     service: 'FPL Engine API',
-    release: 'RC2.2B-predictive-variance-calibration',
+    release: 'v2.23.0-supplementary-calendar',
     season: m.season || configuredSeason(env),
     schemaVersion: WORKER_SCHEMA_VERSION,
     storedSchemaVersion: num(m.schema_version, 0),
@@ -1396,6 +1404,7 @@ async function healthData(env) {
     fixtures,
     trackedPlayers,
     dataHash: m.data_hash || null,
+    clubSchedule,
     pipeline,
   };
 }
@@ -1592,7 +1601,7 @@ async function handleHealth(env) {
   return json(await healthData(env));
 }
 
-async function handlePublicSync(request, env) {
+async function handlePublicSync(request, env, ctx) {
   if (request.method !== 'POST') return json({ error: 'POST required' }, 405);
 
   const allowedOrigin = String(env.ALLOWED_ORIGIN || '').trim();
@@ -1600,6 +1609,8 @@ async function handlePublicSync(request, env) {
   if (allowedOrigin && origin !== allowedOrigin) {
     return json({ error: 'origin not allowed' }, 403);
   }
+
+  ctx.waitUntil(maybeRefreshClubSchedule(env));
 
   const last = await env.DB.prepare("SELECT value FROM meta WHERE key='last_poll'").first();
   const lastMs = Date.parse(last?.value || '');
@@ -1621,7 +1632,10 @@ export default {
     const cron=String(event?.cron||'').trim();
     const scheduled=new Date(Number(event?.scheduledTime)||Date.now());
     if(/^\*\/30\b/.test(cron)) {
-      ctx.waitUntil(poll(env,{sampleTransfers:true}));
+      ctx.waitUntil(Promise.allSettled([
+        poll(env,{sampleTransfers:true}),
+        maybeRefreshClubSchedule(env),
+      ]).then(() => undefined));
       return;
     }
     if(/^\*\/5\b/.test(cron)) {
@@ -1659,6 +1673,11 @@ export default {
           return await handleDeltas(env, url);
         case '/api/price-intelligence':
           return await handlePriceIntelligence(request, env, url);
+        case '/api/club-schedule':
+          if (request.method !== 'GET') return json({ error: 'GET required' }, 405);
+          return json(await readClubSchedule(env), 200, {
+            'cache-control': 'public, max-age=900, stale-while-revalidate=86400',
+          });
         case '/api/evaluation/projections':
           return await handleEvaluationProjection(request, env);
         case '/api/evaluation/status':
@@ -1674,7 +1693,7 @@ export default {
         case '/health':
           return await handleHealth(env);
         case '/api/sync':
-          return await handlePublicSync(request, env);
+          return await handlePublicSync(request, env, ctx);
         case '/api/refresh': {
           if (!adminAuthorised(request, url, env)) {
             return json({ error: 'unauthorised' }, 401, { 'cache-control': 'no-store' });
@@ -1709,12 +1728,12 @@ export default {
         default:
           return json({
             service: 'FPL Engine API',
-            release: 'RC2.2B-predictive-variance-calibration',
+            release: 'v2.23.0-supplementary-calendar',
             frontendRoutes: [
               '/bootstrap-static/', '/fixtures/', '/api/news?hours=72',
               '/api/deltas?hours=24', '/api/price-intelligence?hours=24',
               '/api/evaluation/status?gw=1', '/api/evaluation/coverage?model_version=…', '/api/evaluation/projections (POST)',
-              '/api/health', '/api/metadata', '/api/sync',
+              '/api/club-schedule', '/api/health', '/api/metadata', '/api/sync',
             ],
             advancedRoutes: [
               '/api/state', '/api/current-alerts', '/api/watchlist?hours=24',
