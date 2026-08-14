@@ -174,7 +174,7 @@ async function testWorkerConnection(){
     renderDataStatus();pipelineFinish('OK','Required Worker routes and Scout contract are reachable · starting full live refresh');setTimeout(()=>refreshLiveData(true),120);
   }else pipelineFinish('WARN','Worker root is unavailable but required routes may still work');
 }
-const APP_BUILD='2026.08.14.4',API_BASE='https://fpl-engine-api.blackpharoahisking.workers.dev',SCOUT_API_BASE='https://otb-role-intelligence.blackpharoahisking.workers.dev',CACHE_KEY='fpl-engine-cache-v2',STATE_KEY='fpl-engine-user-v2',LEGACY_CACHE_KEY='fpl-engine-rc3-live-cache-v1',LEGACY_STATE_KEY='fpl-engine-rc3-user-v1',EXTERNAL_FIXTURE_KEY='fpl-engine-external-calendar-rc232-v1';
+const APP_BUILD='2026.08.14.5',API_BASE='https://fpl-engine-api.blackpharoahisking.workers.dev',SCOUT_API_BASE='https://otb-role-intelligence.blackpharoahisking.workers.dev',CACHE_KEY='fpl-engine-cache-v2',STATE_KEY='fpl-engine-user-v2',LEGACY_CACHE_KEY='fpl-engine-rc3-live-cache-v1',LEGACY_STATE_KEY='fpl-engine-rc3-user-v1',EXTERNAL_FIXTURE_KEY='fpl-engine-external-calendar-rc232-v1';
 const EXT_CAL={fixtures:[],source:'none',mode:'auto',updatedAt:null,error:'',syncPromise:null,autoAttempted:false};
 const EXPECTED_SEASON='2026/27',SEASON_START=Date.parse('2026-08-21T00:00:00Z'),SEASON_END=Date.parse('2027-05-30T23:59:59Z'),FIRST_DEADLINE_MIN=Date.parse('2026-08-14T00:00:00Z'),FIRST_DEADLINE_MAX=Date.parse('2026-08-22T23:59:59Z'),LAST_DEADLINE_MIN=Date.parse('2027-05-23T00:00:00Z'),LAST_DEADLINE_MAX=Date.parse('2027-05-31T23:59:59Z'),WORKER_SCHEMA_MIN=3,SCOUT_SCHEMA_MIN='1.35.0',MAX_DATA_AGE_HOURS=24;
 /* RC5.0.9 — semver-aware comparison for the Scout schema gate. The previous
@@ -3049,8 +3049,8 @@ try{const now=Date.now(),before=fplImportGwCandidates({current_event:null},[{id:
 try{const htmlBuild=document.documentElement.getAttribute('data-build'),metaBuild=document.querySelector('meta[name="otb-build"]')?.content;
   add('Visible page and runtime build identifiers agree',htmlBuild===APP_BUILD&&metaBuild===APP_BUILD,`html ${htmlBuild||'missing'} · meta ${metaBuild||'missing'} · runtime ${APP_BUILD}`,'engineering')}
 catch(e){add('Visible page and runtime build identifiers agree',false,e.message,'engineering')}
-try{const parsed=buildFromHtml('<!doctype html><html data-build="2026.08.14.5"><head></head></html>'),newer=compareBuilds(parsed,APP_BUILD),older=compareBuilds('2026.08.14.3',APP_BUILD);
-  add('Build freshness comparator detects newer Pages HTML',parsed==='2026.08.14.5'&&newer>0&&older<0,`${APP_BUILD} → ${parsed}`,'engineering')}
+try{const parsed=buildFromHtml('<!doctype html><html data-build="2026.08.14.6"><head></head></html>'),newer=compareBuilds(parsed,APP_BUILD),older=compareBuilds('2026.08.14.4',APP_BUILD);
+  add('Build freshness comparator detects newer Pages HTML',parsed==='2026.08.14.6'&&newer>0&&older<0,`${APP_BUILD} → ${parsed}`,'engineering')}
 catch(e){add('Build freshness comparator detects newer Pages HTML',false,e.message,'engineering')}
 try{const select=String(document.getElementById('gwSel')?.onchange||''),follow=String(document.getElementById('gwFollow')?.onchange||''),bootstrap=String(applyBootstrap),source=String(optimiseViewedLineup),scripts=[...document.scripts].map(s=>s.textContent||'').join('\n'),wired=select.includes('optimiseViewedLineup')&&follow.includes('optimiseViewedLineup')&&bootstrap.includes('optimiseViewedLineup')&&scripts.includes("bumpCache();optimiseViewedLineup();saveUserState();renderFixtures()"),scoped=source.includes('bestXIForGw')&&source.includes('expectedAutosub')&&!source.includes('S.squad=');
   add('Every displayed-GW route re-optimises only the owned lineup',wired&&scoped,'dropdown · follow-current · automatic GW · fixtures','engineering')}
