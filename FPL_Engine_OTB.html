@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-build="2026.08.12.1">
+<html lang="en" data-build="2026.08.14.1">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="otb-build" content="2026.08.12.1"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%2337003C%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2720%27 fill=%27%2300FF87%27/%3E%3Cpath d=%27M32 17l9 7-3 11H26l-3-11zM26 35l-7 7 8 5 5-6 5 6 8-5-7-7%27 fill=%27%23160019%27/%3E%3C/svg%3E"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="OTB"><meta name="theme-color" content="#37003C">
-<title>FPL Engine — OTB 26/27 · RC5.0.20 Automated Supplementary Calendar</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="otb-build" content="2026.08.14.1"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%2337003C%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2720%27 fill=%27%2300FF87%27/%3E%3Cpath d=%27M32 17l9 7-3 11H26l-3-11zM26 35l-7 7 8 5 5-6 5 6 8-5-7-7%27 fill=%27%23160019%27/%3E%3C/svg%3E"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="OTB"><meta name="theme-color" content="#37003C">
+<title>FPL Engine — OTB 26/27 · RC5.0.21 Fresh Squad Review Packet</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
@@ -111,6 +111,10 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
 /* RC5.0.11 — Startup Responsiveness: single boot render + progressive non-critical hydration. */
 /* RC5.0.8 — final decision strip: the action queue says what needs attention; this says exactly what the manager is doing. */
 .vdecision{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 0 11px}.vdecision-cell{border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:7px 8px;background:rgba(255,255,255,.022);min-width:0}.vdecision-cell .k{font:800 8px 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.vdecision-cell .v{font-size:11px;font-weight:800;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vdecision-cell.good .v{color:var(--mint)}.vdecision-cell.warn .v{color:#FFD75E}.vdecision-cell.info .v{color:var(--cyan)}.vdecision-note{grid-column:1/-1;font-size:9.5px;line-height:1.45;color:var(--muted);padding:1px 2px}@media(max-width:560px){.vdecision{grid-template-columns:1fr 1fr}}
+
+/* RC5.0.21 — Phase 1 manual-review bridge. This is a local text export only:
+   it reads the current Verdict snapshot and never changes squad/model state. */
+.fresh-review{border:1px solid rgba(4,245,255,.22);border-left:3px solid var(--cyan);border-radius:4px;background:rgba(4,245,255,.045);padding:10px;margin:0 0 12px}.fresh-review.locked{border-left-color:var(--muted);background:rgba(155,133,162,.055)}.fresh-review-note{font-size:10px;line-height:1.5;color:var(--muted);margin-bottom:9px}.fresh-review-note b{color:var(--paper)}.fresh-review-status{font:700 9px/1.45 'JetBrains Mono',monospace;color:#FFD75E;margin:-2px 0 9px}.fresh-review-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,.42fr);gap:7px}.fresh-review-actions .btn{margin:0}.fresh-review-output{margin-top:9px}.fresh-review-output textarea{height:340px;min-height:220px;line-height:1.5;resize:vertical;white-space:pre;tab-size:2}.fresh-review-copy-note{min-height:16px;margin-top:6px;font:700 9px 'JetBrains Mono',monospace;color:var(--mint)}@media(max-width:560px){.fresh-review-actions{grid-template-columns:1fr}.fresh-review-output textarea{height:300px}}
 
 /* ═══ RC5.0.8 — Verdict Brain + Release hardening (non-destructive audit patch) ═══ */
 .verdict-hero.vq-ok{border-left-color:var(--mint)}
@@ -261,7 +265,7 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
 </head>
 <body>
 <header>
-  <div class="brand"><h1 class="display">FPL Engine</h1><span class="season mono">OTB &middot; 26/27</span><button type="button" class="build-badge mono" id="buildBadge" title="Check for a newer OTB build">BUILD 0811.3</button></div>
+  <div class="brand"><h1 class="display">FPL Engine</h1><span class="season mono">OTB &middot; 26/27</span><button type="button" class="build-badge mono" id="buildBadge" title="Check for a newer OTB build">BUILD 0814.1</button></div>
   <div class="hdr-spacer"></div>
   <div class="chipstat"><span class="k">Data</span><span class="v mono" id="hData" style="font-size:12px">SEED</span></div>
   <div class="chipstat"><span class="k">Squad</span><span class="v mono" id="hSquad">0/15</span></div>
@@ -421,7 +425,7 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
     <div class="price-section-title"><span>Transfer-plan exposure</span><span>move now vs wait</span></div><div id="pricePlanExposure"></div>
     <div class="price-section-title"><span>Market pressure</span><span id="priceResultCount">—</span></div><div id="priceIntel" aria-live="polite"></div>
   </div>
-  <div class="pane hide" id="pVerdict"><div id="verdictCommand"></div><div id="verdictDecisionStrip"></div><div id="verdictActions"></div><div id="verdictHealth"></div><div id="verdictChanges"></div><div id="verdictDecisionMemory"></div><div id="verdictReadiness"></div><div id="verdictIntel"></div><div class="verdict-actions"><button type="button" class="btn" id="verdictOpenTransfers">Open Transfer Plan</button><button type="button" class="btn ghost" id="verdictOpenFixtures">Inspect Schedule</button></div><details class="verdict-detail-toggle"><summary>Detailed squad evidence</summary><div class="verdict-detail-body"><div id="verdicts"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Bench intelligence</h2><span class="note">expected autosubs</span></div><div id="benchIntel"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Captain ranking</h2><span class="note">mean · ceiling</span></div><div id="capList"></div><div class="sechead" style="margin:16px -10px 10px;position:static"><h2>Best available upgrades</h2><span class="note">gross gain</span></div><div class="help">Legal swaps ranked by expected-points gain. The heuristic range matters: a narrow +0.5 may be more dependable than a volatile +1.0.</div><div id="upgrades"></div></div></details></div>
+  <div class="pane hide" id="pVerdict"><div id="verdictCommand"></div><div id="verdictDecisionStrip"></div><div id="verdictFreshSquadReview" aria-live="polite"></div><div id="verdictActions"></div><div id="verdictHealth"></div><div id="verdictChanges"></div><div id="verdictDecisionMemory"></div><div id="verdictReadiness"></div><div id="verdictIntel"></div><div class="verdict-actions"><button type="button" class="btn" id="verdictOpenTransfers">Open Transfer Plan</button><button type="button" class="btn ghost" id="verdictOpenFixtures">Inspect Schedule</button></div><details class="verdict-detail-toggle"><summary>Detailed squad evidence</summary><div class="verdict-detail-body"><div id="verdicts"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Bench intelligence</h2><span class="note">expected autosubs</span></div><div id="benchIntel"></div><div class="sechead" style="margin:14px -10px 10px;position:static"><h2>Captain ranking</h2><span class="note">mean · ceiling</span></div><div id="capList"></div><div class="sechead" style="margin:16px -10px 10px;position:static"><h2>Best available upgrades</h2><span class="note">gross gain</span></div><div class="help">Legal swaps ranked by expected-points gain. The heuristic range matters: a narrow +0.5 may be more dependable than a volatile +1.0.</div><div id="upgrades"></div></div></details></div>
   <div class="pane hide" id="pModel">
     <div class="help"><b>OTB hybrid xPts.</b> Historical output is retained as a prior, not multiplied again by old minutes or the player’s own club strength. Current-season xG, xA, expected minutes, clean-sheet probability, saves, goals-conceded deductions, cards, DefCon threshold probability and bonus are introduced gradually as evidence accumulates. Official FPL xPts and recent form are calibration layers, not extra points added on top. Bonus specifically also carries a 2026/27 BPS rule adjustment on the historical prior — CBI-reliant defenders are scaled down (clearances/blocks/interceptions now earn less per action), goalkeepers and attacking players scaled up slightly (tackled-suffered penalty removed; save scoring enhanced) — since last season’s bonus rate was earned under different rules. This correction fades out automatically as real 2026/27 bonus data accumulates.</div>
     <div class="field"><label>Fixture sensitivity <b id="lFix">0.30</b></label><input type="range" id="wFix" min="0" max="0.6" step="0.02" value="0.30"></div>
@@ -1020,7 +1024,7 @@ async function testWorkerConnection(){
     renderDataStatus();pipelineFinish('OK','Required Worker routes and Scout contract are reachable · starting full live refresh');setTimeout(()=>refreshLiveData(true),120);
   }else pipelineFinish('WARN','Worker root is unavailable but required routes may still work');
 }
-const APP_BUILD='2026.08.12.1',API_BASE='https://fpl-engine-api.blackpharoahisking.workers.dev',SCOUT_API_BASE='https://otb-role-intelligence.blackpharoahisking.workers.dev',CACHE_KEY='fpl-engine-cache-v2',STATE_KEY='fpl-engine-user-v2',LEGACY_CACHE_KEY='fpl-engine-rc3-live-cache-v1',LEGACY_STATE_KEY='fpl-engine-rc3-user-v1',EXTERNAL_FIXTURE_KEY='fpl-engine-external-calendar-rc232-v1';
+const APP_BUILD='2026.08.14.1',API_BASE='https://fpl-engine-api.blackpharoahisking.workers.dev',SCOUT_API_BASE='https://otb-role-intelligence.blackpharoahisking.workers.dev',CACHE_KEY='fpl-engine-cache-v2',STATE_KEY='fpl-engine-user-v2',LEGACY_CACHE_KEY='fpl-engine-rc3-live-cache-v1',LEGACY_STATE_KEY='fpl-engine-rc3-user-v1',EXTERNAL_FIXTURE_KEY='fpl-engine-external-calendar-rc232-v1';
 const EXT_CAL={fixtures:[],source:'none',mode:'auto',updatedAt:null,error:'',syncPromise:null,autoAttempted:false};
 const EXPECTED_SEASON='2026/27',SEASON_START=Date.parse('2026-08-21T00:00:00Z'),SEASON_END=Date.parse('2027-05-30T23:59:59Z'),FIRST_DEADLINE_MIN=Date.parse('2026-08-14T00:00:00Z'),FIRST_DEADLINE_MAX=Date.parse('2026-08-22T23:59:59Z'),LAST_DEADLINE_MIN=Date.parse('2027-05-23T00:00:00Z'),LAST_DEADLINE_MAX=Date.parse('2027-05-31T23:59:59Z'),WORKER_SCHEMA_MIN=3,SCOUT_SCHEMA_MIN='1.30.0',MAX_DATA_AGE_HOURS=24;
 /* RC5.0.9 — semver-aware comparison for the Scout schema gate. The previous
@@ -2559,6 +2563,119 @@ function verdictCaptainSensitivity(){
   return{player:top.p,rival:second.p,flipAt:flip,current:cur,margin:cur-flip,
     robust:cur-flip>0.25};
 }
+
+/* ── Fresh Squad Review · Phase 1 ──────────────────────────────────────
+   A deterministic, context-only export for manual review. Preparing or
+   copying a packet must never write to S, projection inputs, storage, or any
+   remote service. The only side effect is the user's explicit clipboard copy. */
+let FRESH_SQUAD_REVIEW={text:'',fingerprint:'',copied:false};
+function freshSquadReviewHasValid15(ctx,state=S){
+  const players=Array.isArray(ctx?.players)?ctx.players:[],ids=Array.isArray(state?.squad)?state.squad:[];
+  if(players.length!==15||ids.length!==15||new Set(ids).size!==15)return false;
+  const playerIds=new Set(players.map(p=>p.id));if(playerIds.size!==15||ids.some(id=>!playerIds.has(id)))return false;
+  const pos={GK:0,DEF:0,MID:0,FWD:0},clubs={};
+  for(const p of players){if(!(p?.p in pos)||!p?.t)return false;pos[p.p]++;clubs[p.t]=(clubs[p.t]||0)+1}
+  return pos.GK===2&&pos.DEF===5&&pos.MID===5&&pos.FWD===3&&Object.values(clubs).every(n=>n<=3);
+}
+function freshSquadReviewBench(ctx,state=S){
+  const rows=Array.isArray(ctx?.benchRows)?ctx.benchRows:[],gk=rows.find(o=>o.p?.p==='GK')||null,
+    outfield=rows.filter(o=>o.p?.p!=='GK'),order=new Map;
+  (state?.benchOrder||[]).forEach((key,i)=>{order.set(String(key),i)});
+  const priority=o=>{const id=order.get(String(o.p.id));if(id!=null)return id;const stable=order.get(stableKey(o.p));return stable==null?Infinity:stable};
+  outfield.sort((a,b)=>priority(a)-priority(b)||num(b.r?.x)-num(a.r?.x)||String(a.p.n).localeCompare(String(b.p.n)));
+  return{gk,outfield,all:[gk,...outfield].filter(Boolean)};
+}
+function freshSquadReviewIssue(ctx,state=S){
+  if(!freshSquadReviewHasValid15(ctx,state))return'Complete a valid 15-player squad (2 GK, 5 DEF, 5 MID, 3 FWD, maximum 3 per club).';
+  if(ctx?.budgetOk===false)return`Bring the squad within budget before preparing a review packet.`;
+  if(!ctx?.xiOk||ctx.xi?.length!==11)return'Set a legal starting XI before preparing the packet.';
+  const bench=freshSquadReviewBench(ctx,state);if(!bench.gk||bench.outfield.length!==3)return'Set one substitute goalkeeper and three outfield substitutes.';
+  const xiIds=new Set(ctx.xi.map(o=>o.p.id));
+  if(!state.cap||!xiIds.has(state.cap))return'Set a captain in the starting XI.';
+  if(!state.vice||!xiIds.has(state.vice)||state.vice===state.cap)return'Set a distinct vice-captain in the starting XI.';
+  return'';
+}
+function freshSquadReviewPlain(value){
+  const box=document.createElement('div');box.innerHTML=String(value??'');
+  return String(box.textContent||'').replace(/\s+/g,' ').trim();
+}
+function freshSquadReviewOfficialAlerts(){
+  const source=Array.isArray(NEWS.last?.alerts)?NEWS.last.alerts:currentAlertsFromPool();
+  return sortCurrentAlerts(source).filter(a=>a.__owned).map(a=>{
+    const status=String(a.status||'a').toLowerCase(),chance=a.chance??a.chance_of_playing_next_round,
+      chanceText=chance==null?'':` · ${chance}% chance of playing`,detail=a.news||`${STATUS_LABEL[status]||status}${chanceText}`;
+    return{level:'SQUAD NEWS',title:`${a.web_name||a.name||'Unknown player'}${a.team_code||a.team?` (${a.team_code||a.team})`:''}`,detail:freshSquadReviewPlain(detail)};
+  });
+}
+function freshSquadReviewPlayer(row,role,state=S){
+  const fixtureCount=Array.isArray(row?.r?.fixtures)?row.r.fixtures.length:0,usage=accuracyEventUsage(row?.md,fixtureCount);
+  return{id:row.p.id,name:freshSquadReviewPlain(row.p.n),team:freshSquadReviewPlain(row.p.t),pos:row.p.p,role,
+    xPts:+num(row.r?.x).toFixed(2),xMins:Math.round(num(usage.minutes)),startPct:Math.round(100*clamp(num(usage.pStart),0,1)),
+    captain:row.p.id===state.cap,vice:row.p.id===state.vice};
+}
+function freshSquadReviewModel(ctx,state=S){
+  const posRank={GK:0,DEF:1,MID:2,FWD:3},sortRows=(a,b)=>posRank[a.p.p]-posRank[b.p.p]||num(b.r?.x)-num(a.r?.x)||String(a.p.n).localeCompare(String(b.p.n)),
+    starting=[...(ctx.xi||[])].sort(sortRows).map(o=>freshSquadReviewPlayer(o,'XI',state)),benchRows=freshSquadReviewBench(ctx,state),bench=[];
+  if(benchRows.gk)bench.push(freshSquadReviewPlayer(benchRows.gk,'GK substitute',state));
+  benchRows.outfield.forEach((o,i)=>bench.push(freshSquadReviewPlayer(o,`Bench ${i+1}`,state)));
+  const queue=(ctx.queue||[]).map(item=>({level:item.blocking?'BLOCKING':item.severity==='act'?'ACTION':'WATCH',
+    title:freshSquadReviewPlain(item.title),detail:freshSquadReviewPlain(item.evidence),cost:item.blocking?null:+num(item.cost).toFixed(2)}));
+  const captain=starting.find(p=>p.captain),vice=starting.find(p=>p.vice),full=[...starting,...bench];
+  return{gameweek:state.gw,formation:ctx.formation||'—',xiProjected:+num(ctx.xiTotal).toFixed(2),captain:captain?.name||'NOT SET',vice:vice?.name||'NOT SET',starting,bench,full,alerts:[...queue,...freshSquadReviewOfficialAlerts()]};
+}
+function formatFreshSquadReviewPacket(model){
+  const metric=p=>`${p.name} (${p.team}, ${p.pos})${p.captain?' [C]':p.vice?' [VC]':''} | xPts ${num(p.xPts).toFixed(2)} | xMins ${Math.round(num(p.xMins))} | Start ${Math.round(num(p.startPct))}%`,
+    xi=(model.starting||[]).map((p,i)=>`${String(i+1).padStart(2,'0')}. ${metric(p)}`),
+    bench=(model.bench||[]).map((p,i)=>`${i===0?'GK':String(i)}. ${metric(p)}`),
+    full=(model.full||[]).map((p,i)=>`${String(i+1).padStart(2,'0')}. [${p.role}] ${metric(p)}`),
+    alerts=(model.alerts||[]).map(a=>`- [${a.level}${a.cost!=null&&a.cost>=.05?` · ${num(a.cost).toFixed(2)} xP`:''}] ${a.title}${a.detail?` — ${a.detail}`:''}`);
+  return[
+    'OTB FRESH SQUAD REVIEW PACKET',
+    `Selected gameweek: GW${model.gameweek}`,
+    `Formation: ${model.formation}`,
+    `XI projected points: ${num(model.xiProjected).toFixed(2)} xPts (captain included)`,
+    `Captain: ${model.captain}`,
+    `Vice-captain: ${model.vice}`,
+    'Squad status: 15/15 legal',
+    'Metric note: xMins totals every fixture in the selected gameweek; Start is the overall probability of at least one start.',
+    'Context note: this packet does not change the squad or projections and makes no external AI call.',
+    '',
+    'STARTING XI',...xi,
+    '',
+    'BENCH ORDER',...bench,
+    '',
+    'FULL 15',...full,
+    '',
+    'CURRENT OTB ALERTS',...(alerts.length?alerts:['- None.'])
+  ].join('\n');
+}
+function prepareFreshSquadReview(){
+  const ctx=verdictContext(),issue=freshSquadReviewIssue(ctx);if(issue){flash(issue);renderFreshSquadReview(ctx);return''}
+  const model=freshSquadReviewModel(ctx),text=formatFreshSquadReviewPacket(model);
+  FRESH_SQUAD_REVIEW={text,fingerprint:JSON.stringify(model),copied:false};renderFreshSquadReview(ctx);return text;
+}
+async function copyFreshSquadReview(text,clipboard=(typeof navigator!=='undefined'?navigator.clipboard:null)){
+  if(!String(text||''))return false;
+  if(clipboard&&typeof clipboard.writeText==='function'){await clipboard.writeText(String(text));return true}
+  const box=document.createElement('textarea');box.value=String(text);box.setAttribute('readonly','');box.style.position='fixed';box.style.opacity='0';document.body.appendChild(box);box.select();
+  let copied=false;try{copied=!!document.execCommand('copy')}finally{box.remove()}return copied;
+}
+function renderFreshSquadReview(ctx=null){
+  const host=document.getElementById('verdictFreshSquadReview');if(!host)return;
+  const issue=freshSquadReviewIssue(ctx),ready=!issue,model=ready?freshSquadReviewModel(ctx):null,fingerprint=model?JSON.stringify(model):'';
+  if(!ready||(FRESH_SQUAD_REVIEW.text&&FRESH_SQUAD_REVIEW.fingerprint!==fingerprint))FRESH_SQUAD_REVIEW={text:'',fingerprint:'',copied:false};
+  const hasPacket=!!FRESH_SQUAD_REVIEW.text;
+  host.innerHTML=`<div class="vsec-h">Fresh Squad Review<span>Phase 1 · manual context packet</span></div><div class="fresh-review ${ready?'':'locked'}">
+    <div class="fresh-review-note"><b>Prepare once, then paste the packet into your review chat.</b> This only reads the current Verdict snapshot. It does not alter the squad, recalculate inputs, save anything, or contact an AI service.</div>
+    ${issue?`<div class="fresh-review-status">${esc(issue)}</div>`:''}
+    <div class="fresh-review-actions"><button type="button" class="btn" id="btnPrepareFreshSquadReview" ${ready?'':'disabled'}>Prepare Fresh Squad Review</button><button type="button" class="btn ghost" id="btnCopyFreshSquadReview" ${hasPacket?'':'disabled'}>Copy packet</button></div>
+    ${hasPacket?`<div class="fresh-review-output"><label class="sr-only" for="freshSquadReviewText">Fresh Squad Review packet</label><textarea id="freshSquadReviewText" readonly spellcheck="false">${esc(FRESH_SQUAD_REVIEW.text)}</textarea><div class="fresh-review-copy-note" id="freshSquadReviewCopyNote">${FRESH_SQUAD_REVIEW.copied?'Copied to clipboard.':''}</div></div>`:''}
+  </div>`;
+  const prepare=document.getElementById('btnPrepareFreshSquadReview');if(prepare)prepare.onclick=prepareFreshSquadReview;
+  const copy=document.getElementById('btnCopyFreshSquadReview');if(copy)copy.onclick=async()=>{copy.disabled=true;const note=document.getElementById('freshSquadReviewCopyNote');
+    try{const ok=await copyFreshSquadReview(FRESH_SQUAD_REVIEW.text);FRESH_SQUAD_REVIEW.copied=ok;if(note)note.textContent=ok?'Copied to clipboard.':'Clipboard copy was blocked — select the packet text and copy it manually.';if(ok)flash('Fresh Squad Review packet copied.');else flash('Clipboard copy was blocked. Select the packet text and copy it manually.')}
+    catch(e){if(note)note.textContent='Clipboard copy was blocked — select the packet text and copy it manually.';flash('Clipboard copy was blocked. Select the packet text and copy it manually.')}finally{copy.disabled=false}}
+}
 /* ── Context assembly ───────────────────────────────────────────────────
    One pass that gathers every signal Verdict acts on. The old renderVerdict
    recomputed the same availability filter three times and re-ran project()
@@ -2757,7 +2874,7 @@ function bumpVerdict(){VERDICT_RENDER_KEY='';try{renderVerdict()}catch(e){consol
 
 function renderVerdict(){
   const host=document.getElementById('verdictCommand');if(!host)return;
-  const key=[S.gw,S.squad.join(','),[...S.start].join(','),S.cap,S.vice,bank().toFixed(2),
+  const key=[S.gw,S.squad.join(','),[...S.start].join(','),(S.benchOrder||[]).join(','),S.cap,S.vice,bank().toFixed(2),
     verdictFeedFingerprint(),S.transfer.last?JSON.stringify(S.transfer.last.plan?.[0]||''):'',
     Math.floor((verdictRegime().minsLeft??-1)/15)].join('|');
   if(VERDICT_RENDER_KEY===key&&host.dataset.rendered==='1')return;
@@ -2769,6 +2886,7 @@ function renderVerdict(){
       <div class="vh-line">Squad is ${players.length}/15</div>
       <div class="vh-note">Verdict issues decisions, not estimates. Complete a legal 15-player squad and it will rank every action by what it is costing you.</div></div>`;
     ['verdictDecisionStrip','verdictActions','verdictHealth','verdictChanges','verdictDecisionMemory','verdictReadiness','verdictIntel','verdicts','benchIntel','capList','upgrades'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=''});
+    renderFreshSquadReview(null);
     return;
   }
 
@@ -2812,6 +2930,7 @@ function renderVerdict(){
       ${cell('Bench 1',decision.bench1?.n||'—','info')}${cell('Chip',decision.chip,decision.chip==='HOLD'?'good':'warn')}${cell('State',decision.readiness,blocking.length?'warn':decision.readiness==='READY'?'good':'info')}
       <div class="vdecision-note">Action costs below are standalone estimates and may overlap. A stale transfer route is excluded until it is recomputed against the current feeds and projections.</div></div>`;
   }
+  renderFreshSquadReview(ctx);
 
   /* feed strip */
   const fh=document.getElementById('verdictHealth');
@@ -3672,6 +3791,24 @@ try{const host=document.getElementById('verdictDecisionMemory'),src=String(sched
   add('Decision Memory capture is scoped to the visible Verdict tab',!!host&&src.includes("activeRailTab()!=='verdict'")&&src.includes('S.squad.length!==15'),'quiet-period capture guarded by tab and legal squad','engineering')}
 catch(e){add('Decision Memory capture is scoped to the visible Verdict tab',false,e.message,'engineering')}
 
+/* RC5.0.21 — Fresh Squad Review Packet acceptance checks. */
+try{const pane=document.getElementById('pVerdict'),host=document.getElementById('verdictFreshSquadReview'),button=document.getElementById('btnPrepareFreshSquadReview');
+  add('Fresh Squad Review control appears on Verdict',!!pane&&!!host&&pane.contains(host)&&button?.textContent.trim()==='Prepare Fresh Squad Review','Verdict host · prepare control','engineering')}
+catch(e){add('Fresh Squad Review control appears on Verdict',false,e.message,'engineering')}
+try{const positions=['GK','GK',...Array(5).fill('DEF'),...Array(5).fill('MID'),...Array(3).fill('FWD')],players=positions.map((p,i)=>({id:i+1,p,t:`T${Math.floor(i/3)}`})),state={squad:players.map(p=>p.id)},ctx={players};
+  const valid=freshSquadReviewHasValid15(ctx,state),short=freshSquadReviewHasValid15({players:players.slice(0,14)},{squad:state.squad.slice(0,14)});
+  add('Fresh Squad Review requires a valid 15',valid&&!short,'legal 15 accepted · 14 rejected','engineering')}
+catch(e){add('Fresh Squad Review requires a valid 15',false,e.message,'engineering')}
+try{const rows=Array.from({length:15},(_,i)=>({id:i+1,name:`Player ${i+1}`,team:`T${i%5}`,pos:i<2?'GK':i<7?'DEF':i<12?'MID':'FWD',role:i<11?'XI':i===11?'GK substitute':`Bench ${i-11}`,xPts:5-i*.1,xMins:90-i,startPct:95-i,captain:i===0,vice:i===1})),model={gameweek:7,formation:'3-4-3',xiProjected:61.25,captain:'Player 1',vice:'Player 2',starting:rows.slice(0,11),bench:rows.slice(11),full:rows,alerts:[]},packet=formatFreshSquadReviewPacket(model);
+  add('Fresh Squad Review packet includes captain, vice, XI and bench',packet.includes('Captain: Player 1')&&packet.includes('Vice-captain: Player 2')&&packet.includes('STARTING XI')&&packet.includes('BENCH ORDER')&&packet.includes('GK. Player 12')&&packet.includes('1. Player 13')&&packet.includes('FULL 15'),'captain · vice · 11 starters · ordered bench · full squad','engineering')}
+catch(e){add('Fresh Squad Review packet includes captain, vice, XI and bench',false,e.message,'engineering')}
+try{let copied='';const result=copyFreshSquadReview('clipboard probe',{writeText:value=>{copied=value}});
+  add('Fresh Squad Review copies the packet through the clipboard adapter',copied==='clipboard probe'&&result instanceof Promise,'writeText received the exact packet text','engineering')}
+catch(e){add('Fresh Squad Review copies the packet through the clipboard adapter',false,e.message,'engineering')}
+try{const src=[prepareFreshSquadReview,freshSquadReviewModel,formatFreshSquadReviewPacket,copyFreshSquadReview].map(String).join('\n'),network=/\bfetch\s*\(|XMLHttpRequest|WebSocket|new\s+Worker|\bAPI_BASE\b|\bSCOUT_API_BASE\b/i.test(src),stateWrite=/\bS\.[A-Za-z0-9_]+\s*=/.test(src);
+  add('Fresh Squad Review is context-only and makes no external AI call',!network&&!stateWrite,'no transport · no squad/projection state write','engineering')}
+catch(e){add('Fresh Squad Review is context-only and makes no external AI call',false,e.message,'engineering')}
+
 try{const payload={players:[{id:1,gw:{1:{mean:5,utility:5,pAppear:.9,sd:1,confidence:80}}}],gws:[1],squadIds:[1],purchase:{1:5},bank:0,free:1,maxMoves:1,maxHit:4,threshold:.25,lockedIds:[],chips:{},hybrid:{},sensitivity:null},same=JSON.parse(JSON.stringify(payload)),changed=JSON.parse(JSON.stringify(payload));changed.players[0].gw[1].mean=5.1;const a=verdictPlannerFingerprint(payload),b=verdictPlannerFingerprint(same),c=verdictPlannerFingerprint(changed);add('Transfer staleness hashes semantic worker inputs',a===b&&a!==c&&a.startsWith('tp2:'),'stable refreshes preserve route · projection changes invalidate it','engineering')}catch(e){add('Transfer staleness hashes semantic worker inputs',false,e.message,'engineering')}
 try{const src=String(runTransferPlanner);add('Transfer planner fingerprints the exact sent snapshot and guards in-flight changes',src.includes('payload=transferPlannerPayload()')&&src.includes('verdictPlannerFingerprint(payload)')&&src.includes('currentFingerprint!==plannerFingerprint'),'one snapshot · one guarded retry','engineering')}catch(e){add('Transfer planner fingerprints the exact sent snapshot and guards in-flight changes',false,e.message,'engineering')}
 
@@ -4149,7 +4286,7 @@ document.getElementById('fxSyncExternal').onclick=()=>syncExternalCalendar();
    RC2.3.6 — compact screenshot view includes the complete bench.
    RC2.3.5 — public-release certification, history-eligible assurance and restored-XI header refresh.
    RC2.3.4 — audited projection ledger, reproducible snapshots and final-result backtesting. */
-const APP_RELEASE='RC5.0.20',APP_RELEASE_SLUG='RC5.0.20-automated-supplementary-calendar';
+const APP_RELEASE='RC5.0.21',APP_RELEASE_SLUG='RC5.0.21-fresh-squad-review-packet';
 const ACCURACY_LEDGER_KEY='fpl-engine-projection-ledger-rc233-v1',ACCURACY_SCHEMA=2,MODEL_RELEASE=APP_RELEASE;  /* stamped into every accuracy snapshot - must track the real model build */
 
 function emptyAccuracyLedger(){return{schema:ACCURACY_SCHEMA,season:EXPECTED_SEASON,snapshots:{},actuals:{},catalog:{}}}
