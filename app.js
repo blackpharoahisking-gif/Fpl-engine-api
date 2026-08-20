@@ -1758,74 +1758,11 @@ function freshSquadReviewOfficialAlerts(){
     return{level:'SQUAD NEWS',title:`${a.web_name||a.name||'Unknown player'}${a.team_code||a.team?` (${a.team_code||a.team})`:''}`,detail:freshSquadReviewPlain(detail)};
   });
 }
-function freshSquadReviewPlayer(row,role,state=S){
-  const fixtureCount=Array.isArray(row?.r?.fixtures)?row.r.fixtures.length:0,usage=accuracyEventUsage(row?.md,fixtureCount);
-  return{id:row.p.id,name:freshSquadReviewPlain(row.p.n),team:freshSquadReviewPlain(row.p.t),pos:row.p.p,role,
-    xPts:+num(row.r?.x).toFixed(2),xMins:Math.round(num(usage.minutes)),startPct:Math.round(100*clamp(num(usage.pStart),0,1)),
-    captain:row.p.id===state.cap,vice:row.p.id===state.vice};
-}
-function freshSquadReviewModel(ctx,state=S){
-  const posRank={GK:0,DEF:1,MID:2,FWD:3},sortRows=(a,b)=>posRank[a.p.p]-posRank[b.p.p]||num(b.r?.x)-num(a.r?.x)||String(a.p.n).localeCompare(String(b.p.n)),
-    starting=[...(ctx.xi||[])].sort(sortRows).map(o=>freshSquadReviewPlayer(o,'XI',state)),benchRows=freshSquadReviewBench(ctx,state),bench=[];
-  if(benchRows.gk)bench.push(freshSquadReviewPlayer(benchRows.gk,'GK substitute',state));
-  benchRows.outfield.forEach((o,i)=>bench.push(freshSquadReviewPlayer(o,`Bench ${i+1}`,state)));
-  const queue=(ctx.queue||[]).map(item=>({level:item.blocking?'BLOCKING':item.severity==='act'?'ACTION':'WATCH',
-    title:freshSquadReviewPlain(item.title),detail:freshSquadReviewPlain(item.evidence),cost:item.blocking?null:+num(item.cost).toFixed(2)}));
-  const captain=starting.find(p=>p.captain),vice=starting.find(p=>p.vice),full=[...starting,...bench];
-  return{gameweek:state.gw,formation:ctx.formation||'—',xiProjected:+num(ctx.xiTotal).toFixed(2),captain:captain?.name||'NOT SET',vice:vice?.name||'NOT SET',starting,bench,full,alerts:[...queue,...freshSquadReviewOfficialAlerts()]};
-}
-function formatFreshSquadReviewPacket(model){
-  const metric=p=>`${p.name} (${p.team}, ${p.pos})${p.captain?' [C]':p.vice?' [VC]':''} | xPts ${num(p.xPts).toFixed(2)} | xMins ${Math.round(num(p.xMins))} | Start ${Math.round(num(p.startPct))}%`,
-    xi=(model.starting||[]).map((p,i)=>`${String(i+1).padStart(2,'0')}. ${metric(p)}`),
-    bench=(model.bench||[]).map((p,i)=>`${i===0?'GK':String(i)}. ${metric(p)}`),
-    full=(model.full||[]).map((p,i)=>`${String(i+1).padStart(2,'0')}. [${p.role}] ${metric(p)}`),
-    alerts=(model.alerts||[]).map(a=>`- [${a.level}${a.cost!=null&&a.cost>=.05?` · ${num(a.cost).toFixed(2)} xP`:''}] ${a.title}${a.detail?` — ${a.detail}`:''}`);
-  return[
-    'OTB FRESH SQUAD REVIEW PACKET',
-    `Selected gameweek: GW${model.gameweek}`,
-    `Formation: ${model.formation}`,
-    `XI projected points: ${num(model.xiProjected).toFixed(2)} xPts (captain included)`,
-    `Captain: ${model.captain}`,
-    `Vice-captain: ${model.vice}`,
-    'Squad status: 15/15 legal',
-    'Metric note: xMins totals every fixture in the selected gameweek; Start is the overall probability of at least one start.',
-    'Context note: this packet does not change the squad or projections and makes no external AI call.',
-    '',
-    'STARTING XI',...xi,
-    '',
-    'BENCH ORDER',...bench,
-    '',
-    'FULL 15',...full,
-    '',
-    'CURRENT OTB ALERTS',...(alerts.length?alerts:['- None.'])
-  ].join('\n');
-}
-function prepareFreshSquadReview(){
-  const ctx=verdictContext(),issue=freshSquadReviewIssue(ctx);if(issue){flash(issue);renderFreshSquadReview(ctx);return''}
-  const model=freshSquadReviewModel(ctx),text=formatFreshSquadReviewPacket(model);
-  FRESH_SQUAD_REVIEW={text,fingerprint:JSON.stringify(model),copied:false};renderFreshSquadReview(ctx);return text;
-}
 async function copyFreshSquadReview(text,clipboard=(typeof navigator!=='undefined'?navigator.clipboard:null)){
   if(!String(text||''))return false;
   if(clipboard&&typeof clipboard.writeText==='function'){await clipboard.writeText(String(text));return true}
   const box=document.createElement('textarea');box.value=String(text);box.setAttribute('readonly','');box.style.position='fixed';box.style.opacity='0';document.body.appendChild(box);box.select();
   let copied=false;try{copied=!!document.execCommand('copy')}finally{box.remove()}return copied;
-}
-function renderFreshSquadReview(ctx=null){
-  const host=document.getElementById('verdictFreshSquadReview');if(!host)return;
-  const issue=freshSquadReviewIssue(ctx),ready=!issue,model=ready?freshSquadReviewModel(ctx):null,fingerprint=model?JSON.stringify(model):'';
-  if(!ready||(FRESH_SQUAD_REVIEW.text&&FRESH_SQUAD_REVIEW.fingerprint!==fingerprint))FRESH_SQUAD_REVIEW={text:'',fingerprint:'',copied:false};
-  const hasPacket=!!FRESH_SQUAD_REVIEW.text;
-  host.innerHTML=`<div class="vsec-h">Fresh Squad Review<span>Phase 1 · manual context packet</span></div><div class="fresh-review ${ready?'':'locked'}">
-    <div class="fresh-review-note"><b>Prepare once, then paste the packet into your review chat.</b> This only reads the current Verdict snapshot. It does not alter the squad, recalculate inputs, save anything, or contact an AI service.</div>
-    ${issue?`<div class="fresh-review-status">${esc(issue)}</div>`:''}
-    <div class="fresh-review-actions"><button type="button" class="btn" id="btnPrepareFreshSquadReview" ${ready?'':'disabled'}>Prepare Fresh Squad Review</button><button type="button" class="btn ghost" id="btnCopyFreshSquadReview" ${hasPacket?'':'disabled'}>Copy packet</button></div>
-    ${hasPacket?`<div class="fresh-review-output"><label class="sr-only" for="freshSquadReviewText">Fresh Squad Review packet</label><textarea id="freshSquadReviewText" readonly spellcheck="false">${esc(FRESH_SQUAD_REVIEW.text)}</textarea><div class="fresh-review-copy-note" id="freshSquadReviewCopyNote">${FRESH_SQUAD_REVIEW.copied?'Copied to clipboard.':''}</div></div>`:''}
-  </div>`;
-  const prepare=document.getElementById('btnPrepareFreshSquadReview');if(prepare)prepare.onclick=prepareFreshSquadReview;
-  const copy=document.getElementById('btnCopyFreshSquadReview');if(copy)copy.onclick=async()=>{copy.disabled=true;const note=document.getElementById('freshSquadReviewCopyNote');
-    try{const ok=await copyFreshSquadReview(FRESH_SQUAD_REVIEW.text);FRESH_SQUAD_REVIEW.copied=ok;if(note)note.textContent=ok?'Copied to clipboard.':'Clipboard copy was blocked — select the packet text and copy it manually.';if(ok)flash('Fresh Squad Review packet copied.');else flash('Clipboard copy was blocked. Select the packet text and copy it manually.')}
-    catch(e){if(note)note.textContent='Clipboard copy was blocked — select the packet text and copy it manually.';flash('Clipboard copy was blocked. Select the packet text and copy it manually.')}finally{copy.disabled=false}}
 }
 /* ── Fresh Squad Intelligence · production workflow ────────────────────
    The Phase 1 serializer remains the diagnostic COPY REVIEW CONTEXT path.
