@@ -8,6 +8,7 @@ import {
   mergeSourceResults,
   parseEflMatches,
   parseFaCupHtml,
+  loadUefaSources,
   parseUefaMatches,
   refreshClubSchedule,
   zeroYieldRegressions,
@@ -303,4 +304,89 @@ test('refresh persists a per-source report and retains European rows when UEFA s
   },Date.parse(updatedAt));
   assert.equal(health.status,'partial');
   assert.deepEqual(health.degradedSources,[CLUB_SCHEDULE_SOURCES.uecl]);
+});
+
+/* The 20 Aug refresh proved the parser filters were never the Brighton
+   problem: the Conference League payload arrived EMPTY (detail.total 0) while
+   the Champions League returned 34 rows using the same scraped config. Both
+   causes that can produce that are addressed below. */
+
+const UEFA_PAGE='<script>window.apiKey="key-abc";window.currentSeason=2027;</script>';
+const okText=body=>({ok:true,headers:{get:()=>String(body.length)},text:async()=>body});
+
+function uefaFetchStub({matchesBySeason={},pageBySource={},onCall=()=>{}}={}){
+  return async(url)=>{
+    onCall(url);
+    if(!url.startsWith('https://match.uefa.com/')){
+      return okText(pageBySource[url]!==undefined?pageBySource[url]:UEFA_PAGE);
+    }
+    const parsed=new URL(url);
+    const key=`${parsed.searchParams.get('competitionId')}|${parsed.searchParams.get('seasonYear')}`;
+    return okText(JSON.stringify(matchesBySeason[key]||[]));
+  };
+}
+
+const ueclMatchRow={
+  competition:{id:'2032',sex:'MALE',age:'ADULT'},status:'UPCOMING',
+  kickOffTime:{dateTime:'2026-08-20T18:00:00Z'},
+  homeTeam:{internationalName:'Tromso',teamTypeDetail:'DOMESTIC_MEN_TEAM_A'},
+  awayTeam:{internationalName:'Brighton',teamTypeDetail:'DOMESTIC_MEN_TEAM_A'},
+};
+const window26={year:2026,fromDate:'2026-07-30',toDate:'2027-06-30'};
+
+test('each competition reads its own configuration rather than reusing the Champions League page',async()=>{
+  const seen=[];
+  const fetchFn=uefaFetchStub({matchesBySeason:{'2032|2027':[ueclMatchRow]},onCall:u=>seen.push(u)});
+  const results=await loadUefaSources(fetchFn,teams,window26,updatedAt);
+  const uecl=results.find(r=>r.source===CLUB_SCHEDULE_SOURCES.uecl);
+  assert.equal(uecl.ok,true);
+  assert.equal(uecl.detail.configSource,'own-page');
+  assert.ok(seen.includes(CLUB_SCHEDULE_SOURCES.uecl),'the Conference League page itself must be read');
+});
+
+test('an empty payload retries the adjacent season year before believing the emptiness',async()=>{
+  // Config says 2027; the matches only exist under 2026. Before this, that
+  // returned zero rows and looked like a competition with no fixtures.
+  const fetchFn=uefaFetchStub({matchesBySeason:{'2032|2026':[ueclMatchRow]}});
+  const results=await loadUefaSources(fetchFn,teams,window26,updatedAt);
+  const uecl=results.find(r=>r.source===CLUB_SCHEDULE_SOURCES.uecl);
+  assert.equal(uecl.yielded,1,'the Brighton fixture must be recovered by the retry');
+  assert.equal(uecl.fixtures[0].team,'BHA');
+  assert.equal(uecl.detail.seasonYear,2026,'the season year that actually answered is recorded');
+  assert.equal(uecl.detail.seasonYearRetried,2026);
+});
+
+test('a season year that already works is never retried',async()=>{
+  let matchCalls=0;
+  // Every competition answers on the configured year, so nothing should retry.
+  const row=(id,name)=>({...ueclMatchRow,competition:{id,sex:'MALE',age:'ADULT'},awayTeam:{internationalName:name,teamTypeDetail:'DOMESTIC_MEN_TEAM_A'}});
+  const fetchFn=uefaFetchStub({
+    matchesBySeason:{'1|2027':[row('1','Arsenal')],'3|2027':[row('3','Aston Villa')],'2032|2027':[ueclMatchRow]},
+    onCall:u=>{if(u.startsWith('https://match.uefa.com/'))matchCalls+=1},
+  });
+  const results=await loadUefaSources(fetchFn,teams,window26,updatedAt);
+  assert.deepEqual(results.map(r=>r.detail.seasonYearRetried),[null,null,null]);
+  assert.equal(matchCalls,3,'one match request per competition, no speculative retries');
+});
+
+test('request parameters travel with the yield so a zero is diagnosable',async()=>{
+  const fetchFn=uefaFetchStub({});
+  const results=await loadUefaSources(fetchFn,teams,window26,updatedAt);
+  const uecl=results.find(r=>r.source===CLUB_SCHEDULE_SOURCES.uecl);
+  assert.equal(uecl.yielded,0);
+  assert.equal(uecl.detail.competitionId,'2032');
+  assert.equal(uecl.detail.seasonYear,2027);
+  assert.equal(uecl.detail.fromDate,'2026-07-30');
+  assert.equal(uecl.detail.total,0,'an empty payload is distinguishable from a filtered-out one');
+});
+
+test('a competition page that fails falls back to the Champions League config',async()=>{
+  const fetchFn=uefaFetchStub({
+    pageBySource:{[CLUB_SCHEDULE_SOURCES.uecl]:''},
+    matchesBySeason:{'2032|2027':[ueclMatchRow]},
+  });
+  const results=await loadUefaSources(fetchFn,teams,window26,updatedAt);
+  const uecl=results.find(r=>r.source===CLUB_SCHEDULE_SOURCES.uecl);
+  assert.equal(uecl.detail.configSource,'ucl-fallback');
+  assert.equal(uecl.yielded,1);
 });

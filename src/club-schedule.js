@@ -390,30 +390,75 @@ function uefaConfig(html) {
   return { apiKey, seasonYear };
 }
 
-async function loadUefaSources(fetchFn, teams, window, updatedAt) {
-  let config;
+/* The apiKey and, crucially, the season year were read from the CHAMPIONS
+   LEAGUE page and then reused for all three competitions. Each competition
+   publishes its own configuration, so read each one's own page and keep the
+   Champions League values only as a fallback. */
+async function uefaConfigFor(fetchFn, definition, fallback) {
   try {
-    const html = await fetchText(fetchFn, CLUB_SCHEDULE_SOURCES.ucl);
-    config = uefaConfig(html);
+    return { ...uefaConfig(await fetchText(fetchFn, definition.source)), configSource: 'own-page' };
   } catch (error) {
-    return UEFA_COMPETITIONS.map((definition) => sourceResult(definition.source, false, [], error));
+    if (!fallback) throw error;
+    return { ...fallback, configSource: 'ucl-fallback' };
+  }
+}
+
+async function fetchUefaMatches(fetchFn, definition, config, window, seasonYear) {
+  const url = new URL('https://match.uefa.com/v5/matches');
+  url.searchParams.set('competitionId', definition.id);
+  url.searchParams.set('seasonYear', String(seasonYear));
+  url.searchParams.set('offset', '0');
+  url.searchParams.set('limit', '500');
+  url.searchParams.set('order', 'ASC');
+  url.searchParams.set('fromDate', window.fromDate);
+  url.searchParams.set('toDate', window.toDate);
+  return fetchJson(fetchFn, url.toString(), { headers: { 'x-api-key': config.apiKey } });
+}
+
+export async function loadUefaSources(fetchFn, teams, window, updatedAt) {
+  let baseConfig = null;
+  let baseError = null;
+  try {
+    baseConfig = uefaConfig(await fetchText(fetchFn, CLUB_SCHEDULE_SOURCES.ucl));
+  } catch (error) {
+    baseError = error;
   }
   return Promise.all(UEFA_COMPETITIONS.map(async (definition) => {
     try {
-      const url = new URL('https://match.uefa.com/v5/matches');
-      url.searchParams.set('competitionId', definition.id);
-      url.searchParams.set('seasonYear', String(config.seasonYear));
-      url.searchParams.set('offset', '0');
-      url.searchParams.set('limit', '500');
-      url.searchParams.set('order', 'ASC');
-      url.searchParams.set('fromDate', window.fromDate);
-      url.searchParams.set('toDate', window.toDate);
-      const payload = await fetchJson(fetchFn, url.toString(), { headers: { 'x-api-key': config.apiKey } });
+      const config = await uefaConfigFor(fetchFn, definition, baseConfig);
+      let seasonYear = config.seasonYear;
+      let payload = await fetchUefaMatches(fetchFn, definition, config, window, seasonYear);
+      let seasonYearRetried = null;
+      /* An empty payload from a season-scoped sports API is far more often an
+         off-by-one season year than a competition with no matches. The
+         Conference League returned zero rows on 20 Aug 2026 while Brighton
+         were playing in it, so try the adjacent year once before believing an
+         emptiness. Bounded to a single extra request, and which year actually
+         answered is recorded below. */
+      if (Array.isArray(payload) && !payload.length) {
+        const alternate = seasonYear - 1;
+        const retry = await fetchUefaMatches(fetchFn, definition, config, window, alternate).catch(() => null);
+        seasonYearRetried = alternate;
+        if (Array.isArray(retry) && retry.length) {
+          payload = retry;
+          seasonYear = alternate;
+        }
+      }
       const stats = {};
       const rows = parseUefaMatches(payload, teams, definition, updatedAt, stats);
-      return sourceResult(definition.source, true, rows, '', stats);
+      /* Request parameters travel with the yield. "Zero rows" on its own is
+         not a diagnosis; "zero rows for competitionId X at seasonYear Y" is. */
+      return sourceResult(definition.source, true, rows, '', {
+        ...stats,
+        competitionId: definition.id,
+        seasonYear,
+        seasonYearRetried,
+        configSource: config.configSource,
+        fromDate: window.fromDate,
+        toDate: window.toDate,
+      });
     } catch (error) {
-      return sourceResult(definition.source, false, [], error);
+      return sourceResult(definition.source, false, [], error || baseError);
     }
   }));
 }
