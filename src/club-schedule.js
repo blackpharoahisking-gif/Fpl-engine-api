@@ -1,5 +1,11 @@
 const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const EMPTY_RETRY_INTERVAL_MS = 30 * 60 * 1000;
+/* lastAttempt is stamped when a refresh FINISHES, so a run taking ten seconds
+   pushes the next eligible moment ten seconds past the cron boundary and the
+   tick at exactly the interval is skipped -- a 6-hour cadence silently becomes
+   6.5. Observed twice on 20 Aug: a 14:00:10 stamp made the 20:00 tick a no-op.
+   A small grace lets the tick that was meant to fire, fire. */
+const REFRESH_GRACE_MS = 2 * 60 * 1000;
 const SOURCE_LOOKBACK_DAYS = 21;
 const FETCH_LIMIT_BYTES = 12 * 1024 * 1024;
 const FA_CUP_MAX_PAGES = 12;
@@ -662,7 +668,7 @@ export async function maybeRefreshClubSchedule(env, options = {}) {
   const hasCalendar = parseStoredCalendar(stored.club_schedule_json).length > 0;
   const lastAttempt = Date.parse(stored.club_schedule_last_attempt_at || '');
   const interval = hasCalendar ? REFRESH_INTERVAL_MS : EMPTY_RETRY_INTERVAL_MS;
-  if (!options.force && Number.isFinite(lastAttempt) && nowMs - lastAttempt < interval) {
+  if (!options.force && Number.isFinite(lastAttempt) && nowMs - lastAttempt < interval - REFRESH_GRACE_MS) {
     return {
       ok: true,
       skipped: true,

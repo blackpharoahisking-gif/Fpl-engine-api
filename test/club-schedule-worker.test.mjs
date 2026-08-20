@@ -9,6 +9,7 @@ import {
   parseEflMatches,
   parseFaCupHtml,
   loadUefaSources,
+  maybeRefreshClubSchedule,
   parseUefaMatches,
   refreshClubSchedule,
   zeroYieldRegressions,
@@ -389,4 +390,20 @@ test('a competition page that fails falls back to the Champions League config',a
   const uecl=results.find(r=>r.source===CLUB_SCHEDULE_SOURCES.uecl);
   assert.equal(uecl.detail.configSource,'ucl-fallback');
   assert.equal(uecl.yielded,1);
+});
+
+test('a cron tick landing a few seconds early still refreshes instead of losing half a cycle',async()=>{
+  const fixture={team:'HUL',kickoff:'2026-08-25T18:45:00Z',competition:'Carabao Cup',opponent:'Stoke City',home:false,confirmed:true,source:CLUB_SCHEDULE_SOURCES.eflCup,updatedAt:'2026-08-20T14:00:10Z'};
+  const base={season:'2026/27',club_schedule_json:JSON.stringify([fixture]),club_schedule_updated_at:'2026-08-20T14:00:10Z',club_schedule_last_attempt_at:'2026-08-20T14:00:10.745Z'};
+  const loaders=[async()=>({source:CLUB_SCHEDULE_SOURCES.eflCup,ok:true,fixtures:[fixture],error:'',yielded:1})];
+
+  // 20:00:00 is 5h59m50s after the 14:00:10 stamp. Real behaviour on 20 Aug:
+  // skipped, so the calendar went stale for another half hour.
+  const onTime=await maybeRefreshClubSchedule({DB:new MemoryDb(base)},{nowMs:Date.parse('2026-08-20T20:00:00Z'),sourceLoaders:loaders});
+  assert.equal(onTime.skipped,undefined,'the tick at the interval boundary must not be swallowed');
+
+  // Well inside the cooldown, still skipped.
+  const early=await maybeRefreshClubSchedule({DB:new MemoryDb(base)},{nowMs:Date.parse('2026-08-20T17:00:00Z'),sourceLoaders:loaders});
+  assert.equal(early.skipped,true);
+  assert.match(early.reason,/cooldown/);
 });
