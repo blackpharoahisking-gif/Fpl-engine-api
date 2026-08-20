@@ -3,12 +3,14 @@ import test from 'node:test';
 
 import {
   CLUB_SCHEDULE_SOURCES,
+  clubScheduleHealthFromMeta,
   dedupeFixtures,
   mergeSourceResults,
   parseEflMatches,
   parseFaCupHtml,
   parseUefaMatches,
   refreshClubSchedule,
+  zeroYieldRegressions,
 } from '../src/club-schedule.js';
 
 const teams = [
@@ -149,4 +151,156 @@ test('refresh persists partial success without wiping failed-provider data, then
   assert.equal(failed.ok,false);
   assert.equal(db.meta.get('club_schedule_json').value,savedJson);
   assert.equal(db.meta.get('club_schedule_updated_at').value,savedUpdatedAt);
+});
+
+/* Regression tests for the 20 Aug 2026 miss: Brighton played a Conference
+   League playoff at Tromso and the fixture never reached the congestion
+   calendar. All three UEFA calls returned 200, parsed cleanly, matched nothing,
+   and still counted as successful, so health reported no European problem. */
+
+const UECL={id:'2032',name:'UEFA Conference League',source:CLUB_SCHEDULE_SOURCES.uecl};
+
+function ueclMatch(overrides={}){
+  return{
+    competition:{id:'2032',sex:'MALE',age:'ADULT'},
+    status:'UPCOMING',
+    kickOffTime:{dateTime:'2026-08-20T18:00:00Z'},
+    homeTeam:{internationalName:'Tromso',teamTypeDetail:'DOMESTIC_MEN_TEAM_A'},
+    awayTeam:{internationalName:'Brighton',teamTypeDetail:'DOMESTIC_MEN_TEAM_A'},
+    ...overrides,
+  };
+}
+
+test('UEFA parser keeps a playoff-round tie under a qualifying competition id',()=>{
+  const rows=parseUefaMatches([ueclMatch({competition:{id:'2032_QUAL',sex:'MALE',age:'ADULT'}})],teams,UECL,updatedAt);
+  assert.equal(rows.length,1);
+  assert.equal(rows[0].team,'BHA');
+  assert.equal(rows[0].home,false);
+  assert.equal(rows[0].competition,'UEFA Conference League');
+});
+
+test('UEFA parser keeps a first-team tie whose team type is an unrecognised senior label',()=>{
+  const rows=parseUefaMatches([ueclMatch({
+    awayTeam:{internationalName:'Brighton',teamTypeDetail:'DOMESTIC_MEN_TEAM_QUALIFIER'},
+  })],teams,UECL,updatedAt);
+  assert.equal(rows.length,1);
+  assert.equal(rows[0].team,'BHA');
+});
+
+test('an unresolved placeholder opponent no longer erases the tracked club fixture',()=>{
+  const rows=parseUefaMatches([ueclMatch({
+    homeTeam:{internationalName:'Winner Q3 Path C',isPlaceHolder:true},
+  })],teams,UECL,updatedAt);
+  assert.equal(rows.length,1);
+  assert.equal(rows[0].team,'BHA');
+  assert.equal(rows[0].home,false);
+});
+
+test('women and youth team types are still rejected after the allowlist became a blocklist',()=>{
+  for(const teamTypeDetail of ['DOMESTIC_WOMEN_TEAM_A','DOMESTIC_MEN_TEAM_U19','DOMESTIC_MEN_TEAM_U21','DOMESTIC_YOUTH_TEAM']){
+    const rows=parseUefaMatches([ueclMatch({awayTeam:{internationalName:'Brighton',teamTypeDetail}})],teams,UECL,updatedAt);
+    assert.equal(rows.length,0,teamTypeDetail);
+  }
+});
+
+test('a genuinely different competition is still rejected, and the reason is counted',()=>{
+  const stats={};
+  const rows=parseUefaMatches([ueclMatch({competition:{id:'1',sex:'MALE',age:'ADULT'}})],teams,UECL,updatedAt,stats);
+  assert.equal(rows.length,0);
+  assert.equal(stats.competition,1);
+  assert.equal(stats.kept,0);
+  assert.equal(stats.total,1);
+});
+
+test('drop telemetry attributes every rejected row to a specific filter',()=>{
+  const stats={};
+  const rows=parseUefaMatches([
+    ueclMatch(),
+    ueclMatch({status:'POSTPONED'}),
+    ueclMatch({awayTeam:{internationalName:'Brighton Women',teamTypeDetail:'DOMESTIC_WOMEN_TEAM_A'}}),
+    ueclMatch({homeTeam:{internationalName:'Tromso'},awayTeam:{internationalName:'Molde'}}),
+  ],teams,UECL,updatedAt,stats);
+  assert.equal(rows.length,1);
+  assert.deepEqual(
+    {total:stats.total,kept:stats.kept,status:stats.status,nonSenior:stats.nonSenior,noTrackedClub:stats.noTrackedClub},
+    {total:4,kept:1,status:1,nonSenior:1,noTrackedClub:1}
+  );
+});
+
+test('a source that regresses to zero rows is flagged and keeps its last-known-good fixtures',()=>{
+  const priorUefa={team:'BHA',kickoff:'2026-08-20T18:00:00Z',competition:'UEFA Conference League',opponent:'Tromso',home:false,confirmed:true,source:CLUB_SCHEDULE_SOURCES.uecl,updatedAt:'2026-08-19T00:00:00Z'};
+  const results=[{source:CLUB_SCHEDULE_SOURCES.uecl,ok:true,fixtures:[],error:''}];
+  assert.deepEqual(zeroYieldRegressions([priorUefa],results),[CLUB_SCHEDULE_SOURCES.uecl]);
+  const merged=mergeSourceResults([priorUefa],results);
+  assert.equal(merged.length,1,'the European fixture must survive a silently empty parse');
+  assert.equal(merged[0].team,'BHA');
+});
+
+test('a source that has never yielded rows is not treated as a regression',()=>{
+  const priorEfl={team:'HUL',kickoff:'2026-08-25T18:45:00Z',competition:'Carabao Cup',opponent:'Stoke City',home:false,confirmed:true,source:CLUB_SCHEDULE_SOURCES.eflCup,updatedAt:'2026-08-19T00:00:00Z'};
+  const results=[{source:CLUB_SCHEDULE_SOURCES.faCup,ok:true,fixtures:[],error:''}];
+  assert.deepEqual(zeroYieldRegressions([priorEfl],results),[]);
+});
+
+test('health reports partial and names the degraded provider when a source silently empties',()=>{
+  const nowMs=Date.parse('2026-08-20T18:00:00Z');
+  const fixture={team:'HUL',kickoff:'2026-08-25T18:45:00Z',competition:'Carabao Cup',opponent:'Stoke City',home:false,confirmed:true,source:CLUB_SCHEDULE_SOURCES.eflCup,updatedAt:'2026-08-20T14:00:00Z'};
+  const health=clubScheduleHealthFromMeta({
+    club_schedule_json:JSON.stringify([fixture]),
+    club_schedule_updated_at:'2026-08-20T14:00:00Z',
+    club_schedule_last_error:'',
+    club_schedule_source_report:JSON.stringify([
+      {source:CLUB_SCHEDULE_SOURCES.eflCup,ok:true,yielded:1,degraded:false,error:null},
+      {source:CLUB_SCHEDULE_SOURCES.uecl,ok:true,yielded:0,degraded:true,error:null,detail:{total:64,kept:0,competition:64}},
+    ]),
+  },nowMs);
+  assert.equal(health.status,'partial','a zero-yield provider must not read as a clean bill of health');
+  assert.deepEqual(health.degradedSources,[CLUB_SCHEDULE_SOURCES.uecl]);
+  assert.deepEqual(health.fixturesByCompetition,{'Carabao Cup':1});
+  assert.equal(health.sources.find(s=>s.source===CLUB_SCHEDULE_SOURCES.uecl).detail.competition,64);
+});
+
+test('health stays ok when every provider yields and nothing regressed',()=>{
+  const nowMs=Date.parse('2026-08-20T18:00:00Z');
+  const fixture={team:'BHA',kickoff:'2026-08-20T18:00:00Z',competition:'UEFA Conference League',opponent:'Tromso',home:false,confirmed:true,source:CLUB_SCHEDULE_SOURCES.uecl,updatedAt:'2026-08-20T14:00:00Z'};
+  const health=clubScheduleHealthFromMeta({
+    club_schedule_json:JSON.stringify([fixture]),
+    club_schedule_updated_at:'2026-08-20T14:00:00Z',
+    club_schedule_last_error:'',
+    club_schedule_source_report:JSON.stringify([{source:CLUB_SCHEDULE_SOURCES.uecl,ok:true,yielded:1,degraded:false,error:null}]),
+  },nowMs);
+  assert.equal(health.status,'ok');
+  assert.deepEqual(health.degradedSources,[]);
+  assert.deepEqual(health.fixturesByCompetition,{'UEFA Conference League':1});
+});
+
+test('refresh persists a per-source report and retains European rows when UEFA silently empties',async()=>{
+  const priorUefa={team:'BHA',kickoff:'2026-08-20T18:00:00Z',competition:'UEFA Conference League',opponent:'Tromso',home:false,confirmed:true,source:CLUB_SCHEDULE_SOURCES.uecl,updatedAt:'2026-08-19T00:00:00Z'};
+  const freshEfl={team:'HUL',kickoff:'2026-08-25T18:45:00Z',competition:'Carabao Cup',opponent:'Stoke City',home:false,confirmed:true,source:CLUB_SCHEDULE_SOURCES.eflCup,updatedAt};
+  const db=new MemoryDb({season:'2026/27',club_schedule_json:JSON.stringify([priorUefa]),club_schedule_updated_at:'2026-08-19T00:00:00Z'});
+  const result=await refreshClubSchedule({DB:db},{nowMs:Date.parse(updatedAt),sourceLoaders:[
+    async()=>({source:CLUB_SCHEDULE_SOURCES.eflCup,ok:true,fixtures:[freshEfl],error:'',yielded:1}),
+    async()=>({source:CLUB_SCHEDULE_SOURCES.uecl,ok:true,fixtures:[],error:'',yielded:0,detail:{total:64,kept:0,competition:64}}),
+  ]});
+  assert.equal(result.ok,true);
+  assert.equal(result.sourcesDegraded,1);
+  assert.deepEqual(result.degraded,[CLUB_SCHEDULE_SOURCES.uecl]);
+  assert.equal(result.staleSourcesRetained,true);
+
+  const saved=JSON.parse(db.meta.get('club_schedule_json').value);
+  assert.ok(saved.some(row=>row.team==='BHA'),'the silently-emptied provider must keep its European fixture');
+  assert.ok(saved.some(row=>row.team==='HUL'));
+
+  const report=JSON.parse(db.meta.get('club_schedule_source_report').value);
+  const uecl=report.find(row=>row.source===CLUB_SCHEDULE_SOURCES.uecl);
+  assert.equal(uecl.ok,true);
+  assert.equal(uecl.yielded,0);
+  assert.equal(uecl.degraded,true);
+  assert.equal(uecl.detail.competition,64);
+
+  const health=clubScheduleHealthFromMeta({
+    ...Object.fromEntries([...db.meta].map(([k,v])=>[k,v.value])),
+  },Date.parse(updatedAt));
+  assert.equal(health.status,'partial');
+  assert.deepEqual(health.degradedSources,[CLUB_SCHEDULE_SOURCES.uecl]);
 });

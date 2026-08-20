@@ -4,6 +4,12 @@ const SOURCE_LOOKBACK_DAYS = 21;
 const FETCH_LIMIT_BYTES = 12 * 1024 * 1024;
 const FA_CUP_MAX_PAGES = 12;
 const SOURCE_UA = 'OTB-FPL-Engine/2.23 (official fixture calendar)';
+/* Team types that are genuinely not the senior men's first team. This is a
+   BLOCKLIST on purpose. The previous allowlist accepted only the exact string
+   'DOMESTIC_MEN_TEAM_A', so any label UEFA uses for a qualifying/playoff-round
+   entrant silently dropped a real first-team tie -- and because a zero-row
+   parse still counted as a successful fetch, nothing anywhere reported it. */
+const NON_SENIOR_TEAM_TYPE_RE = /WOMEN|GIRLS|LADIES|YOUTH|JUNIOR|ACADEMY|RESERVE|AMATEUR|FUTSAL|_U\d{2}/i;
 
 export const CLUB_SCHEDULE_SOURCES = Object.freeze({
   ucl: 'https://www.uefa.com/uefachampionsleague/fixtures-results/',
@@ -160,8 +166,9 @@ function isoDate(value) {
   return new Date(value).toISOString().slice(0, 10);
 }
 
-function sourceResult(source, ok, fixtures = [], error = '') {
-  return { source, ok, fixtures: ok ? dedupeFixtures(fixtures) : [], error: text(error) };
+function sourceResult(source, ok, fixtures = [], error = '', detail = null) {
+  const rows = ok ? dedupeFixtures(fixtures) : [];
+  return { source, ok, fixtures: rows, error: text(error), yielded: rows.length, detail: detail || null };
 }
 
 function addClubMatch(out, index, details) {
@@ -193,26 +200,46 @@ function teamName(team) {
   );
 }
 
-function isSeniorMensUefaMatch(match) {
+function isSeniorMensUefaMatch(match, index = null) {
   const competition = match?.competition || {};
   const home = match?.homeTeam || {};
   const away = match?.awayTeam || {};
   if (competition.sex && competition.sex !== 'MALE') return false;
   if (competition.age && competition.age !== 'ADULT') return false;
-  if (home.isPlaceHolder || away.isPlaceHolder) return false;
-  if (home.teamTypeDetail && home.teamTypeDetail !== 'DOMESTIC_MEN_TEAM_A') return false;
-  if (away.teamTypeDetail && away.teamTypeDetail !== 'DOMESTIC_MEN_TEAM_A') return false;
+  // No placeholder veto. A placeholder ('Winner of Q3') carries no usable
+  // identity, but it cannot contribute a row anyway -- addClubMatch only
+  // records a side whose name resolves to a tracked club. Vetoing the whole
+  // match on either side's flag threw away the OTHER side's real fixture,
+  // which is how an unresolved opponent could erase a Premier League club's
+  // European date from the congestion calendar entirely.
+  if (NON_SENIOR_TEAM_TYPE_RE.test(text(home.teamTypeDetail))) return false;
+  if (NON_SENIOR_TEAM_TYPE_RE.test(text(away.teamTypeDetail))) return false;
   return !hasExcludedSquadMarker(teamName(home), teamName(away));
 }
 
-export function parseUefaMatches(payload, teams, definition, updatedAt) {
+/* The request is already scoped to one competitionId, so re-checking the
+   payload is only a sanity guard. Treat a related identifier (a qualifying or
+   playoff-round variant that shares a prefix with the league-phase id) as the
+   same competition: losing a real European tie from the congestion calendar is
+   far more damaging than labelling one with the parent competition's name. */
+function uefaCompetitionMatches(payloadId, definitionId) {
+  const a = text(payloadId);
+  const b = text(definitionId);
+  if (!a || !b) return true;
+  return a === b || a.startsWith(b) || b.startsWith(a);
+}
+
+export function parseUefaMatches(payload, teams, definition, updatedAt, stats = null) {
   if (!Array.isArray(payload)) throw new Error('UEFA payload was not an array');
   const index = buildTeamIndex(teams);
   const out = [];
+  const drop = { total: payload.length, competition: 0, status: 0, nonSenior: 0, noTrackedClub: 0 };
   const rejectedStatuses = new Set(['CANCELLED', 'CANCELED', 'POSTPONED', 'SUSPENDED', 'ABANDONED']);
   for (const match of payload) {
-    if (text(match?.competition?.id) !== text(definition?.id)) continue;
-    if (rejectedStatuses.has(text(match?.status).toUpperCase()) || !isSeniorMensUefaMatch(match)) continue;
+    if (!uefaCompetitionMatches(match?.competition?.id, definition?.id)) { drop.competition += 1; continue; }
+    if (rejectedStatuses.has(text(match?.status).toUpperCase())) { drop.status += 1; continue; }
+    if (!isSeniorMensUefaMatch(match, index)) { drop.nonSenior += 1; continue; }
+    const before = out.length;
     addClubMatch(out, index, {
       homeName: teamName(match.homeTeam),
       awayName: teamName(match.awayTeam),
@@ -221,8 +248,14 @@ export function parseUefaMatches(payload, teams, definition, updatedAt) {
       source: definition.source,
       updatedAt,
     });
+    if (out.length === before) drop.noTrackedClub += 1;
   }
-  return dedupeFixtures(out);
+  const rows = dedupeFixtures(out);
+  // Why-was-it-empty telemetry. A silently empty parse is the exact failure
+  // that hid a live Conference League playoff from the congestion model, so
+  // the reason a row was dropped has to survive into the health surface.
+  if (stats && typeof stats === 'object') Object.assign(stats, { ...drop, kept: rows.length });
+  return rows;
 }
 
 function utcTimestamp(value) {
@@ -376,7 +409,9 @@ async function loadUefaSources(fetchFn, teams, window, updatedAt) {
       url.searchParams.set('fromDate', window.fromDate);
       url.searchParams.set('toDate', window.toDate);
       const payload = await fetchJson(fetchFn, url.toString(), { headers: { 'x-api-key': config.apiKey } });
-      return sourceResult(definition.source, true, parseUefaMatches(payload, teams, definition, updatedAt));
+      const stats = {};
+      const rows = parseUefaMatches(payload, teams, definition, updatedAt, stats);
+      return sourceResult(definition.source, true, rows, '', stats);
     } catch (error) {
       return sourceResult(definition.source, false, [], error);
     }
@@ -437,8 +472,26 @@ function parseStoredCalendar(value) {
   catch { return []; }
 }
 
+export function zeroYieldRegressions(previous, results) {
+  const priorCounts = new Map();
+  for (const row of dedupeFixtures(previous)) priorCounts.set(row.source, (priorCounts.get(row.source) || 0) + 1);
+  return (results || [])
+    .filter((result) => result?.ok && !(result.fixtures || []).length && (priorCounts.get(result.source) || 0) > 0)
+    .map((result) => result.source);
+}
+
 export function mergeSourceResults(previous, results, window = null) {
-  const successful = new Set((results || []).filter((result) => result?.ok).map((result) => result.source));
+  /* A source that parsed cleanly but produced nothing WHERE IT PREVIOUSLY
+     PRODUCED FIXTURES is a regression, not an authoritative 'no fixtures'.
+     Replacing its rows with an empty set is how an entire European calendar
+     can disappear in one refresh without a single error being raised, so its
+     last-known-good rows are retained exactly like a failed source's. A source
+     that has never yielded rows still replaces normally, so a competition that
+     is legitimately out of season never produces a false alarm. */
+  const regressed = new Set(zeroYieldRegressions(previous, results));
+  const successful = new Set(
+    (results || []).filter((result) => result?.ok && !regressed.has(result.source)).map((result) => result.source)
+  );
   const retained = dedupeFixtures(previous).filter((row) => !successful.has(row.source));
   const fresh = (results || []).filter((result) => result?.ok).flatMap((result) => result.fixtures || []);
   const merged = dedupeFixtures([...retained, ...fresh]);
@@ -454,7 +507,8 @@ export function mergeSourceResults(previous, results, window = null) {
 async function metaRows(env) {
   return env.DB.prepare(
     `SELECT key,value,updated_at FROM meta WHERE key IN (
-       'club_schedule_json','club_schedule_updated_at','club_schedule_last_attempt_at','club_schedule_last_error','season'
+       'club_schedule_json','club_schedule_updated_at','club_schedule_last_attempt_at','club_schedule_last_error',
+       'club_schedule_source_report','season'
      )`
   ).all();
 }
@@ -519,12 +573,22 @@ export async function refreshClubSchedule(env, options = {}) {
 
   const seasonRow = await env.DB.prepare("SELECT value FROM meta WHERE key='season'").first();
   const window = sourceWindow(seasonRow?.value || '', nowMs);
+  const degraded = zeroYieldRegressions(previous, results);
+  const sourceReport = results.map((result) => ({
+    source: result?.source || 'unknown',
+    ok: result?.ok === true,
+    yielded: Number(result?.yielded) || 0,
+    degraded: degraded.includes(result?.source),
+    error: text(result?.error) || null,
+    detail: result?.detail || null,
+  }));
   const fixtures = mergeSourceResults(previous, results, window);
   await env.DB.batch([
     metaUpsert(env, 'club_schedule_json', JSON.stringify(fixtures), attemptedAt),
     metaUpsert(env, 'club_schedule_updated_at', attemptedAt, attemptedAt),
     metaUpsert(env, 'club_schedule_last_attempt_at', attemptedAt, attemptedAt),
     metaUpsert(env, 'club_schedule_last_error', errors.join(' | '), attemptedAt),
+    metaUpsert(env, 'club_schedule_source_report', JSON.stringify(sourceReport), attemptedAt),
   ]);
   console.log(JSON.stringify({
     message: 'club schedule refresh completed',
@@ -538,9 +602,12 @@ export async function refreshClubSchedule(env, options = {}) {
     fixtures: fixtures.length,
     sourcesOk: successful.length,
     sourcesFailed: errors.length,
-    staleSourcesRetained: errors.length > 0,
+    sourcesDegraded: degraded.length,
+    degraded,
+    staleSourcesRetained: errors.length > 0 || degraded.length > 0,
     updatedAt: attemptedAt,
     errors,
+    sourceReport,
   };
 }
 
@@ -566,12 +633,29 @@ export function clubScheduleHealthFromMeta(meta, nowMs = Date.now()) {
   const fixtures = parseStoredCalendar(meta?.club_schedule_json);
   const updatedAt = meta?.club_schedule_updated_at || null;
   const ageHours = updatedAt ? Math.max(0, (nowMs - Date.parse(updatedAt)) / 3600e3) : null;
+  let sources = [];
+  try { const parsed = JSON.parse(meta?.club_schedule_source_report || '[]'); if (Array.isArray(parsed)) sources = parsed; }
+  catch { sources = []; }
+  const degradedSources = sources.filter((row) => row?.degraded).map((row) => row.source);
+  const byCompetition = {};
+  for (const row of fixtures) byCompetition[row.competition] = (byCompetition[row.competition] || 0) + 1;
+  /* 'ok' now requires that nothing regressed to zero. Before this, a provider
+     that quietly stopped matching any rows still reported a clean bill of
+     health, because only a thrown error could move the status off 'ok'. */
+  const status = !updatedAt
+    ? 'empty'
+    : ageHours > 24
+      ? 'stale'
+      : (meta?.club_schedule_last_error || degradedSources.length) ? 'partial' : 'ok';
   return {
-    status: !updatedAt ? 'empty' : ageHours > 24 ? 'stale' : meta?.club_schedule_last_error ? 'partial' : 'ok',
+    status,
     fixtures: fixtures.length,
+    fixturesByCompetition: byCompetition,
     updatedAt,
     lastAttemptAt: meta?.club_schedule_last_attempt_at || null,
     ageHours: Number.isFinite(ageHours) ? Math.round(ageHours * 10) / 10 : null,
     lastError: meta?.club_schedule_last_error || null,
+    degradedSources,
+    sources,
   };
 }
