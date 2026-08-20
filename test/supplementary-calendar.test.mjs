@@ -3,7 +3,8 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
 
-const html=readFileSync(new URL('../FPL_Engine_OTB.html',import.meta.url),'utf8');
+const html=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const markup=readFileSync(new URL('../FPL_Engine_OTB.html',import.meta.url),'utf8');
 const featureStart=html.indexOf('function externalNormal');
 const featureEnd=html.indexOf('\nfunction scheduleRankValue',featureStart);
 assert.ok(featureStart>=0&&featureEnd>featureStart,'supplementary calendar helpers must be present');
@@ -75,8 +76,8 @@ test('Schedule opening performs no network work and the browser contains no prov
 });
 
 test('automatic state is primary and manual import remains a collapsed override',()=>{
-  assert.match(html,/id="fxExternalMode">Auto calendar/);
-  assert.match(html,/<details class="schedule-manual"><summary>Manual override<\/summary>/);
-  assert.match(html,/id="fxSyncExternal">Sync cached feed<\/button>/);
-  assert.match(html,/id="fxImportExternal">Apply override<\/button>/);
+  assert.match(markup,/id="fxExternalMode">Auto calendar/);
+  assert.match(markup,/<details class="schedule-manual"><summary>Manual override<\/summary>/);
+  assert.match(markup,/id="fxSyncExternal">Sync cached feed<\/button>/);
+  assert.match(markup,/id="fxImportExternal">Apply override<\/button>/);
 });

@@ -2,6 +2,12 @@ name = "fpl-engine-api"
 main = "src/index.js"
 compatibility_date = "2026-07-01"
 
+# Restricts /api/sync and /api/evaluation/projections to requests whose
+# Origin header matches the published frontend. Matches otb-scout-ai's
+# ALLOWED_ORIGIN so both Workers agree on the one legitimate caller.
+[vars]
+ALLOWED_ORIGIN = "https://blackpharoahisking-gif.github.io"
+
 # Cron is UTC. FPL changes prices at roughly 01:30 UK time, which is 00:30 UTC
 # in summer (BST) and 01:30 UTC in winter (GMT) — so cover 00:00–02:59 tightly
 # and poll every 30 minutes the rest of the day for injuries and news.
