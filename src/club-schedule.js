@@ -418,9 +418,18 @@ async function uefaConfigFor(fetchFn, definition, fallback) {
 
 /** Authoritative competition ids straight from UEFA, keyed by lowercased name. */
 export async function uefaCompetitionIndex(fetchFn, config) {
-  const url = new URL('https://match.uefa.com/v5/competitions');
-  url.searchParams.set('seasonYear', String(config.seasonYear));
-  const payload = await fetchJson(fetchFn, url.toString(), { headers: { 'x-api-key': config.apiKey } });
+  /* Competitions live on a DIFFERENT HOST from matches. The first attempt used
+     match.uefa.com/v5/competitions and got a clean 404, which the fail-safe
+     absorbed into the hardcoded ids. The real path was read out of the
+     published `uefa-api` package rather than guessed:
+       apiMatches      https://match.uefa.com/v5/matches
+       apiCompetitions https://comp.uefa.com/v2/competitions
+     That package sends no api key and no seasonYear to this endpoint, so
+     neither does this -- the call is matched to a working implementation
+     instead of assumed. */
+  void config;
+  const url = new URL('https://comp.uefa.com/v2/competitions');
+  const payload = await fetchJson(fetchFn, url.toString());
   const rows = Array.isArray(payload) ? payload : (Array.isArray(payload?.competitions) ? payload.competitions : []);
   const index = [];
   for (const row of rows) {

@@ -318,7 +318,7 @@ const okText=body=>({ok:true,headers:{get:()=>String(body.length)},text:async()=
 function uefaFetchStub({matchesBySeason={},pageBySource={},competitions=[],onCall=()=>{}}={}){
   return async(url)=>{
     onCall(url);
-    if(url.startsWith('https://match.uefa.com/v5/competitions')){
+    if(url.startsWith('https://comp.uefa.com/v2/competitions')){
       return okText(JSON.stringify(competitions));
     }
     if(!url.startsWith('https://match.uefa.com/')){
@@ -445,7 +445,7 @@ test('Europa League is not matched by the Conference League entry, or vice versa
 
 test('a failed competition lookup falls back to the constant rather than fetching nothing',async()=>{
   const fetchFn=async url=>{
-    if(url.startsWith('https://match.uefa.com/v5/competitions'))return {ok:false,status:503,headers:{get:()=>'0'},text:async()=>''};
+    if(url.startsWith('https://comp.uefa.com/v2/competitions'))return {ok:false,status:404,headers:{get:()=>'0'},text:async()=>''};
     if(!url.startsWith('https://match.uefa.com/'))return okText(UEFA_PAGE);
     return okText(JSON.stringify([]));
   };
