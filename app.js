@@ -174,7 +174,7 @@ async function testWorkerConnection(){
     renderDataStatus();pipelineFinish('OK','Required Worker routes and Scout contract are reachable · starting full live refresh');setTimeout(()=>refreshLiveData(true),120);
   }else pipelineFinish('WARN','Worker root is unavailable but required routes may still work');
 }
-const APP_BUILD='2026.08.20.2',API_BASE='https://fpl-engine-api.blackpharoahisking.workers.dev',SCOUT_API_BASE='https://otb-role-intelligence.blackpharoahisking.workers.dev',CACHE_KEY='fpl-engine-cache-v2',STATE_KEY='fpl-engine-user-v2',LEGACY_CACHE_KEY='fpl-engine-rc3-live-cache-v1',LEGACY_STATE_KEY='fpl-engine-rc3-user-v1',EXTERNAL_FIXTURE_KEY='fpl-engine-external-calendar-rc232-v1';
+const APP_BUILD='2026.08.21.1',API_BASE='https://fpl-engine-api.blackpharoahisking.workers.dev',SCOUT_API_BASE='https://otb-role-intelligence.blackpharoahisking.workers.dev',CACHE_KEY='fpl-engine-cache-v2',STATE_KEY='fpl-engine-user-v2',LEGACY_CACHE_KEY='fpl-engine-rc3-live-cache-v1',LEGACY_STATE_KEY='fpl-engine-rc3-user-v1',EXTERNAL_FIXTURE_KEY='fpl-engine-external-calendar-rc232-v1';
 const EXT_CAL={fixtures:[],source:'none',mode:'auto',updatedAt:null,error:'',syncPromise:null,autoAttempted:false};
 const EXPECTED_SEASON='2026/27',SEASON_START=Date.parse('2026-08-21T00:00:00Z'),SEASON_END=Date.parse('2027-05-30T23:59:59Z'),FIRST_DEADLINE_MIN=Date.parse('2026-08-14T00:00:00Z'),FIRST_DEADLINE_MAX=Date.parse('2026-08-22T23:59:59Z'),LAST_DEADLINE_MIN=Date.parse('2027-05-23T00:00:00Z'),LAST_DEADLINE_MAX=Date.parse('2027-05-31T23:59:59Z'),WORKER_SCHEMA_MIN=3,SCOUT_SCHEMA_MIN='1.35.0',MAX_DATA_AGE_HOURS=24;
 /* RC5.0.9 — semver-aware comparison for the Scout schema gate. The previous
@@ -502,7 +502,16 @@ const ROLE_EVIDENCE_POLICY=Object.freeze({
 confirmed_start:{k:4,channel:'lineup',halfLife:18,ttl:30,cap:35},confirmed_bench:{k:-4,channel:'lineup',halfLife:18,ttl:30,cap:35},
 unavailable:{k:-5,channel:'availability',halfLife:72,ttl:168,cap:90},suspension:{k:-5,channel:'availability',halfLife:168,ttl:336,cap:90},
 minutes_restricted:{k:-1,channel:'availability',halfLife:48,ttl:96,cap:45},fitness_doubt:{k:-1,channel:'availability',halfLife:36,ttl:72,cap:25},
-observed_role:{k:1,channel:'selection',halfLife:240,ttl:720,cap:12},rotation_warning:{k:-.65,channel:'manager',halfLife:72,ttl:120,cap:12},
+observed_role:{k:1,channel:'selection',halfLife:240,ttl:720,cap:12},
+/* observed_bench is observed_role's mirror. Non-starts used to arrive as
+   rotation_warning, which sits on the MANAGER channel where resolveRoleIntelEvents
+   keeps only the single most recent event per player -- so three consecutive
+   benchings counted once while three starts counted three times. A player who
+   starts, is dropped, starts again could only ever drift upward. Same channel,
+   same half-life, same cap, opposite sign: the last three observations now
+   decide, whatever they were. */
+observed_bench:{k:-1,channel:'selection',halfLife:240,ttl:720,cap:12},
+rotation_warning:{k:-.65,channel:'manager',halfLife:72,ttl:120,cap:12},
 friendly_start:{k:.35,channel:'selection',halfLife:96,ttl:240,cap:8},friendly_bench:{k:-.35,channel:'selection',halfLife:96,ttl:240,cap:8},
 manager_positive:{k:.7,channel:'manager',halfLife:96,ttl:168,cap:10},manager_negative:{k:-.7,channel:'manager',halfLife:96,ttl:168,cap:10},
 departure:{k:.4,channel:'competition',halfLife:360,ttl:1080,cap:5},injury:{k:.35,channel:'competition',halfLife:120,ttl:336,cap:6},
@@ -562,7 +571,7 @@ function roleIntelEventDelta(e){const pl=(typeof POOL!=='undefined'&&Array.isArr
 /* Selection evidence is directional by definition. Keep that semantic direction
    separate from the constrained counterfactual above. The final player-level
    xMin/xPts effect remains visible in the before/after impact panel below. */
-function roleSelectionEvidenceDirection(e){const t=String(e?.rawType||e?.sourceType||e?.type||'');if(/^(?:confirmed_start|friendly_start|observed_role|manager_positive)$/.test(t))return 1;if(/^(?:confirmed_bench|friendly_bench|rotation_warning|manager_negative)$/.test(t))return -1;return 0}
+function roleSelectionEvidenceDirection(e){const t=String(e?.rawType||e?.sourceType||e?.type||'');if(/^(?:confirmed_start|friendly_start|observed_role|manager_positive)$/.test(t))return 1;if(/^(?:confirmed_bench|friendly_bench|observed_bench|rotation_warning|manager_negative)$/.test(t))return -1;return 0}
 function roleEventPresentation(e){const dir=roleSelectionEvidenceDirection(e);if(dir)return{direction:dir,tone:dir>0?'positive':'negative',label:dir>0?'↑ START EVIDENCE':'↓ START EVIDENCE',selection:true};const d=roleIntelEventDelta(e);return{direction:d===0?0:(d>0?1:-1),tone:d>=0?'positive':'negative',label:`${d>=0?'+':''}${d.toFixed(1)} xMin`,selection:false}}
 function roleIntelFor(pl){if(ROLE_INTEL.suspend)return{shift:0,events:[],availabilityFactor:1,minuteCeiling:null,startOverride:null};const key=stableKey(pl),events=resolveRoleIntelEvents(roleIntelEvents().filter(e=>e.affectedKey===key&&e.id!==ROLE_INTEL.exclude)),shift=clamp(events.reduce((a,e)=>a+roleEventLogOdds(e),0),-ROLE_SHIFT_CAP,ROLE_SHIFT_CAP),direct=roleDirectControls(events);return{shift,events,...direct}}
 function roleProductionImpact(pl){const key=stableKey(pl),events=resolveRoleIntelEvents(roleIntelEvents().filter(e=>e.affectedKey===key&&e.id!==ROLE_INTEL.exclude));return clamp(events.reduce((a,e)=>a+clamp(num(e.productionImpact),-.25,.25)*clamp(num(e.confidence),0,1)*roleEventFreshness(e),0),-.20,.20)}
@@ -3772,6 +3781,44 @@ function runWhenIdle(fn,{delay=0,timeout=3500}={}){
   },Math.max(0,delay));
 }
 let POST_LIVE_HYDRATION_SEQ=0;
+/* Role evidence used to reach the model only when someone opened the Role
+   Intelligence panel and pressed "Load latest scout report" -- one club at a
+   time. Everything downstream of that was built and working, but the loop was
+   only ever closed by hand, for whichever single club had been looked at last.
+   This pulls cached evidence for every club the squad actually contains, on
+   every live refresh, so observed starts and current team news reach xPts
+   without anyone asking. Cached reads only: no scan is triggered, so this
+   costs the scout no browser budget. */
+async function syncSquadRoleIntelligence(){
+  const codes=[...new Set(squadPlayers().map(p=>p.t).filter(Boolean))].sort();
+  if(!codes.length)return {status:'no-squad',applied:0};
+  let payload=null;
+  try{
+    const r=await fetch(`${SCOUT_API_BASE}/api/scout/latest?teams=${encodeURIComponent(codes.join(','))}`,{cache:'no-store',headers:{Accept:'application/json'}});
+    if(!r.ok)return {status:`http-${r.status}`,applied:0};
+    payload=await r.json();
+  }catch(e){return {status:'unreachable',applied:0}}
+  const reports=payload&&payload.status==='ok'&&payload.teams&&typeof payload.teams==='object'?payload.teams:null;
+  if(!reports)return {status:'unrecognised',applied:0};
+  const refreshed=new Set(Object.keys(reports).map(c=>String(c).toUpperCase()));
+  if(!refreshed.size)return {status:'empty',applied:0};
+  const applied=[];
+  for(const [code,report] of Object.entries(reports)){
+    if(!report||report.status!=='ok'||!Array.isArray(report.events))continue;
+    for(const z of report.events){
+      const local=scoutEventLocal(z,{...report,team:report.team||code});
+      if(local)applied.push(local);
+    }
+  }
+  /* Replace worker evidence only for the clubs actually refreshed. Manual
+     evidence, and any club not asked about, are left exactly as they were. */
+  const kept=roleIntelEvents().filter(e=>!(e.worker&&refreshed.has(String(e.team).toUpperCase())));
+  S.roleIntel.events=[...kept,...applied];
+  SCOUT.syncedAt=Date.now();SCOUT.syncedTeams=[...refreshed];
+  bumpCache();saveUserState();renderRoleIntelligence();render();
+  return {status:'ok',applied:applied.length,teams:refreshed.size};
+}
+
 function schedulePostLiveHydration(){
   const seq=++POST_LIVE_HYDRATION_SEQ;
   const current=()=>seq===POST_LIVE_HYDRATION_SEQ;
@@ -3781,6 +3828,7 @@ function schedulePostLiveHydration(){
   }
   runWhenIdle(()=>{if(current())maybeAutoCaptureProjection()},{delay:700,timeout:4500});
   runWhenIdle(()=>{if(current()&&navigator.onLine!==false)maybeAutoSyncAccuracyActuals()},{delay:1200,timeout:5000});
+  runWhenIdle(()=>{if(current()&&navigator.onLine!==false)syncSquadRoleIntelligence().catch(()=>{})},{delay:1500,timeout:6000});
   runWhenIdle(()=>{if(current())refreshNewsFeed({silent:true})},{delay:1900,timeout:5000});
   runWhenIdle(()=>{if(current())refreshPriceIntel({silent:true})},{delay:2250,timeout:5000});
   runWhenIdle(()=>{if(current())saveUserState()},{delay:2500,timeout:5000});
