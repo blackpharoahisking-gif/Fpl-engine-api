@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
 
-const html=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const html=readFileSync(new URL('../app-core.js',import.meta.url),'utf8');
 const featureStart=html.indexOf('const SCHEDULE_SWING_MATERIAL_DELTA');
 const featureEnd=html.indexOf('\nfunction schedulePlayerProjection',featureStart);
 const commandStart=html.indexOf('function renderScheduleCommand');

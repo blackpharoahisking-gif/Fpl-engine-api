@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
 
-const html=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const html=readFileSync(new URL('../app-core.js',import.meta.url),'utf8');
 const markup=readFileSync(new URL('../FPL_Engine_OTB.html',import.meta.url),'utf8');
 const featureStart=html.indexOf('function externalNormal');
 const featureEnd=html.indexOf('\nfunction scheduleRankValue',featureStart);
