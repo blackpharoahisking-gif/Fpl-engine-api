@@ -1,7 +1,12 @@
-/* OTB 2026.08.21.2 — live GW points + public team import bridge.
+/* OTB 2026.08.21.3 — live GW points + public team import bridge.
    The production application remains byte-for-byte in app-core.js. This file
    loads it first, then adds a display-only live-points layer. Projection maths,
-   optimiser state, role intelligence and Verdict logic are not changed here. */
+   optimiser state, role intelligence and Verdict logic are not changed here.
+   2026.08.21.3: the Import Team control was correctly wired all along
+   (app-core.js:btnImportFplTeam) but lived only inside Engine > Build, which
+   is not where a Squad-tab user goes looking for it. Added a matching
+   quick-action card ("Import team") to the Squad tab's qf-grid that jumps
+   there and focuses the field — same pattern as the existing News jump. */
 (function loadOtbCore(){
   const script=document.createElement('script');
   script.src='app-core.js?v=2026.08.21.1-core';
@@ -19,7 +24,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.21.2';
+  const BUILD='2026.08.21.3';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -28,7 +33,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.21.2';badge.title='OTB live GW points + team import bridge';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.21.3';badge.title='OTB live GW points + team import bridge';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){
@@ -37,6 +42,14 @@ function installOtbLivePointsPatch(){
     teamIdInput.addEventListener('change',remember);
     document.getElementById('btnImportFplTeam')?.addEventListener('click',remember,{capture:true});
   }
+
+  document.getElementById('btnJumpImport')?.addEventListener('click',()=>{
+    document.querySelector('.tabs button[data-t="build"]')?.click();
+    if(matchMedia('(max-width:1080px)').matches)document.querySelector('.mobile-tabs button[data-m="rail"]')?.click();
+    const card=document.getElementById('teamImportCard');
+    card?.scrollIntoView({behavior:'smooth',block:'center'});
+    setTimeout(()=>document.getElementById('fplTeamId')?.focus(),120);
+  });
 
   const eventForGw=gw=>(Array.isArray(EVENTS)?EVENTS:[]).find(e=>Number(e?.id)===Number(gw));
   const deadlineForGw=gw=>Date.parse(eventForGw(gw)?.deadline_time||'');
