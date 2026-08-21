@@ -416,10 +416,18 @@ test('a cron tick landing a few seconds early still refreshes instead of losing 
    therefore exonerated and the two identifiers are simply wrong. Rather than
    guess replacements, ask UEFA which ids exist and match on name. */
 
+/* Real comp.uefa.com/v2/competitions shape: the display name lives at
+   translations.name.EN, and the list carries women's, youth and futsal
+   competitions that must not be matched. */
+const comp=(id,en,extra={})=>({id,age:'ADULT',sex:'MALE',sportsType:'FOOTBALL',
+  metaData:{name:en},translations:{name:{EN:en,FR:'ignored'}},...extra});
 const UEFA_INDEX=[
-  {id:'1',name:'UEFA Champions League'},
-  {id:'2019',name:'UEFA Europa League'},
-  {id:'2020',name:'UEFA Europa Conference League'},
+  comp('1','UEFA Champions League'),
+  comp('2019','UEFA Europa League'),
+  comp('2020','UEFA Europa Conference League'),
+  comp('4','UEFA Women\'s Champions League',{sex:'FEMALE'}),
+  comp('14','UEFA Youth League',{age:'YOUTH'}),
+  comp('99','UEFA Futsal Champions League',{sportsType:'FUTSAL'}),
 ];
 
 test('competition ids are discovered from UEFA rather than trusted from the constant',async()=>{
@@ -458,8 +466,16 @@ test('a failed competition lookup falls back to the constant rather than fetchin
 });
 
 test('an unrecognised competition list leaves every fallback in place',async()=>{
-  const fetchFn=uefaFetchStub({competitions:[{id:'999',name:'Some Other Cup'}]});
+  const fetchFn=uefaFetchStub({competitions:[comp('999','Some Other Cup')]});
   const results=await loadUefaSources(fetchFn,teams,window26,updatedAt);
   assert.deepEqual(results.map(r=>r.detail.competitionIdSource),['hardcoded','hardcoded','hardcoded']);
   assert.equal(results[0].detail.competitionsIndexed,1,'the lookup succeeded, it just matched nothing');
+});
+
+test('women, youth and futsal competitions are never matched',async()=>{
+  const fetchFn=uefaFetchStub({competitions:UEFA_INDEX});
+  const results=await loadUefaSources(fetchFn,teams,window26,updatedAt);
+  const ucl=results.find(r=>r.source===CLUB_SCHEDULE_SOURCES.ucl);
+  assert.equal(ucl.detail.competitionId,'1',"the men's senior Champions League, not the women's or futsal one");
+  assert.equal(ucl.detail.competitionsIndexed,3,'women, youth and futsal entries must be excluded from the index');
 });

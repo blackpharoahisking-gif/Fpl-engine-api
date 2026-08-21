@@ -1392,7 +1392,7 @@ async function healthData(env) {
   return {
     status,
     service: 'FPL Engine API',
-    release: 'v2.27.0-uefa-competitions-host',
+    release: 'v2.28.0-uefa-name-extraction',
     season: m.season || configuredSeason(env),
     schemaVersion: WORKER_SCHEMA_VERSION,
     storedSchemaVersion: num(m.schema_version, 0),
@@ -1728,7 +1728,7 @@ export default {
         default:
           return json({
             service: 'FPL Engine API',
-            release: 'v2.27.0-uefa-competitions-host',
+            release: 'v2.28.0-uefa-name-extraction',
             frontendRoutes: [
               '/bootstrap-static/', '/fixtures/', '/api/news?hours=72',
               '/api/deltas?hours=24', '/api/price-intelligence?hours=24',

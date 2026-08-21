@@ -434,8 +434,18 @@ export async function uefaCompetitionIndex(fetchFn, config) {
   const index = [];
   for (const row of rows) {
     const id = text(row?.id ?? row?.competitionId);
-    const name = text(row?.displayName || row?.name || row?.internationalName || row?.translations?.name).toLowerCase();
-    if (id && name) index.push({ id, name });
+    /* translations.name is an OBJECT keyed by language, not a string. Reading
+       it directly stringified to "[object Object]", which is why 307 rows
+       indexed cleanly and then matched nothing at all. */
+    const name = text(row?.translations?.name?.EN || row?.metaData?.name || '').toLowerCase();
+    if (!id || !name) continue;
+    /* The list is every competition UEFA knows about -- domestic leagues,
+       futsal, women's and youth included. Without these guards /champions/
+       would happily match the Women's Champions League or a youth equivalent. */
+    if (row?.sex && row.sex !== 'MALE') continue;
+    if (row?.age && row.age !== 'ADULT') continue;
+    if (row?.sportsType && row.sportsType !== 'FOOTBALL') continue;
+    index.push({ id, name });
   }
   return index;
 }
@@ -511,6 +521,12 @@ export async function loadUefaSources(fetchFn, teams, window, updatedAt) {
         competitionIdSource: discoveredId ? 'discovered' : 'hardcoded',
         competitionsIndexed: competitionIndex.length,
         competitionIndexError,
+        /* What the names actually look like. A zero match against 307 indexed
+           competitions is not diagnosable without seeing them. */
+        competitionSample: competitionIndex
+          .filter((row) => /champions|europa|conference/.test(row.name))
+          .slice(0, 12)
+          .map((row) => `${row.id}:${row.name}`),
         seasonYear,
         seasonYearRetried,
         configSource: config.configSource,
