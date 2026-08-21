@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
 
-const html=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const html=readFileSync(new URL('../app-core.js',import.meta.url),'utf8');
 const start=html.indexOf('const ROLE_INTEL=');
 const end=html.indexOf('\nfunction poissonTail',start);
 assert.ok(start>=0&&end>start,'role-intelligence + scout-coverage block must be present');
