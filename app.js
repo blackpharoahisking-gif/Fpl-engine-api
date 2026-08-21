@@ -1,4 +1,4 @@
-/* OTB 2026.08.21.3 — live GW points + public team import bridge.
+/* OTB 2026.08.21.4 — live GW points + public team import bridge.
    The production application remains byte-for-byte in app-core.js. This file
    loads it first, then adds a display-only live-points layer. Projection maths,
    optimiser state, role intelligence and Verdict logic are not changed here.
@@ -6,7 +6,26 @@
    (app-core.js:btnImportFplTeam) but lived only inside Engine > Build, which
    is not where a Squad-tab user goes looking for it. Added a matching
    quick-action card ("Import team") to the Squad tab's qf-grid that jumps
-   there and focuses the field — same pattern as the existing News jump. */
+   there and focuses the field — same pattern as the existing News jump.
+   2026.08.21.4: the live path required >=300 rows back from FPL's own
+   event-live endpoint before it would show ANY player's actual points — an
+   all-or-nothing gate on a magic number. FPL's live endpoint only lists
+   elements once their fixture has kicked off, so mid-gameweek (GW1 spans
+   most of a week) the true row count sits well under 300 for days, and the
+   whole feature stayed dark. This is the same shape of bug as the role-
+   intelligence gap Marcus called out earlier: don't gate the WHOLE thing on
+   one coarse signal, read what's actually there per player. Fixed the same
+   way — actualReady() now only requires that we heard back from the gw
+   at all (rows.size>0), and the GW total blends real points for whichever
+   scorers have reported with each remaining scorer's own projected xPts
+   (same project() call their card already uses), so the number shown is
+   always the engine's best current estimate of the final total rather than
+   silently undercounting for players who simply haven't kicked off yet.
+   The status line and header tooltip say plainly how many of the XI are
+   still projected so it's never presented as more final than it is. This
+   applies identically to every player, team and gameweek — nothing here is
+   keyed to a specific player. The Accuracy/backtesting module's own >=300
+   completeness check (app-core.js) is separate and untouched. */
 (function loadOtbCore(){
   const script=document.createElement('script');
   script.src='app-core.js?v=2026.08.21.1-core';
@@ -24,7 +43,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.21.3';
+  const BUILD='2026.08.21.4';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -33,7 +52,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.21.3';badge.title='OTB live GW points + team import bridge';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.21.4';badge.title='OTB live GW points + team import bridge';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){
@@ -56,12 +75,13 @@ function installOtbLivePointsPatch(){
   const deadlinePassed=gw=>{const t=deadlineForGw(gw);return Number.isFinite(t)&&Date.now()>=t};
   const selectedGwView=()=>S.display!=='total';
   const actualRequested=()=>selectedGwView()&&deadlinePassed(S.gw)&&scoreMode!=='expected';
-  const actualReady=()=>actualRequested()&&LIVE.gw===Number(S.gw)&&LIVE.rows.size>=300;
+  const actualReady=()=>actualRequested()&&LIVE.gw===Number(S.gw)&&LIVE.rows.size>0;
   const actualForPlayer=p=>{
     if(!actualReady()||p?.apiId==null)return null;
     const row=LIVE.rows.get(Number(p.apiId));
     return row&&Number.isFinite(Number(row.pts))?Number(row.pts):null;
   };
+  const projectedForPlayer=p=>{try{const r=project(p,S.gw);return Number.isFinite(r?.x)?r.x:0}catch(_){return 0}};
 
   const displaySelect=document.getElementById('oDisplay');
   if(displaySelect){
@@ -108,8 +128,12 @@ function installOtbLivePointsPatch(){
     }
     if(LIVE.loading){status.textContent=`Loading GW${S.gw} official points…`;return;}
     if(actualReady()){
-      const age=Math.max(0,Math.floor((Date.now()-LIVE.loadedAt)/60000));
-      status.textContent=`GW${S.gw} official points · ${age<1?'live':age+'m old'}`;return;
+      const age=Math.max(0,Math.floor((Date.now()-LIVE.loadedAt)/60000)),pending=pendingScorerCount();
+      const freshness=age<1?'live':age+'m old';
+      status.textContent=pending>0
+        ? `GW${S.gw} official points · ${freshness} · ${pending} of your XI still to kick off (shown as projected xPts)`
+        : `GW${S.gw} official points · ${freshness}`;
+      return;
     }
     status.textContent=LIVE.error?`GW points unavailable · ${LIVE.error}`:`GW${S.gw} official points pending.`;
   }
@@ -117,13 +141,13 @@ function installOtbLivePointsPatch(){
   async function refreshLiveGwPoints({force=false}={}){
     if(!actualRequested()||navigator.onLine===false)return false;
     if(LIVE.loading)return false;
-    if(!force&&LIVE.gw===Number(S.gw)&&LIVE.rows.size>=300&&Date.now()-LIVE.loadedAt<45000)return true;
+    if(!force&&LIVE.gw===Number(S.gw)&&LIVE.rows.size>0&&Date.now()-LIVE.loadedAt<45000)return true;
     const requestedGw=Number(S.gw);
     LIVE.loading=true;LIVE.error='';renderScoreStatus();
     try{
       const payload=await fetchJSON(`${API_BASE}/api/event-live?gw=${requestedGw}`,15000);
       const rows=actualRowsFromPayload(payload);
-      if(rows.length<300)throw new Error(`${rows.length} player rows returned`);
+      if(rows.length<1)throw new Error('FPL has not published any player stats for this gameweek yet');
       if(Number(S.gw)!==requestedGw)return false;
       LIVE.gw=requestedGw;LIVE.rows=new Map(rows.map(row=>[Number(row.i),row]));LIVE.loadedAt=Date.now();
       requestAnimationFrame(()=>{renderPitch();renderSpine();renderScoreStatus()});
@@ -146,20 +170,36 @@ function installOtbLivePointsPatch(){
       .replace(/expected-points total/g,'official GW-points result');
   };
 
+  function currentScorers(){
+    const players=squadPlayers(),chip=chipStateForGw(S.gw);
+    return chip.benchScoring?players:players.filter(p=>S.start.has(p.id));
+  }
+  function pendingScorerCount(){
+    if(!actualReady())return 0;
+    return currentScorers().filter(p=>actualForPlayer(p)===null).length;
+  }
+
   const projectedRenderSpine=renderSpine;
   renderSpine=function(){
     const out=projectedRenderSpine();
     const key=document.querySelector('#spineWrap .spine-key');
     if(!actualReady()){if(key)key.style.display='';return out;}
-    const players=squadPlayers(),chip=chipStateForGw(S.gw),scorers=chip.benchScoring?players:players.filter(p=>S.start.has(p.id));
-    let sum=0;
-    for(const p of scorers){const pts=actualForPlayer(p);if(pts===null)continue;sum+=pts*(p.id===S.cap?chip.captainMultiplier:1);}
+    const chip=chipStateForGw(S.gw),scorers=currentScorers();
+    let sum=0,pending=0;
+    for(const p of scorers){
+      const mult=p.id===S.cap?chip.captainMultiplier:1;
+      const actual=actualForPlayer(p);
+      if(actual!==null){sum+=actual*mult;continue}
+      pending++;sum+=projectedForPlayer(p)*mult;
+    }
+    sum=Math.round(sum*10)/10;
     const total=document.getElementById('spineTotal'),head=document.getElementById('hXpts'),label=document.getElementById('hXptsLabel');
     if(total)total.textContent=String(sum);if(head)head.textContent=String(sum);
-    const title=`Official FPL GW${S.gw} player points for the selected scoring XI${chip.benchScoring?' plus Bench Boost':''}. Pending autosubs or vice-captain promotion can still change the final FPL team total.`;
-    if(label){label.textContent=`${chip.benchScoring?'BB 15':'XI'} GW points`;label.title=title;}
+    const pendingNote=pending>0?` ${pending} of ${scorers.length} have not kicked off yet and are shown as projected xPts, not final.`:'';
+    const title=`Official FPL GW${S.gw} player points for the selected scoring XI${chip.benchScoring?' plus Bench Boost':''}.${pendingNote} Pending autosubs or vice-captain promotion can still change the final FPL team total.`;
+    if(label){label.textContent=`${chip.benchScoring?'BB 15':'XI'} GW points${pending>0?' (partial)':''}`;label.title=title;}
     if(head){head.title=title;head.setAttribute('aria-label',`${title} ${sum} points`);}
-    const spine=document.getElementById('spine');if(spine)spine.innerHTML='<div style="width:100%;background:var(--mint)" title="Official FPL GW points"></div>';
+    const spine=document.getElementById('spine');if(spine)spine.innerHTML=`<div style="width:100%;background:var(--mint)" title="${pending>0?'Partial — some players have not kicked off yet':'Official FPL GW points'}"></div>`;
     if(key)key.style.display='none';
     return out;
   };
