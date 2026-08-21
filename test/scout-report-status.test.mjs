@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
 
-const html=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const html=readFileSync(new URL('../app-core.js',import.meta.url),'utf8');
 const helperStart=html.indexOf('function scoutSourceReadCount');
 const helperEnd=html.indexOf('function applyScoutReport',helperStart);
 assert.ok(helperStart>=0&&helperEnd>helperStart,'scout source-read helpers must be present');
