@@ -315,9 +315,12 @@ test('refresh persists a per-source report and retains European rows when UEFA s
 const UEFA_PAGE='<script>window.apiKey="key-abc";window.currentSeason=2027;</script>';
 const okText=body=>({ok:true,headers:{get:()=>String(body.length)},text:async()=>body});
 
-function uefaFetchStub({matchesBySeason={},pageBySource={},onCall=()=>{}}={}){
+function uefaFetchStub({matchesBySeason={},pageBySource={},competitions=[],onCall=()=>{}}={}){
   return async(url)=>{
     onCall(url);
+    if(url.startsWith('https://match.uefa.com/v5/competitions')){
+      return okText(JSON.stringify(competitions));
+    }
     if(!url.startsWith('https://match.uefa.com/')){
       return okText(pageBySource[url]!==undefined?pageBySource[url]:UEFA_PAGE);
     }
@@ -363,7 +366,7 @@ test('a season year that already works is never retried',async()=>{
   const row=(id,name)=>({...ueclMatchRow,competition:{id,sex:'MALE',age:'ADULT'},awayTeam:{internationalName:name,teamTypeDetail:'DOMESTIC_MEN_TEAM_A'}});
   const fetchFn=uefaFetchStub({
     matchesBySeason:{'1|2027':[row('1','Arsenal')],'3|2027':[row('3','Aston Villa')],'2032|2027':[ueclMatchRow]},
-    onCall:u=>{if(u.startsWith('https://match.uefa.com/'))matchCalls+=1},
+    onCall:u=>{if(u.startsWith('https://match.uefa.com/v5/matches'))matchCalls+=1},
   });
   const results=await loadUefaSources(fetchFn,teams,window26,updatedAt);
   assert.deepEqual(results.map(r=>r.detail.seasonYearRetried),[null,null,null]);
@@ -406,4 +409,57 @@ test('a cron tick landing a few seconds early still refreshes instead of losing 
   const early=await maybeRefreshClubSchedule({DB:new MemoryDb(base)},{nowMs:Date.parse('2026-08-20T17:00:00Z'),sourceLoaders:loaders});
   assert.equal(early.skipped,true);
   assert.match(early.reason,/cooldown/);
+});
+
+/* 21 Aug telemetry: competitionId 1 returned 34 matches while 3 and 2032
+   returned empty payloads at BOTH candidate season years. Season year was
+   therefore exonerated and the two identifiers are simply wrong. Rather than
+   guess replacements, ask UEFA which ids exist and match on name. */
+
+const UEFA_INDEX=[
+  {id:'1',name:'UEFA Champions League'},
+  {id:'2019',name:'UEFA Europa League'},
+  {id:'2020',name:'UEFA Europa Conference League'},
+];
+
+test('competition ids are discovered from UEFA rather than trusted from the constant',async()=>{
+  const row=id=>({...ueclMatchRow,competition:{id,sex:'MALE',age:'ADULT'}});
+  const fetchFn=uefaFetchStub({competitions:UEFA_INDEX,matchesBySeason:{'2020|2027':[row('2020')]}});
+  const results=await loadUefaSources(fetchFn,teams,window26,updatedAt);
+  const uecl=results.find(r=>r.source===CLUB_SCHEDULE_SOURCES.uecl);
+  assert.equal(uecl.detail.competitionId,'2020','the discovered id must be used, not the hardcoded 2032');
+  assert.equal(uecl.detail.competitionIdFallback,'2032');
+  assert.equal(uecl.detail.competitionIdSource,'discovered');
+  assert.equal(uecl.yielded,1,'and it must actually recover the Brighton fixture');
+  assert.equal(uecl.fixtures[0].team,'BHA');
+});
+
+test('Europa League is not matched by the Conference League entry, or vice versa',async()=>{
+  const fetchFn=uefaFetchStub({competitions:UEFA_INDEX});
+  const results=await loadUefaSources(fetchFn,teams,window26,updatedAt);
+  const byId=Object.fromEntries(results.map(r=>[r.source,r.detail?.competitionId]));
+  assert.equal(byId[CLUB_SCHEDULE_SOURCES.uel],'2019','"UEFA Europa Conference League" must not capture the Europa League slot');
+  assert.equal(byId[CLUB_SCHEDULE_SOURCES.uecl],'2020');
+  assert.equal(byId[CLUB_SCHEDULE_SOURCES.ucl],'1');
+});
+
+test('a failed competition lookup falls back to the constant rather than fetching nothing',async()=>{
+  const fetchFn=async url=>{
+    if(url.startsWith('https://match.uefa.com/v5/competitions'))return {ok:false,status:503,headers:{get:()=>'0'},text:async()=>''};
+    if(!url.startsWith('https://match.uefa.com/'))return okText(UEFA_PAGE);
+    return okText(JSON.stringify([]));
+  };
+  const results=await loadUefaSources(fetchFn,teams,window26,updatedAt);
+  const uecl=results.find(r=>r.source===CLUB_SCHEDULE_SOURCES.uecl);
+  assert.equal(uecl.ok,true,'a lookup failure must not fail the whole competition');
+  assert.equal(uecl.detail.competitionId,'2032','worst case is exactly the previous behaviour');
+  assert.equal(uecl.detail.competitionIdSource,'hardcoded');
+  assert.ok(uecl.detail.competitionIndexError,'and the reason must be recorded');
+});
+
+test('an unrecognised competition list leaves every fallback in place',async()=>{
+  const fetchFn=uefaFetchStub({competitions:[{id:'999',name:'Some Other Cup'}]});
+  const results=await loadUefaSources(fetchFn,teams,window26,updatedAt);
+  assert.deepEqual(results.map(r=>r.detail.competitionIdSource),['hardcoded','hardcoded','hardcoded']);
+  assert.equal(results[0].detail.competitionsIndexed,1,'the lookup succeeded, it just matched nothing');
 });

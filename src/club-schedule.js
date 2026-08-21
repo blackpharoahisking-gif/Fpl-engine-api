@@ -25,10 +25,17 @@ export const CLUB_SCHEDULE_SOURCES = Object.freeze({
   faCup: 'https://www.thefa.com/competitions/thefacup/fixtures',
 });
 
+/* `id` is a FALLBACK only. Telemetry on 21 Aug showed competitionId 1 returning
+   34 matches while 3 and 2032 returned empty payloads at BOTH candidate season
+   years -- so the season year is exonerated and these two identifiers are
+   simply wrong or have moved. Rather than guess replacements, ask UEFA which
+   ids exist and match on name; `match` is how a discovered competition is
+   recognised. Discovery failing leaves the fallback id in place, so the worst
+   case is exactly today's behaviour. */
 const UEFA_COMPETITIONS = Object.freeze([
-  { id: '1', name: 'UEFA Champions League', source: CLUB_SCHEDULE_SOURCES.ucl },
-  { id: '3', name: 'UEFA Europa League', source: CLUB_SCHEDULE_SOURCES.uel },
-  { id: '2032', name: 'UEFA Conference League', source: CLUB_SCHEDULE_SOURCES.uecl },
+  { id: '1', name: 'UEFA Champions League', source: CLUB_SCHEDULE_SOURCES.ucl, match: /champions/ },
+  { id: '3', name: 'UEFA Europa League', source: CLUB_SCHEDULE_SOURCES.uel, match: /europa/, exclude: /conference/ },
+  { id: '2032', name: 'UEFA Conference League', source: CLUB_SCHEDULE_SOURCES.uecl, match: /conference/ },
 ]);
 
 const CLUB_ALIASES = Object.freeze({
@@ -409,6 +416,30 @@ async function uefaConfigFor(fetchFn, definition, fallback) {
   }
 }
 
+/** Authoritative competition ids straight from UEFA, keyed by lowercased name. */
+export async function uefaCompetitionIndex(fetchFn, config) {
+  const url = new URL('https://match.uefa.com/v5/competitions');
+  url.searchParams.set('seasonYear', String(config.seasonYear));
+  const payload = await fetchJson(fetchFn, url.toString(), { headers: { 'x-api-key': config.apiKey } });
+  const rows = Array.isArray(payload) ? payload : (Array.isArray(payload?.competitions) ? payload.competitions : []);
+  const index = [];
+  for (const row of rows) {
+    const id = text(row?.id ?? row?.competitionId);
+    const name = text(row?.displayName || row?.name || row?.internationalName || row?.translations?.name).toLowerCase();
+    if (id && name) index.push({ id, name });
+  }
+  return index;
+}
+
+export function resolveUefaCompetitionId(index, definition) {
+  for (const row of index || []) {
+    if (!definition.match?.test(row.name)) continue;
+    if (definition.exclude?.test(row.name)) continue;
+    return row.id;
+  }
+  return null;
+}
+
 async function fetchUefaMatches(fetchFn, definition, config, window, seasonYear) {
   const url = new URL('https://match.uefa.com/v5/matches');
   url.searchParams.set('competitionId', definition.id);
@@ -429,11 +460,21 @@ export async function loadUefaSources(fetchFn, teams, window, updatedAt) {
   } catch (error) {
     baseError = error;
   }
+  /* One lookup for the whole refresh, best-effort: a failure here must not
+     stop three competitions from being fetched with their fallback ids. */
+  let competitionIndex = [];
+  let competitionIndexError = null;
+  if (baseConfig) {
+    try { competitionIndex = await uefaCompetitionIndex(fetchFn, baseConfig); }
+    catch (error) { competitionIndexError = error?.message || String(error); }
+  }
   return Promise.all(UEFA_COMPETITIONS.map(async (definition) => {
     try {
       const config = await uefaConfigFor(fetchFn, definition, baseConfig);
+      const discoveredId = resolveUefaCompetitionId(competitionIndex, definition);
+      const active = { ...definition, id: discoveredId || definition.id };
       let seasonYear = config.seasonYear;
-      let payload = await fetchUefaMatches(fetchFn, definition, config, window, seasonYear);
+      let payload = await fetchUefaMatches(fetchFn, active, config, window, seasonYear);
       let seasonYearRetried = null;
       /* An empty payload from a season-scoped sports API is far more often an
          off-by-one season year than a competition with no matches. The
@@ -443,7 +484,7 @@ export async function loadUefaSources(fetchFn, teams, window, updatedAt) {
          answered is recorded below. */
       if (Array.isArray(payload) && !payload.length) {
         const alternate = seasonYear - 1;
-        const retry = await fetchUefaMatches(fetchFn, definition, config, window, alternate).catch(() => null);
+        const retry = await fetchUefaMatches(fetchFn, active, config, window, alternate).catch(() => null);
         seasonYearRetried = alternate;
         if (Array.isArray(retry) && retry.length) {
           payload = retry;
@@ -451,12 +492,16 @@ export async function loadUefaSources(fetchFn, teams, window, updatedAt) {
         }
       }
       const stats = {};
-      const rows = parseUefaMatches(payload, teams, definition, updatedAt, stats);
+      const rows = parseUefaMatches(payload, teams, active, updatedAt, stats);
       /* Request parameters travel with the yield. "Zero rows" on its own is
          not a diagnosis; "zero rows for competitionId X at seasonYear Y" is. */
       return sourceResult(definition.source, true, rows, '', {
         ...stats,
-        competitionId: definition.id,
+        competitionId: active.id,
+        competitionIdFallback: definition.id,
+        competitionIdSource: discoveredId ? 'discovered' : 'hardcoded',
+        competitionsIndexed: competitionIndex.length,
+        competitionIndexError,
         seasonYear,
         seasonYearRetried,
         configSource: config.configSource,
