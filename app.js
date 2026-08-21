@@ -1,4 +1,4 @@
-/* OTB 2026.08.21.4 — live GW points + public team import bridge.
+/* OTB 2026.08.21.5 — live GW points + public team import bridge.
    The production application remains byte-for-byte in app-core.js. This file
    loads it first, then adds a display-only live-points layer. Projection maths,
    optimiser state, role intelligence and Verdict logic are not changed here.
@@ -25,10 +25,24 @@
    still projected so it's never presented as more final than it is. This
    applies identically to every player, team and gameweek — nothing here is
    keyed to a specific player. The Accuracy/backtesting module's own >=300
-   completeness check (app-core.js) is separate and untouched. */
+   completeness check (app-core.js) is separate and untouched.
+   2026.08.21.5: found the actual cause of "22 pts not 27" — importing a
+   team left S.start with 15 members ("Set a legal starting XI — 15/11").
+   applyImportedFplTeam() (app-core.js) decided the starting XI from
+   `multiplier>0 || position<=11`. FPL's picks endpoint keeps `position` as
+   the manager's original pre-deadline order forever and instead updates
+   `multiplier` to reflect autosubs — 0 for an original starter who didn't
+   play and was subbed out, >0 for the bench player subbed in. The OR kept
+   both, so any gameweek with an autosub imported more starters than 11,
+   and the live total then summed every one of them. Fixed to use
+   `position<=11` alone, with a self-heal via autoXI() if that's ever not
+   exactly 11 — app-core.js was edited for this because it's a genuine
+   defect in the import logic itself, not a display concern for this
+   patch layer. The core file's cache-bust query is bumped to .2-core so
+   returning users actually get it. */
 (function loadOtbCore(){
   const script=document.createElement('script');
-  script.src='app-core.js?v=2026.08.21.1-core';
+  script.src='app-core.js?v=2026.08.21.2-core';
   script.async=false;
   script.onload=()=>{
     try{installOtbLivePointsPatch()}
@@ -43,7 +57,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.21.4';
+  const BUILD='2026.08.21.5';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -52,7 +66,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.21.4';badge.title='OTB live GW points + team import bridge';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.21.5';badge.title='OTB live GW points + team import bridge';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){
