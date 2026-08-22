@@ -1,4 +1,5 @@
-/* OTB 2026.08.22.2 — automatic Gameweek intelligence and snapshots.
+/* OTB 2026.08.22.3 — LiveFPL-style card redesign, on top of automatic
+   Gameweek intelligence and snapshots.
    The production application remains byte-for-byte in app-core.js. This file
    loads it first, then adds a display-only live-points layer. Projection maths,
    optimiser state, role intelligence and Verdict logic are not changed here.
@@ -72,10 +73,22 @@
    snapshot from a post-deadline forecast awaiting results. Before the GW
    deadline, the Track Record row reads "Pre-deadline forecast active";
    after the deadline it naturally falls back to the core "Awaiting results"
-   state. This is display-only and does not mutate the snapshot ledger. */
+   state. This is display-only and does not mutate the snapshot ledger.
+   2026.08.22.3: "can otb player card look similar to live fpl players
+   cards?" — approved as a full visual overhaul (app-core.js:cardHTML),
+   not a new feature: a kit-shirt icon (reusing the existing CLUB_COLOURS
+   data) replaces the old colour swatch, captain/vice moved from a text
+   chip onto a small corner badge, and the identity row is tighter and
+   left-aligned like LiveFPL's cards. xEO (effective ownership) was
+   explicitly skipped — OTB has no ownership data source wired in and
+   Marcus agreed that's a separate feature, not part of this redesign.
+   OTB's own stats LiveFPL doesn't have (xPts breakdown, health status,
+   3-GW fixture run) are untouched. This patch layer wasn't touched for
+   the redesign itself — only its cache-bust query for app-core.js is
+   bumped below so returning users actually get the new card. */
 (function loadOtbCore(){
   const script=document.createElement('script');
-  script.src='app-core.js?v=2026.08.22.1-core';
+  script.src='app-core.js?v=2026.08.22.2-core';
   script.async=false;
   script.onload=()=>{
     try{installOtbLivePointsPatch()}
@@ -90,7 +103,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.22.2';
+  const BUILD='2026.08.22.3';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -99,7 +112,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.2';badge.title='OTB automatic Gameweek intelligence + live points';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.3';badge.title='OTB automatic Gameweek intelligence + LiveFPL-style cards';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){

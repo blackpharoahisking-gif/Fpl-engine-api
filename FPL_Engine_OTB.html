@@ -273,6 +273,22 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
 .build-update-banner{position:fixed;right:16px;top:76px;z-index:500;width:min(390px,calc(100vw - 24px));display:flex;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--mint);border-left:4px solid var(--mint);border-radius:6px;background:#24002A;box-shadow:0 18px 50px rgba(0,0,0,.55)}.build-update-banner div{min-width:0;flex:1}.build-update-banner b{display:block;color:var(--mint);font-size:12px}.build-update-banner span{display:block;margin-top:2px;color:var(--muted);font-size:10px;line-height:1.4}.build-update-banner button{flex:0 0 auto;padding:7px 9px;border-radius:3px;background:var(--mint);color:var(--pl-ink);font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
 .dm-shell{border:1px solid rgba(4,245,255,.18);border-radius:5px;background:rgba(4,245,255,.025);overflow:hidden}.dm-empty{padding:10px;font-size:10.5px;line-height:1.5;color:var(--muted)}.dm-list{display:flex;flex-direction:column}.dm-entry{padding:9px 10px;border-top:1px solid rgba(255,255,255,.07)}.dm-entry:first-child{border-top:0}.dm-head{display:flex;align-items:baseline;gap:7px}.dm-time{font:700 9px 'JetBrains Mono',monospace;color:var(--cyan)}.dm-kind{font:800 8px 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.dm-build{margin-left:auto;font:600 8px 'JetBrains Mono',monospace;color:var(--muted)}.dm-reason{margin-top:5px;font-size:10.5px;line-height:1.45;color:var(--paper)}.dm-reason span{display:block}.dm-state{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.dm-pill{padding:2px 5px;border:1px solid var(--line);border-radius:999px;font:600 8px 'JetBrains Mono',monospace;color:var(--muted)}.dm-trigger{margin-top:6px;padding-left:7px;border-left:2px solid #FFC107;font-size:9.5px;line-height:1.45;color:var(--muted)}.dm-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:8px 10px;border-top:1px solid rgba(255,255,255,.07)}.dm-actions .btn{margin:0;font-size:9px;padding:7px}.dm-actions .btn.danger{background:transparent;border:1px solid rgba(233,0,82,.55);color:#FF91B5}
 @media(max-width:560px){.build-badge{font-size:7px;padding:2px 5px}.build-update-banner{top:auto;right:12px;bottom:14px}.dm-actions{grid-template-columns:1fr}.dm-build{display:none}}
+/* Marcus, 21 Aug: "can otb player card look similar to live fpl players cards?"
+   — approved as a full visual overhaul: a LiveFPL-style kit-shirt icon and a
+   tighter, left-aligned identity row up top, captain/vice moved off a text
+   chip onto a small corner badge. Everything the live-points patch and the
+   in-browser self-tests key off — .therm, .cstat, xp-value/xp-label,
+   .card-action-grid, .card-menu, the cardHealth/cardFixtureRun output —
+   is untouched, so these rules only style the new top-of-card markup. */
+.card-top{display:flex;align-items:center;gap:7px;padding:7px 8px 3px;text-align:left}
+.kit-shirt{flex:0 0 auto;display:block}
+.card-top-info{min-width:0;flex:1}
+.card-top .nm{padding:0;text-align:left;font-size:11px}
+.card-top .tm{padding:2px 0 0;text-align:left;letter-spacing:.08em}
+.corner-badge{position:absolute;top:4px;right:4px;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 9px 'JetBrains Mono',monospace;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,.45);line-height:1}
+.corner-badge.cap-badge{background:var(--mint);color:var(--pl-ink)}
+.corner-badge.vice-badge{background:var(--cyan);color:var(--pl-ink)}
+@media(max-width:560px){.kit-shirt{width:22px;height:22px}.card-top{gap:5px;padding:6px 6px 2px}.corner-badge{width:14px;height:14px;font-size:8px}}
 </style>
 <!-- OTB RC4.4 Strategy Laboratory & Six-Style Comparison -->
 </head>
@@ -882,5 +898,5 @@ function run(p){
 }
 onmessage=e=>{if(e.data?.type==='run')run(e.data.payload)};
 </script>
-<script src="app.js?v=2026.08.22.1"></script>
+<script src="app.js?v=2026.08.22.3"></script>
 </body></html>
