@@ -1,4 +1,4 @@
-/* OTB 2026.08.22.1 — automatic Gameweek intelligence and snapshots.
+/* OTB 2026.08.22.2 — automatic Gameweek intelligence and snapshots.
    The production application remains byte-for-byte in app-core.js. This file
    loads it first, then adds a display-only live-points layer. Projection maths,
    optimiser state, role intelligence and Verdict logic are not changed here.
@@ -67,7 +67,12 @@
    still counted toward the total using the best number available, but
    folded into "still to finalize" so the total is never shown as more
    settled than it is; the previous .4 flow only checked for missing data,
-   not for a still-live match. */
+   not for a still-live match.
+   2026.08.22.2: Projection Accountability now distinguishes a valid future
+   snapshot from a post-deadline forecast awaiting results. Before the GW
+   deadline, the Track Record row reads "Pre-deadline forecast active";
+   after the deadline it naturally falls back to the core "Awaiting results"
+   state. This is display-only and does not mutate the snapshot ledger. */
 (function loadOtbCore(){
   const script=document.createElement('script');
   script.src='app-core.js?v=2026.08.22.1-core';
@@ -85,7 +90,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.22.1';
+  const BUILD='2026.08.22.2';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -94,7 +99,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.1';badge.title='OTB automatic Gameweek intelligence + live points';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.2';badge.title='OTB automatic Gameweek intelligence + live points';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){
@@ -315,7 +320,28 @@ function installOtbLivePointsPatch(){
     return out;
   };
 
+  /* Projection Accountability lifecycle display: a valid snapshot before its
+     deadline is still being maintained and is not yet "awaiting results". */
+  const coreRenderAccuracyGwTable=typeof renderAccuracyGwTable==='function'?renderAccuracyGwTable:null;
+  if(coreRenderAccuracyGwTable){
+    renderAccuracyGwTable=function(cohort){
+      const out=coreRenderAccuracyGwTable(cohort);
+      const host=document.getElementById('accuracyGwTable');
+      host?.querySelectorAll('[data-accuracy-gw]').forEach(btn=>{
+        const gw=Number(btn.dataset.accuracyGw);
+        const snap=typeof ACCURACY!=='undefined'?ACCURACY.ledger?.snapshots?.[gw]:null;
+        const deadline=typeof accuracyDeadline==='function'?Number(accuracyDeadline(gw)):NaN;
+        const state=btn.nextElementSibling;
+        if(snap&&typeof accuracySnapshotReady==='function'&&accuracySnapshotReady(gw)&&Number.isFinite(deadline)&&Date.now()<deadline&&state?.textContent==='Awaiting results'){
+          state.textContent='Pre-deadline forecast active';
+        }
+      });
+      return out;
+    };
+  }
+
   ensureScoreControl();renderScoreStatus();
+  try{if(typeof renderAccuracy==='function')renderAccuracy()}catch(_){ }
   document.getElementById('gwSel')?.addEventListener('change',()=>setTimeout(()=>{LIVE.error='';renderScoreStatus();if(actualRequested())refreshLiveGwPoints({force:true});},0));
   displaySelect?.addEventListener('change',()=>setTimeout(()=>{renderScoreStatus();if(actualRequested())refreshLiveGwPoints({force:true});},0));
   setInterval(()=>{if(actualRequested())refreshLiveGwPoints();},60000);
