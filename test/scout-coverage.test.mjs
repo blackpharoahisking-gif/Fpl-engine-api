@@ -119,7 +119,9 @@ test('an irregular starter nets out between the two, not pinned to either',()=>{
   const dropped=sum([obs('observed_bench',3,1),obs('observed_bench',2,170),obs('observed_bench',1,340)]);
   const irregular=sum([obs('observed_role',3,1),obs('observed_bench',2,170),obs('observed_role',1,340)]);
   assert.ok(nailed>0&&dropped<0,'the two extremes must point opposite ways');
-  assert.ok(Math.abs(nailed+dropped)<1e-9,'and be symmetric');
+  /* Each sum calls freshness against the wall clock separately. Allow the
+     sub-millisecond decay difference while still enforcing mirror behaviour. */
+  assert.ok(Math.abs(nailed+dropped)<1e-6,'and be symmetric');
   assert.ok(irregular<nailed&&irregular>dropped,'start-miss-start sits between the extremes');
 });
 
