@@ -1,4 +1,4 @@
-/* OTB 2026.08.21.5 — live GW points + public team import bridge.
+/* OTB 2026.08.21.6 — live GW points + public team import bridge.
    The production application remains byte-for-byte in app-core.js. This file
    loads it first, then adds a display-only live-points layer. Projection maths,
    optimiser state, role intelligence and Verdict logic are not changed here.
@@ -39,7 +39,35 @@
    exactly 11 — app-core.js was edited for this because it's a genuine
    defect in the import logic itself, not a display concern for this
    patch layer. The core file's cache-bust query is bumped to .2-core so
-   returning users actually get it. */
+   returning users actually get it.
+   2026.08.21.6: closes the gap the .4 tooltip disclosed — the live total
+   now actually applies FPL's real autosub and vice-captain-promotion
+   rules instead of a flat sum of the nominal starting XI, so it can match
+   FPL's own total once a gameweek settles, not just approximate it.
+   A player only counts as "confirmed not played" once their OWN fixture
+   has finished (fixtureListFor, already used for congestion) AND they
+   show 0 minutes — never from a mid-match snapshot, so nobody is subbed
+   out prematurely just because a match is still being played. A bench
+   player only counts as an eligible substitute once they show >0 minutes
+   — that reading is irreversible the moment it appears, so it doesn't
+   need to wait on their own match finishing. Which bench players actually
+   come on, in what order, and whether the formation stays legal, reuses
+   the SAME selectAutosubs()/orderedOutfieldBench() the projection engine
+   already uses for expected autosub value (app-core.js) — one algorithm,
+   fed real per-player minutes instead of appearance probabilities, not a
+   second reimplementation that could quietly drift from the first.
+   Captain promotion: if the captain's own fixture has finished with 0
+   minutes, the chip-aware multiplier (2x, or 3x under Triple Captain)
+   moves to the vice-captain's own points, whatever they are — matching
+   FPL's rule that the armband itself transfers, not just a fixed bonus.
+   Bench Boost is unaffected (autosubs don't apply when the whole 15
+   already scores). A scorer is only "final" once BOTH we have their
+   actual points AND their own fixture has finished — anything else
+   (no data yet, or a live number from a match still in progress) is
+   still counted toward the total using the best number available, but
+   folded into "still to finalize" so the total is never shown as more
+   settled than it is; the previous .4 flow only checked for missing data,
+   not for a still-live match. */
 (function loadOtbCore(){
   const script=document.createElement('script');
   script.src='app-core.js?v=2026.08.21.2-core';
@@ -57,7 +85,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.21.5';
+  const BUILD='2026.08.21.6';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -66,7 +94,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.21.5';badge.title='OTB live GW points + team import bridge';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.21.6';badge.title='OTB live GW points + team import bridge';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){
@@ -96,6 +124,71 @@ function installOtbLivePointsPatch(){
     return row&&Number.isFinite(Number(row.pts))?Number(row.pts):null;
   };
   const projectedForPlayer=p=>{try{const r=project(p,S.gw);return Number.isFinite(r?.x)?r.x:0}catch(_){return 0}};
+
+  /* A player's own involvement for the gameweek is only settled once their
+     own fixture has finished — never from a mid-match snapshot. Reuses the
+     same fixture data already driving the congestion calendar. */
+  const playerLocked=(p,gw)=>{
+    if(!p)return false;
+    try{
+      const fx=(typeof fixtureListFor==='function')?fixtureListFor(p.t,gw):[];
+      return fx.length>0&&fx.every(f=>!!f.finished);
+    }catch(_){return false}
+  };
+  const liveMinutes=p=>{
+    if(p?.apiId==null)return null;
+    const row=LIVE.rows.get(Number(p.apiId));
+    return row&&Number.isFinite(Number(row.min))?Number(row.min):null;
+  };
+  const liveMinutesOrZero=p=>{const m=liveMinutes(p);return m===null?0:m};
+
+  /* Decides the actual scoring XI for the gameweek: who was subbed out,
+     who came on, whether the captain armband moved to the vice-captain.
+     Reuses selectAutosubs()/orderedOutfieldBench() from app-core.js — the
+     same functions the projection engine already uses for expected
+     autosub value — fed real per-player minutes instead of appearance
+     probabilities, so there is one autosub algorithm, not two that could
+     quietly disagree. */
+  function resolveActualLineup(){
+    const gw=S.gw,chip=chipStateForGw(gw),squad=squadPlayers();
+    if(chip.benchScoring)return finalizeCaptain(squad,gw,chip,{gkSwapped:false,subsInCount:0,unfilledSubCount:0});
+    const starters=squad.filter(p=>S.start.has(p.id));
+    const benchGK=squad.find(p=>!S.start.has(p.id)&&p.p==='GK')||null;
+    const benchOutfieldRaw=squad.filter(p=>!S.start.has(p.id)&&p.p!=='GK');
+    const benchOutfield=(typeof orderedOutfieldBench==='function')?orderedOutfieldBench(benchOutfieldRaw):benchOutfieldRaw;
+    const startGK=starters.find(p=>p.p==='GK')||null;
+    const startOutfield=starters.filter(p=>p.p!=='GK');
+
+    let finalGK=startGK,gkSwapped=false;
+    if(startGK&&playerLocked(startGK,gw)&&liveMinutesOrZero(startGK)===0&&benchGK){finalGK=benchGK;gkSwapped=true}
+
+    const failed=startOutfield.filter(p=>playerLocked(p,gw)&&liveMinutesOrZero(p)===0);
+    const kept=startOutfield.filter(p=>!failed.includes(p));
+    const baseCounts={DEF:0,MID:0,FWD:0};
+    kept.forEach(p=>baseCounts[p.p]++);
+    const appeared=benchOutfield.filter(p=>{const m=liveMinutes(p);return m!==null&&m>0});
+    let subsInPlayers=[];
+    if(failed.length&&typeof selectAutosubs==='function'){
+      subsInPlayers=selectAutosubs(baseCounts,failed.length,appeared.map(p=>({p}))).map(o=>o.p);
+    }
+    const scorers=[...(finalGK?[finalGK]:[]),...kept,...subsInPlayers];
+    const unfilledSubCount=Math.max(0,failed.length-subsInPlayers.length);
+    return finalizeCaptain(scorers,gw,chip,{gkSwapped,subsInCount:subsInPlayers.length,unfilledSubCount});
+  }
+
+  /* Moves the chip-aware captain multiplier (2x, or 3x under Triple
+     Captain) to the vice-captain once the captain's own fixture has
+     finished with 0 minutes — the armband itself transfers, per FPL's
+     rule, not just a fixed points bonus. Left untouched while the
+     captain's fixture is still in progress. */
+  function finalizeCaptain(scorers,gw,chip,extra){
+    const capId=S.cap,viceId=S.vice,capPlayer=typeof byId==='function'?byId(capId):null;
+    let effectiveCapId=capId,capPromoted=false;
+    if(capPlayer&&viceId!=null&&playerLocked(capPlayer,gw)&&liveMinutesOrZero(capPlayer)===0){
+      effectiveCapId=viceId;capPromoted=true;
+    }
+    return{scorers,effectiveCapId,capMultiplier:chip.captainMultiplier,capPromoted,benchScoring:!!chip.benchScoring,...extra};
+  }
 
   const displaySelect=document.getElementById('oDisplay');
   if(displaySelect){
@@ -145,8 +238,8 @@ function installOtbLivePointsPatch(){
       const age=Math.max(0,Math.floor((Date.now()-LIVE.loadedAt)/60000)),pending=pendingScorerCount();
       const freshness=age<1?'live':age+'m old';
       status.textContent=pending>0
-        ? `GW${S.gw} official points · ${freshness} · ${pending} of your XI still to kick off (shown as projected xPts)`
-        : `GW${S.gw} official points · ${freshness}`;
+        ? `GW${S.gw} official points · ${freshness} · ${pending} of your XI not yet final (in progress or projected)`
+        : `GW${S.gw} official points · ${freshness} · autosubs and vice-captaincy applied`;
       return;
     }
     status.textContent=LIVE.error?`GW points unavailable · ${LIVE.error}`:`GW${S.gw} official points pending.`;
@@ -184,13 +277,10 @@ function installOtbLivePointsPatch(){
       .replace(/expected-points total/g,'official GW-points result');
   };
 
-  function currentScorers(){
-    const players=squadPlayers(),chip=chipStateForGw(S.gw);
-    return chip.benchScoring?players:players.filter(p=>S.start.has(p.id));
-  }
   function pendingScorerCount(){
     if(!actualReady())return 0;
-    return currentScorers().filter(p=>actualForPlayer(p)===null).length;
+    const lineup=resolveActualLineup();
+    return lineup.scorers.filter(p=>actualForPlayer(p)===null||!playerLocked(p,S.gw)).length;
   }
 
   const projectedRenderSpine=renderSpine;
@@ -198,22 +288,29 @@ function installOtbLivePointsPatch(){
     const out=projectedRenderSpine();
     const key=document.querySelector('#spineWrap .spine-key');
     if(!actualReady()){if(key)key.style.display='';return out;}
-    const chip=chipStateForGw(S.gw),scorers=currentScorers();
+    const lineup=resolveActualLineup(),scorers=lineup.scorers;
     let sum=0,pending=0;
     for(const p of scorers){
-      const mult=p.id===S.cap?chip.captainMultiplier:1;
+      const mult=p.id===lineup.effectiveCapId?lineup.capMultiplier:1;
       const actual=actualForPlayer(p);
-      if(actual!==null){sum+=actual*mult;continue}
-      pending++;sum+=projectedForPlayer(p)*mult;
+      const settled=actual!==null&&playerLocked(p,S.gw);
+      if(!settled)pending++;
+      sum+=(actual!==null?actual:projectedForPlayer(p))*mult;
     }
     sum=Math.round(sum*10)/10;
     const total=document.getElementById('spineTotal'),head=document.getElementById('hXpts'),label=document.getElementById('hXptsLabel');
     if(total)total.textContent=String(sum);if(head)head.textContent=String(sum);
-    const pendingNote=pending>0?` ${pending} of ${scorers.length} have not kicked off yet and are shown as projected xPts, not final.`:'';
-    const title=`Official FPL GW${S.gw} player points for the selected scoring XI${chip.benchScoring?' plus Bench Boost':''}.${pendingNote} Pending autosubs or vice-captain promotion can still change the final FPL team total.`;
-    if(label){label.textContent=`${chip.benchScoring?'BB 15':'XI'} GW points${pending>0?' (partial)':''}`;label.title=title;}
+    const notes=[];
+    if(pending>0)notes.push(`${pending} of ${scorers.length} not yet final (in progress or shown as projected xPts)`);
+    if(lineup.capPromoted)notes.push('captain did not play — vice-captain multiplier applied');
+    if(lineup.gkSwapped)notes.push('goalkeeper autosub applied');
+    if(lineup.subsInCount)notes.push(`${lineup.subsInCount} outfield autosub${lineup.subsInCount===1?'':'s'} applied`);
+    if(lineup.unfilledSubCount)notes.push(`${lineup.unfilledSubCount} missing starter${lineup.unfilledSubCount===1?'':'s'} had no legal bench cover`);
+    const noteText=notes.length?` ${notes.join('; ')}.`:'';
+    const title=`Official FPL GW${S.gw} player points for the actual scoring XI${lineup.benchScoring?' plus Bench Boost':''} — autosubs and vice-captain promotion applied where each player's own fixture has finished.${noteText}`;
+    if(label){label.textContent=`${lineup.benchScoring?'BB 15':'XI'} GW points${pending>0?' (partial)':''}`;label.title=title;}
     if(head){head.title=title;head.setAttribute('aria-label',`${title} ${sum} points`);}
-    const spine=document.getElementById('spine');if(spine)spine.innerHTML=`<div style="width:100%;background:var(--mint)" title="${pending>0?'Partial — some players have not kicked off yet':'Official FPL GW points'}"></div>`;
+    const spine=document.getElementById('spine');if(spine)spine.innerHTML=`<div style="width:100%;background:var(--mint)" title="${pending>0?'Partial — some players not yet final':'Official FPL GW points'}"></div>`;
     if(key)key.style.display='none';
     return out;
   };

@@ -36,8 +36,7 @@ test('a scorer who has not kicked off yet is blended in via their own projected 
 });
 
 test('a partial GW total says so instead of presenting itself as final',()=>{
-  assert.match(app,/still to kick off/);
-  assert.match(app,/not final/);
+  assert.match(app,/not yet final/);
 });
 
 test('Worker proxies only the public FPL reads required by import and live scoring',()=>{
