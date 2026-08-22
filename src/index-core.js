@@ -11,12 +11,17 @@ import {
   maybeRefreshClubSchedule,
   readClubSchedule,
 } from './club-schedule.js';
+import {
+  GAMEWEEK_INTELLIGENCE_VERSION,
+  buildGameweekIntelligence,
+  normalizeGameweekStats,
+} from './gameweek-intelligence.js';
 
 const FPL = 'https://fantasy.premierleague.com/api';
 const UA = 'FPLEngine/2.2B (personal fantasy tool)';
 
 const POS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
-const WORKER_SCHEMA_VERSION = 7;
+const WORKER_SCHEMA_VERSION = 8;
 const DEFAULT_SEASON = '2026/27';
 const PUBLIC_SYNC_COOLDOWN_MS = 35 * 60 * 1000;
 const PIPELINE_LOCK_TTL_MS = 15 * 60 * 1000;
@@ -30,6 +35,7 @@ const EVALUATION_CAPTURE_MIN_COOLDOWN_MS = 20 * 60 * 1000;
 const EVALUATION_BASELINE_WINDOW_MS = 35 * 60 * 1000;
 const EVALUATION_MIN_PLAYERS = 300;
 const EVALUATION_MAX_PLAYERS = 800;
+const GAMEWEEK_INTELLIGENCE_MIN_PLAYERS = 300;
 
 function evaluationCaptureCooldownMs(hoursUntil) {
   if (hoursUntil > 24) return 12 * 3600e3;
@@ -704,6 +710,266 @@ async function captureCheckedActuals(env, boot, timestamp) {
   return { ok: true, captured, gameweeks };
 }
 
+let GAMEWEEK_INTELLIGENCE_SCHEMA_READY = false;
+
+async function ensureGameweekIntelligenceSchema(env) {
+  if (GAMEWEEK_INTELLIGENCE_SCHEMA_READY) return;
+  await env.DB.batch([
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS gameweek_player_stats (
+         season TEXT NOT NULL,
+         gw INTEGER NOT NULL,
+         player_id INTEGER NOT NULL,
+         web_name TEXT NOT NULL,
+         team_code TEXT NOT NULL,
+         position INTEGER NOT NULL,
+         price INTEGER NOT NULL,
+         ownership REAL NOT NULL,
+         status TEXT NOT NULL,
+         total_points REAL NOT NULL,
+         minutes REAL NOT NULL,
+         starts REAL NOT NULL,
+         goals_scored REAL NOT NULL,
+         assists REAL NOT NULL,
+         clean_sheets REAL NOT NULL,
+         goals_conceded REAL NOT NULL,
+         own_goals REAL NOT NULL,
+         penalties_saved REAL NOT NULL,
+         penalties_missed REAL NOT NULL,
+         yellow_cards REAL NOT NULL,
+         red_cards REAL NOT NULL,
+         saves REAL NOT NULL,
+         bonus REAL NOT NULL,
+         bps REAL NOT NULL,
+         influence REAL NOT NULL,
+         creativity REAL NOT NULL,
+         threat REAL NOT NULL,
+         ict_index REAL NOT NULL,
+         clearances_blocks_interceptions REAL NOT NULL,
+         recoveries REAL NOT NULL,
+         tackles REAL NOT NULL,
+         defensive_contribution REAL NOT NULL,
+         expected_goals REAL NOT NULL,
+         expected_assists REAL NOT NULL,
+         expected_goal_involvements REAL NOT NULL,
+         expected_goals_conceded REAL NOT NULL,
+         in_dreamteam INTEGER NOT NULL,
+         captured_at TEXT NOT NULL,
+         PRIMARY KEY (season, gw, player_id)
+       )`
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_gameweek_player_stats_player
+       ON gameweek_player_stats (season, player_id, gw DESC)`
+    ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS gameweek_reviews (
+         season TEXT NOT NULL,
+         gw INTEGER NOT NULL,
+         review_version TEXT NOT NULL,
+         source_hash TEXT NOT NULL,
+         generated_at TEXT NOT NULL,
+         report_json TEXT NOT NULL,
+         PRIMARY KEY (season, gw)
+       )`
+    ),
+  ]);
+  GAMEWEEK_INTELLIGENCE_SCHEMA_READY = true;
+}
+
+function gameweekStatUpsert(env, row) {
+  return env.DB.prepare(
+    `INSERT INTO gameweek_player_stats (
+       season,gw,player_id,web_name,team_code,position,price,ownership,status,
+       total_points,minutes,starts,goals_scored,assists,clean_sheets,goals_conceded,
+       own_goals,penalties_saved,penalties_missed,yellow_cards,red_cards,saves,
+       bonus,bps,influence,creativity,threat,ict_index,clearances_blocks_interceptions,
+       recoveries,tackles,defensive_contribution,expected_goals,expected_assists,
+       expected_goal_involvements,expected_goals_conceded,in_dreamteam,captured_at)
+     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,
+             ?20,?21,?22,?23,?24,?25,?26,?27,?28,?29,?30,?31,?32,?33,?34,?35,?36,?37,?38)
+     ON CONFLICT(season,gw,player_id) DO UPDATE SET
+       web_name=excluded.web_name,team_code=excluded.team_code,position=excluded.position,
+       price=excluded.price,ownership=excluded.ownership,status=excluded.status,
+       total_points=excluded.total_points,minutes=excluded.minutes,starts=excluded.starts,
+       goals_scored=excluded.goals_scored,assists=excluded.assists,
+       clean_sheets=excluded.clean_sheets,goals_conceded=excluded.goals_conceded,
+       own_goals=excluded.own_goals,penalties_saved=excluded.penalties_saved,
+       penalties_missed=excluded.penalties_missed,yellow_cards=excluded.yellow_cards,
+       red_cards=excluded.red_cards,saves=excluded.saves,bonus=excluded.bonus,bps=excluded.bps,
+       influence=excluded.influence,creativity=excluded.creativity,threat=excluded.threat,
+       ict_index=excluded.ict_index,
+       clearances_blocks_interceptions=excluded.clearances_blocks_interceptions,
+       recoveries=excluded.recoveries,tackles=excluded.tackles,
+       defensive_contribution=excluded.defensive_contribution,
+       expected_goals=excluded.expected_goals,expected_assists=excluded.expected_assists,
+       expected_goal_involvements=excluded.expected_goal_involvements,
+       expected_goals_conceded=excluded.expected_goals_conceded,
+       in_dreamteam=excluded.in_dreamteam,captured_at=excluded.captured_at`
+  ).bind(
+    row.season,row.gw,row.player_id,row.web_name,row.team_code,row.position,row.price,
+    row.ownership,row.status,row.total_points,row.minutes,row.starts,row.goals_scored,
+    row.assists,row.clean_sheets,row.goals_conceded,row.own_goals,row.penalties_saved,
+    row.penalties_missed,row.yellow_cards,row.red_cards,row.saves,row.bonus,row.bps,
+    row.influence,row.creativity,row.threat,row.ict_index,row.clearances_blocks_interceptions,
+    row.recoveries,row.tackles,row.defensive_contribution,row.expected_goals,
+    row.expected_assists,row.expected_goal_involvements,row.expected_goals_conceded,
+    row.in_dreamteam,row.captured_at
+  );
+}
+
+function gameweekReviewUpsert(env, { season, gw, sourceHash, generatedAt, report }) {
+  return env.DB.prepare(
+    `INSERT INTO gameweek_reviews
+       (season,gw,review_version,source_hash,generated_at,report_json)
+     VALUES (?1,?2,?3,?4,?5,?6)
+     ON CONFLICT(season,gw) DO UPDATE SET
+       review_version=excluded.review_version,source_hash=excluded.source_hash,
+       generated_at=excluded.generated_at,report_json=excluded.report_json`
+  ).bind(season,gw,GAMEWEEK_INTELLIGENCE_VERSION,sourceHash,generatedAt,JSON.stringify(report));
+}
+
+async function captureGameweekIntelligence(env, boot, fixtures, timestamp) {
+  await ensureGameweekIntelligenceSchema(env);
+  const season = seasonFromBootstrap(boot);
+  const checked = (boot.events || [])
+    .filter((event) => event.finished && event.data_checked)
+    .map((event) => num(event.id))
+    .sort((a, b) => b - a);
+  if (!checked.length) return { ok: true, skipped: true, reason: 'No data-checked gameweeks' };
+  const required = Math.max(GAMEWEEK_INTELLIGENCE_MIN_PLAYERS, Math.floor((boot.elements || []).length * .9));
+  const existing = await env.DB.prepare(
+    `SELECT reviews.gw,reviews.review_version,COUNT(stats.player_id) AS stats_count
+     FROM gameweek_reviews AS reviews
+     LEFT JOIN gameweek_player_stats AS stats
+       ON stats.season=reviews.season AND stats.gw=reviews.gw
+     WHERE reviews.season=?1
+     GROUP BY reviews.gw,reviews.review_version`
+  ).bind(season).all();
+  const versions = new Map(existing.results.map((row) => [num(row.gw), {
+    version: row.review_version,
+    stats: num(row.stats_count),
+  }]));
+  const missing = checked
+    .filter((gw) => versions.get(gw)?.version !== GAMEWEEK_INTELLIGENCE_VERSION || versions.get(gw)?.stats < required)
+    .slice(0, 2);
+  if (!missing.length) return { ok: true, skipped: true, reason: 'Every checked review is current' };
+
+  const gameweeks = [];
+  let storedPlayers = 0;
+  for (const gw of missing) {
+    const live = await fplGet(`/event/${gw}/live/`);
+    const rows = normalizeGameweekStats({ season, gw, bootstrap: boot, live, capturedAt: timestamp });
+    if (rows.length < required) throw new Error(`GW${gw} intelligence payload has only ${rows.length}/${required} players`);
+    const history = await env.DB.prepare(
+      `SELECT * FROM gameweek_player_stats
+       WHERE season=?1 AND gw BETWEEN ?2 AND ?3
+       ORDER BY gw DESC,player_id`
+    ).bind(season,Math.max(1,gw-4),gw-1).all();
+    const sourceHash = await sha256(JSON.stringify(rows.map((row) => [
+      row.player_id,row.total_points,row.minutes,row.starts,row.goals_scored,row.assists,
+      row.clean_sheets,row.saves,row.bonus,row.bps,row.defensive_contribution,
+      row.expected_goals,row.expected_assists,row.expected_goal_involvements,
+      row.expected_goals_conceded,
+    ])));
+    const report = buildGameweekIntelligence({
+      season,gw,generatedAt:timestamp,rows,historyRows:history.results,
+      fixtures,teams:boot.teams || [],
+    });
+    report.sourceHash = sourceHash;
+    const statements = rows.map((row) => gameweekStatUpsert(env,row));
+    statements.push(gameweekReviewUpsert(env,{season,gw,sourceHash,generatedAt:timestamp,report}));
+    statements.push(metaUpsert(env,`gameweek_intelligence_gw_${gw}`,timestamp,timestamp));
+    for (let i = 0; i < statements.length; i += 60) await env.DB.batch(statements.slice(i,i+60));
+    storedPlayers += rows.length;
+    gameweeks.push(gw);
+  }
+  await env.DB.batch([
+    metaUpsert(env,'gameweek_intelligence_last_at',timestamp,timestamp),
+    metaUpsert(env,'gameweek_intelligence_last_gw',Math.max(...gameweeks),timestamp),
+    metaUpsert(env,'gameweek_intelligence_version',GAMEWEEK_INTELLIGENCE_VERSION,timestamp),
+  ]);
+  return { ok: true, gameweeks, storedPlayers, version: GAMEWEEK_INTELLIGENCE_VERSION };
+}
+
+function gameweekIntelligencePlayerIds(url) {
+  const raw = String(url.searchParams.get('players') || '').split(',');
+  const unique = [];
+  const seen = new Set();
+  for (const value of raw) {
+    const clean = String(value).trim();
+    if (!/^\d+$/.test(clean)) continue;
+    const id = Number(clean);
+    if (!Number.isInteger(id) || id < 1 || seen.has(id)) continue;
+    seen.add(id);
+    unique.push(id);
+    if (unique.length >= 30) break;
+  }
+  return unique;
+}
+
+async function handleGameweekIntelligence(env, url) {
+  await ensureGameweekIntelligenceSchema(env);
+  const season = configuredSeason(env);
+  const requested = String(url.searchParams.get('gw') || 'latest').trim().toLowerCase();
+  let gw = null;
+  if (requested !== 'latest' && !/^\d{1,2}$/.test(requested)) {
+    return json({ error: 'gw must be latest or an integer from 1 to 38' },400);
+  }
+  if (requested !== 'latest') gw = Number(requested);
+  if (gw !== null && (gw < 1 || gw > 38)) return json({ error: 'gw must be latest or an integer from 1 to 38' },400);
+  let review;
+  if (gw === null) {
+    review = await env.DB.prepare(
+      `SELECT gw,review_version,source_hash,generated_at,report_json
+       FROM gameweek_reviews
+       WHERE season=?1 AND review_version=?2
+       ORDER BY gw DESC LIMIT 1`
+    ).bind(season,GAMEWEEK_INTELLIGENCE_VERSION).first();
+    gw = review ? num(review.gw) : null;
+  } else {
+    review = await env.DB.prepare(
+      `SELECT gw,review_version,source_hash,generated_at,report_json
+       FROM gameweek_reviews
+       WHERE season=?1 AND gw=?2 AND review_version=?3`
+    ).bind(season,gw,GAMEWEEK_INTELLIGENCE_VERSION).first();
+  }
+  if (!review) {
+    return json({
+      status:'pending',season,gw,version:GAMEWEEK_INTELLIGENCE_VERSION,
+      message:gw ? `GW${gw} intelligence will be generated automatically after FPL marks the Gameweek finished and data-checked.` : 'No data-checked Gameweek review is available yet.',
+    },200,{'cache-control':'public, max-age=120'});
+  }
+  let report;
+  try { report = JSON.parse(review.report_json); }
+  catch { return json({ error:`GW${gw} review storage is unreadable` },500); }
+  const playerIds = gameweekIntelligencePlayerIds(url);
+  let players = [];
+  if (playerIds.length) {
+    const placeholders = playerIds.map((_,index) => `?${index+3}`).join(',');
+    const result = await env.DB.prepare(
+      `SELECT player_id AS playerId,web_name AS name,team_code AS team,position,
+              price,ownership,total_points AS points,minutes,starts,goals_scored AS goals,
+              assists,clean_sheets AS cleanSheets,goals_conceded AS goalsConceded,
+              saves,bonus,bps,defensive_contribution AS defensiveContribution,
+              expected_goals AS xG,expected_assists AS xA,
+              expected_goal_involvements AS xGI,expected_goals_conceded AS xGC,
+              influence,creativity,threat,ict_index AS ictIndex
+       FROM gameweek_player_stats
+       WHERE season=?1 AND gw=?2 AND player_id IN (${placeholders})
+       ORDER BY player_id`
+    ).bind(season,gw,...playerIds).all();
+    players = result.results.map((row) => ({
+      ...row,
+      position:POS[num(row.position)] || '—',
+      price:Math.round(num(row.price)) / 10,
+    }));
+  }
+  return json({...report,players},200,{
+    'cache-control':'public, max-age=300, stale-while-revalidate=1800',
+  });
+}
+
 async function evaluationServerContext(env, gw, season) {
   const targetSeason = previousSeasonName(season);
   const [players, fixtures, meta] = await Promise.all([
@@ -1203,15 +1469,24 @@ async function poll(env, { sampleTransfers = false } = {}) {
         ]);
       }
       if(sampleTransfers) await saveTransferCheckpoint(env,boot,startedAt);
-      let evaluation={baseline:null,actuals:null,error:null};
+      let evaluation={baseline:null,actuals:null,intelligence:null,error:null};
+      const evaluationErrors=[];
       try {
         evaluation.baseline=await captureOfficialBaselineIfDue(env,boot,fixtures,hash,startedAt);
         evaluation.actuals=await captureCheckedActuals(env,boot,startedAt);
-        await metaUpsert(env,'evaluation_last_error','',startedAt).run();
       } catch(evalErr) {
-        evaluation.error=String(evalErr.message||evalErr);
-        await metaUpsert(env,'evaluation_last_error',evaluation.error,startedAt).run().catch(()=>{});
+        evaluationErrors.push(`accountability: ${String(evalErr.message||evalErr)}`);
       }
+      try {
+        evaluation.intelligence=await captureGameweekIntelligence(env,boot,fixtures,startedAt);
+        await metaUpsert(env,'gameweek_intelligence_last_error','',startedAt).run();
+      } catch(intelligenceErr) {
+        const intelligenceMessage=String(intelligenceErr.message||intelligenceErr);
+        evaluationErrors.push(`gameweek intelligence: ${intelligenceMessage}`);
+        await metaUpsert(env,'gameweek_intelligence_last_error',intelligenceMessage,startedAt).run().catch(()=>{});
+      }
+      evaluation.error=evaluationErrors.length?evaluationErrors.join(' | '):null;
+      await metaUpsert(env,'evaluation_last_error',evaluation.error||'',startedAt).run().catch(()=>{});
       await maybePruneOperationalHistory(env,season,startedAt);
       await env.DB.batch([
         metaUpsert(env,'last_poll',startedAt,startedAt), metaUpsert(env,'last_official_fetch',startedAt,startedAt),
@@ -1386,13 +1661,17 @@ async function healthData(env) {
     evaluationLastActualGw: num(m.evaluation_last_actual_gw, null),
     evaluationLastError: m.evaluation_last_error || null,
     evaluationWriteProtected: Boolean(env.EVALUATION_KEY),
+    gameweekIntelligenceLastAt: m.gameweek_intelligence_last_at || null,
+    gameweekIntelligenceLastGw: num(m.gameweek_intelligence_last_gw, null),
+    gameweekIntelligenceVersion: m.gameweek_intelligence_version || GAMEWEEK_INTELLIGENCE_VERSION,
+    gameweekIntelligenceLastError: m.gameweek_intelligence_last_error || null,
     clubSchedule,
   };
 
   return {
     status,
     service: 'FPL Engine API',
-    release: 'v2.28.0-uefa-name-extraction',
+    release: 'v2.29.0-gameweek-intelligence',
     season: m.season || configuredSeason(env),
     schemaVersion: WORKER_SCHEMA_VERSION,
     storedSchemaVersion: num(m.schema_version, 0),
@@ -1686,6 +1965,9 @@ export default {
           return await handleEvaluationCoverage(env, url);
         case '/api/evaluation/export':
           return await handleEvaluationExport(request, env, url);
+        case '/api/gameweek-intelligence':
+          if (request.method !== 'GET') return json({ error: 'GET required' },405);
+          return await handleGameweekIntelligence(env,url);
         case '/api/watchlist':
           return await handleWatchlist(env, url);
         case '/api/health':
@@ -1728,10 +2010,11 @@ export default {
         default:
           return json({
             service: 'FPL Engine API',
-            release: 'v2.28.0-uefa-name-extraction',
+            release: 'v2.29.0-gameweek-intelligence',
             frontendRoutes: [
               '/bootstrap-static/', '/fixtures/', '/api/news?hours=72',
               '/api/deltas?hours=24', '/api/price-intelligence?hours=24',
+              '/api/gameweek-intelligence?gw=latest&players=1,2,3',
               '/api/evaluation/status?gw=1', '/api/evaluation/coverage?model_version=…', '/api/evaluation/projections (POST)',
               '/api/club-schedule', '/api/health', '/api/metadata', '/api/sync',
             ],

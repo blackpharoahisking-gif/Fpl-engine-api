@@ -131,3 +131,61 @@ CREATE TABLE IF NOT EXISTS poll_log (
   error       TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_polllog_time ON poll_log(started_at DESC);
+
+-- ---------- final Gameweek intelligence ----------
+-- One immutable, official row per player/Gameweek. Reviews are regenerated
+-- only when the deterministic review version changes, keeping weekly storage
+-- bounded while preserving enough history for role and process trends.
+CREATE TABLE IF NOT EXISTS gameweek_player_stats (
+  season TEXT NOT NULL,
+  gw INTEGER NOT NULL,
+  player_id INTEGER NOT NULL,
+  web_name TEXT NOT NULL,
+  team_code TEXT NOT NULL,
+  position INTEGER NOT NULL,
+  price INTEGER NOT NULL,
+  ownership REAL NOT NULL,
+  status TEXT NOT NULL,
+  total_points REAL NOT NULL,
+  minutes REAL NOT NULL,
+  starts REAL NOT NULL,
+  goals_scored REAL NOT NULL,
+  assists REAL NOT NULL,
+  clean_sheets REAL NOT NULL,
+  goals_conceded REAL NOT NULL,
+  own_goals REAL NOT NULL,
+  penalties_saved REAL NOT NULL,
+  penalties_missed REAL NOT NULL,
+  yellow_cards REAL NOT NULL,
+  red_cards REAL NOT NULL,
+  saves REAL NOT NULL,
+  bonus REAL NOT NULL,
+  bps REAL NOT NULL,
+  influence REAL NOT NULL,
+  creativity REAL NOT NULL,
+  threat REAL NOT NULL,
+  ict_index REAL NOT NULL,
+  clearances_blocks_interceptions REAL NOT NULL,
+  recoveries REAL NOT NULL,
+  tackles REAL NOT NULL,
+  defensive_contribution REAL NOT NULL,
+  expected_goals REAL NOT NULL,
+  expected_assists REAL NOT NULL,
+  expected_goal_involvements REAL NOT NULL,
+  expected_goals_conceded REAL NOT NULL,
+  in_dreamteam INTEGER NOT NULL,
+  captured_at TEXT NOT NULL,
+  PRIMARY KEY (season, gw, player_id)
+);
+CREATE INDEX IF NOT EXISTS idx_gameweek_player_stats_player
+  ON gameweek_player_stats (season, player_id, gw DESC);
+
+CREATE TABLE IF NOT EXISTS gameweek_reviews (
+  season TEXT NOT NULL,
+  gw INTEGER NOT NULL,
+  review_version TEXT NOT NULL,
+  source_hash TEXT NOT NULL,
+  generated_at TEXT NOT NULL,
+  report_json TEXT NOT NULL,
+  PRIMARY KEY (season, gw)
+);

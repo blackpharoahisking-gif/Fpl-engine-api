@@ -72,6 +72,11 @@ test('events for a different player do not count as this player\'s coverage',()=
    three. Three benchings therefore counted once while three starts counted
    three times, so a dropped player could only ever drift upward. */
 
+const TEST_NOW=Date.parse('2026-08-22T12:00:00.000Z');
+class FixedDate extends Date{
+  static now(){return TEST_NOW;}
+}
+
 function policyContext(){
   const start=html.indexOf('const ROLE_INTEL=');
   const end=html.indexOf('\nfunction poissonTail',start);
@@ -79,7 +84,7 @@ function policyContext(){
     clamp:(x,a,b)=>Math.max(a,Math.min(b,x)),
     num:(x,d=0)=>Number.isFinite(Number(x))?Number(x):d,
     S:{roleIntel:{events:[]}},POOL:[],stableKey:p=>'api:'+p.apiId,
-    Date,Math,Object,Array,String,Number,console,
+    Date:FixedDate,Math,Object,Array,String,Number,console,
   };
   vm.createContext(context);
   vm.runInContext(`${html.slice(start,end)};globalThis.__p={ROLE_EVIDENCE_POLICY,roleEventLogOdds,resolveRoleIntelEvents,roleSelectionEvidenceDirection};`,context);
@@ -89,8 +94,8 @@ function policyContext(){
 const obs=(type,round,ageHours=0)=>({
   id:`e${type}${round}`,affectedKey:'api:1',affected:'Keeper',subject:'Keeper',type,rawType:type,
   overlap:1,hierarchy:1,confidence:.95,evidenceClass:'selection',
-  evidenceDate:new Date(Date.now()-ageHours*3600000).toISOString(),
-  createdAt:Date.now()-ageHours*3600000,
+  evidenceDate:new Date(TEST_NOW-ageHours*3600000).toISOString(),
+  createdAt:TEST_NOW-ageHours*3600000,
 });
 
 test('a start and a non-start are mirror images on the same channel',()=>{

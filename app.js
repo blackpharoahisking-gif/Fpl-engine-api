@@ -1,4 +1,4 @@
-/* OTB 2026.08.21.6 — live GW points + public team import bridge.
+/* OTB 2026.08.22.1 — automatic Gameweek intelligence and snapshots.
    The production application remains byte-for-byte in app-core.js. This file
    loads it first, then adds a display-only live-points layer. Projection maths,
    optimiser state, role intelligence and Verdict logic are not changed here.
@@ -70,7 +70,7 @@
    not for a still-live match. */
 (function loadOtbCore(){
   const script=document.createElement('script');
-  script.src='app-core.js?v=2026.08.21.2-core';
+  script.src='app-core.js?v=2026.08.22.1-core';
   script.async=false;
   script.onload=()=>{
     try{installOtbLivePointsPatch()}
@@ -85,7 +85,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.21.6';
+  const BUILD='2026.08.22.1';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -94,7 +94,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.21.6';badge.title='OTB live GW points + team import bridge';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.1';badge.title='OTB automatic Gameweek intelligence + live points';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){
