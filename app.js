@@ -1,6 +1,6 @@
-/* OTB 2026.08.22.7 — a card only reports a real result once that player's
-   own fixture has kicked off, on top of cards showing real per-GW points
-   in whole-period view, the live GW score's guaranteed-visible home,
+/* OTB 2026.08.22.8 — a card's bright headline figure is the live GW score
+   in every view, on top of only reporting a real result once that player's
+   fixture has kicked off, the live GW score's guaranteed-visible home,
    separating predictive points from actual points, the LiveFPL-style card
    redesign, and automatic Gameweek intelligence/snapshots.
    The production application remains byte-for-byte in app-core.js. This file
@@ -150,7 +150,23 @@
    unstarted players are "shown as projected xPts" when they are in fact
    counted as their own live 0. It now states what is true: how many are
    final, how many are still playing, how many are yet to kick off, and
-   whether Bench Boost is why the count is 15 rather than 11. */
+   whether Bench Boost is why the count is 15 rather than 11.
+   2026.08.22.8: "the numbers shown in bright green want that to be live
+   gw points" — an explicit reversal of .4's rule that a card's headline
+   figure stays projected in whole-period view. That rule's arithmetic
+   objection was sound (a GW1-2 horizon total is not GW1's score) but it
+   answered the wrong question: mid-gameweek the number worth reading at
+   a glance is what your players are actually scoring, and .6/.7 had left
+   that as small print under a large projection. The headline slot now
+   carries the live score in every view, labelled "GW{n} pts" once the
+   fixture is finished and "GW{n} live" while it is still running.
+   Nothing is lost to make room: the displaced projection is captured
+   verbatim from the markup — its value AND its own label — and written
+   onto the secondary line ahead of the fixture text, so the card still
+   shows both numbers and each still says exactly what it is. A player
+   whose fixture has not kicked off keeps the projection in the headline,
+   per .7, because there is still no real number to put there.
+   selectedGwView() gated nothing after this and was removed. */
 (function loadOtbCore(){
   const script=document.createElement('script');
   script.src='app-core.js?v=2026.08.22.4-core';
@@ -168,7 +184,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.22.7';
+  const BUILD='2026.08.22.8';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -177,7 +193,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.7';badge.title='OTB automatic Gameweek intelligence + LiveFPL-style cards + live GW score everywhere';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.8';badge.title='OTB automatic Gameweek intelligence + LiveFPL-style cards + live GW score everywhere';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){
@@ -198,7 +214,6 @@ function installOtbLivePointsPatch(){
   const eventForGw=gw=>(Array.isArray(EVENTS)?EVENTS:[]).find(e=>Number(e?.id)===Number(gw));
   const deadlineForGw=gw=>Date.parse(eventForGw(gw)?.deadline_time||'');
   const deadlinePassed=gw=>{const t=deadlineForGw(gw);return Number.isFinite(t)&&Date.now()>=t};
-  const selectedGwView=()=>S.display!=='total';
 
   /* Marcus, 22 Aug: "this last update broke the live scoring update that
      shows current gw score...we should separate predictive points from
@@ -220,12 +235,10 @@ function installOtbLivePointsPatch(){
      status line, populated by renderLiveGwScore() below, and the
      predictive spine (renderSpine/#spineTotal/#hXpts) is no longer
      overwritten with actual data — it always shows what its own label
-     says, "Projected scoring points", full stop. selectedGwView() is
-     kept only for the one place actual data still needs it: an
-     individual card's xp-value is a single number that means a
-     multi-GW horizon total in "whole period" mode, so it must stay a
-     projection there — swapping it for a single GW's real points would
-     be wrong, not more accurate. */
+     says, "Projected scoring points", full stop.
+     (.4 also kept a selectedGwView() helper so a card's headline number
+     stayed projected in whole-period view; .8 removed it — see the
+     cardHTML override below for why that call was reversed.) */
   const liveDataRequested=()=>deadlinePassed(S.gw)&&scoreMode!=='expected';
   const liveScoreReady=()=>liveDataRequested()&&LIVE.gw===Number(S.gw)&&LIVE.rows.size>0;
   const actualForPlayer=p=>{
@@ -414,18 +427,31 @@ function installOtbLivePointsPatch(){
     /* A 0 from FPL's live endpoint before kickoff is "nothing recorded
        yet", not a result — keep showing the projection until this
        player's own fixture has actually started, then label it honestly:
-       "live" while the match is running, "actual" once it has finished. */
+       "live" while the match is running, "pts" once it has finished. */
     if(!playerStarted(p,S.gw))return html;
-    const resultTag=playerLocked(p,S.gw)?'actual':'live';
-    if(selectedGwView()){
-      if(S.shotMode)return html.replace(/<div class="cstat">[^<]*<\/div>/,`<div class="cstat">${pts}</div>`);
-      html=html.replace(/<div class="therm"[^>]*><\/div>/,'');
-      html=html
-        .replace(/<span class="xp-value">[^<]*<\/span><span class="xp-label">[^<]*<\/span>/,`<span class="xp-value">${pts}</span><span class="xp-label">GW${S.gw} pts</span>`)
-        .replace(/expected-points details/g,'official GW-points result')
-        .replace(/expected-points total/g,'official GW-points result');
-    }
-    return html.replace(/<span class="secondary-value">GW\d+ [^<]*<\/span>/,`<span class="secondary-value">GW${S.gw} ${pts} pts (${resultTag})</span>`);
+    const settled=playerLocked(p,S.gw);
+    if(S.shotMode)return html.replace(/<div class="cstat">[^<]*<\/div>/,`<div class="cstat">${pts}</div>`);
+    /* Marcus, 23 Aug: "the numbers shown in bright green want that to be
+       live gw points". The headline slot now carries the live score in
+       EVERY view, not just Selected-GW — the earlier reasoning (that a
+       whole-period card has no single-GW figure to put there) was right
+       about the arithmetic but wrong about the priority: mid-gameweek the
+       thing worth reading at a glance is what your players are actually
+       scoring. Nothing is lost, because the horizon projection that used
+       to occupy the slot is captured verbatim and moved down onto the
+       secondary line, keeping its own label and fixture — so the card
+       still shows both numbers, just the other way round, and each one
+       still says exactly what it is. */
+    const headline=html.match(/<span class="xp-value">([^<]*)<\/span><span class="xp-label">([^<]*)<\/span>/);
+    const displaced=headline?`${headline[1]} ${headline[2]}`:'';
+    html=html.replace(/<div class="therm"[^>]*><\/div>/,'');
+    html=html
+      .replace(/<span class="xp-value">[^<]*<\/span><span class="xp-label">[^<]*<\/span>/,`<span class="xp-value">${pts}</span><span class="xp-label">GW${S.gw} ${settled?'pts':'live'}</span>`)
+      .replace(/expected-points details/g,`${settled?'final':'live'} GW-points result`)
+      .replace(/expected-points total/g,`${settled?'final':'live'} GW-points result`);
+    return displaced
+      ?html.replace(/<span class="secondary-value">GW\d+ [^<]*<\/span>/,`<span class="secondary-value">${displaced}</span>`)
+      :html;
   };
 
   function pendingScorerCount(){

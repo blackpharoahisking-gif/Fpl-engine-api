@@ -79,26 +79,42 @@ function sandbox(){
 
 const player=(id,t)=>({id,n:'Test',p:'MID',t,c:6.0,apiId:id});
 const secondaryLine=html=>(html.match(/<span class="secondary-value">[^<]*<\/span>/)||[''])[0];
+/* The headline slot is the big bright-green figure Marcus reads first:
+   "the numbers shown in bright green want that to be live gw points". */
+const headline=html=>{
+  const m=html.match(/<span class="xp-value">([^<]*)<\/span><span class="xp-label">([^<]*)<\/span>/);
+  return m?{value:m[1],label:m[2]}:null;
+};
 
 test('a player whose fixture has not kicked off keeps his projection instead of being reported as a 0-point result',()=>{
   const ctx=sandbox();
   const p=player(8,'BHA');
   assert.equal(ctx.__f.playerStarted(p,1),false,'BHA fixture has started:false and the player has no minutes');
-  const line=secondaryLine(ctx.__f.cardHTML(p));
-  assert.doesNotMatch(line,/actual/,'must not claim an actual result for a match that has not begun');
-  assert.doesNotMatch(line,/0 pts/,'the exact string Marcus saw must be gone');
-  assert.match(line,/xP/,'it should still read as the projection it is');
+  const html=ctx.__f.cardHTML(p);
+  assert.deepEqual(headline(html),{value:'5.6',label:'GW1-2 xP'},'the headline must stay the projection, untouched');
+  assert.doesNotMatch(html,/0 pts/,'the exact string Marcus saw must be gone');
+  assert.match(secondaryLine(html),/GW1 3\.0 xP/,'and the per-GW line stays projected too');
 });
 
-test('a player whose fixture has finished shows his real points, labelled as the settled result',()=>{
+test('a player whose fixture has finished puts his real points in the bright headline slot, labelled as the settled result',()=>{
   const ctx=sandbox();
-  assert.match(secondaryLine(ctx.__f.cardHTML(player(7,'ARS'))),/GW1 5 pts \(actual\)/);
+  const html=ctx.__f.cardHTML(player(7,'ARS'));
+  assert.deepEqual(headline(html),{value:'5',label:'GW1 pts'});
 });
 
 test('a player who is on the pitch right now shows real points labelled live, not final',()=>{
   const ctx=sandbox();
-  const line=secondaryLine(ctx.__f.cardHTML(player(9,'LIV')));
-  assert.match(line,/GW1 2 pts \(live\)/,'points are real but the match is still running, so it must not read "actual"');
+  const head=headline(ctx.__f.cardHTML(player(9,'LIV')));
+  assert.equal(head.value,'2');
+  assert.equal(head.label,'GW1 live','points are real but the match is still running, so it must not read as settled');
+});
+
+test('the horizon projection the live score displaces is moved onto the secondary line, keeping its label and the fixture text',()=>{
+  const ctx=sandbox();
+  const line=secondaryLine(ctx.__f.cardHTML(player(7,'ARS')));
+  assert.match(line,/5\.6 GW1-2 xP/,'the displaced headline value and its own label must both survive');
+  const full=ctx.__f.cardHTML(player(7,'ARS'));
+  assert.match(full,/5\.6 GW1-2 xP<\/span> · AVL\(H\)/,'the fixture text after the span must be left intact');
 });
 
 test('recorded minutes alone prove kickoff, so a missing or stale fixture flag cannot hide a player who is demonstrably playing',()=>{
@@ -106,7 +122,7 @@ test('recorded minutes alone prove kickoff, so a missing or stale fixture flag c
   ctx.LIVE.rows.set(8,{i:8,pts:4,min:12});   // BHA fixture still flagged started:false
   const p=player(8,'BHA');
   assert.equal(ctx.__f.playerStarted(p,1),true,'minutes on the pitch must override an unstarted fixture flag');
-  assert.match(secondaryLine(ctx.__f.cardHTML(p)),/GW1 4 pts \(live\)/);
+  assert.deepEqual(headline(ctx.__f.cardHTML(p)),{value:'4',label:'GW1 live'});
 });
 
 test('app-core.js exposes the fixture started flag the patch layer needs, alongside finished',()=>{

@@ -60,11 +60,30 @@ test('the predictive spine is never overwritten with actual points — it always
   assert.match(wrapper[0],/renderLiveGwScore\(\)/,'renderSpine must still trigger the separate live score render');
 });
 
-test('a card\'s primary xp-value only substitutes a real GW score in Selected-GW view, since a horizon total has no single GW figure to substitute',()=>{
+/* Marcus, 23 Aug: "the numbers shown in bright green want that to be live
+   gw points" — an explicit reversal of the .4 rule that kept a card's
+   headline slot projected in whole-period view. The arithmetic objection
+   still stands (a horizon total is not a single gameweek's score), which is
+   why the displaced projection is moved down to the secondary line with its
+   own label intact rather than discarded: both numbers survive, they just
+   swap places, and each still says what it is. */
+test('the headline slot carries the live GW score in every view, not only Selected-GW',()=>{
   const fn=app.match(/cardHTML=function\(p,benchPos=null\)\{[\s\S]*?\n  \};/);
   assert.ok(fn,'cardHTML override must exist');
   assert.match(fn[0],/if\(!liveScoreReady\(\)\)return html;/,'must still require live data before doing anything');
-  assert.match(fn[0],/if\(selectedGwView\(\)\)\{/,'the primary xp-value swap must stay gated behind Selected-GW view');
+  assert.doesNotMatch(fn[0],/selectedGwView/,'the display toggle must no longer decide whether the headline shows the live score');
+  assert.match(fn[0],/xp-value">\$\{pts\}/,'the live score must land in the headline value');
+});
+
+test('the projection displaced from the headline is preserved on the secondary line rather than discarded',()=>{
+  const fn=app.match(/cardHTML=function\(p,benchPos=null\)\{[\s\S]*?\n  \};/)[0];
+  assert.match(fn,/const headline=html\.match\(/,'the outgoing headline value and label must be captured before being overwritten');
+  assert.match(fn,/const displaced=/);
+  assert.match(fn,/secondary-value">\$\{displaced\}/,'it must be written back onto the secondary line');
+});
+
+test('selectedGwView is fully retired rather than left as a dead helper',()=>{
+  assert.doesNotMatch(app,/const selectedGwView=/,'the helper must be removed once nothing gates on it');
 });
 
 /* Marcus, 22 Aug (2nd follow-up): "on the player cards I still want to
@@ -77,14 +96,9 @@ test('a card\'s primary xp-value only substitutes a real GW score in Selected-GW
    score Marcus is asking for, so it swaps to real points independent
    of the Total/Selected-GW toggle, same as the header chip and callout
    bar already do. */
-test('the card\'s secondary single-GW line swaps to real points regardless of the Total/Selected-GW toggle',()=>{
-  const fn=app.match(/cardHTML=function\(p,benchPos=null\)\{[\s\S]*?\n  \};/);
-  assert.ok(fn,'cardHTML override must exist');
-  assert.match(fn[0],/secondary-value/,'must target the stable secondary-value span, not the whole-period toggle');
-  const afterSelectedGwBlock=fn[0].slice(fn[0].indexOf('if(selectedGwView()){'));
-  const closeOfBlock=afterSelectedGwBlock.indexOf('\n    }\n');
-  const outsideTheBlock=afterSelectedGwBlock.slice(closeOfBlock);
-  assert.match(outsideTheBlock,/secondary-value/,'the secondary-value swap must run OUTSIDE the selectedGwView()-gated block, so it applies in whole-period view too');
+test('the card still targets the stable secondary-value span app-core.js provides',()=>{
+  const fn=app.match(/cardHTML=function\(p,benchPos=null\)\{[\s\S]*?\n  \};/)[0];
+  assert.match(fn,/secondary-value/,'must target the stable span rather than reformatting the whole line and losing the fixture text');
 });
 
 test('app-core.js wraps the card secondary line\'s figure in a stable span the patch layer can target',()=>{
