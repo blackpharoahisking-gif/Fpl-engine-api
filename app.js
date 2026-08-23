@@ -1,7 +1,7 @@
-/* OTB 2026.08.22.5 — gives the live GW score a second, guaranteed-visible
-   home, on top of separating predictive points from actual points, the
-   LiveFPL-style card redesign, and automatic Gameweek intelligence/
-   snapshots.
+/* OTB 2026.08.22.6 — cards show real per-GW points even in whole-period
+   view, on top of giving the live GW score a second guaranteed-visible
+   home, separating predictive points from actual points, the LiveFPL-
+   style card redesign, and automatic Gameweek intelligence/snapshots.
    The production application remains byte-for-byte in app-core.js. This file
    loads it first, then adds a display-only live-points layer. Projection maths,
    optimiser state, role intelligence and Verdict logic are not changed here.
@@ -114,10 +114,23 @@
    Bank/XI xPts there. Rather than touch that existing truncation, added
    a second, guaranteed-visible home: a callout bar (#liveGwBar) in the
    normal page flow directly under the Squad tab's predictive spine,
-   populated by the same renderLiveGwScore(). */
+   populated by the same renderLiveGwScore().
+   2026.08.22.6: "on the player cards I still want to see the actual
+   points that each player scored though for that gw. its still showing
+   expected points." In whole-period view a card's primary xp-value is a
+   multi-GW horizon total ("GW1-2 XP") — still correctly left projected,
+   since there's no single-GW figure there to substitute — but
+   app-core.js already renders a secondary line under it in that same
+   view, GW{S.gw}'s own projected figure ("GW1 6.1 xP · fixture"), which
+   has no such conflict. That line now swaps to the real score whenever
+   it's ready, independent of the Total/Selected-GW toggle, the same as
+   the header chip and callout bar already are — wrapped app-core.js's
+   secondary value in a stable <span class="secondary-value"> so this
+   patch layer has something reliable to target, mirroring how xp-value/
+   xp-label already work. */
 (function loadOtbCore(){
   const script=document.createElement('script');
-  script.src='app-core.js?v=2026.08.22.2-core';
+  script.src='app-core.js?v=2026.08.22.3-core';
   script.async=false;
   script.onload=()=>{
     try{installOtbLivePointsPatch()}
@@ -132,7 +145,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.22.5';
+  const BUILD='2026.08.22.6';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -141,7 +154,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.5';badge.title='OTB automatic Gameweek intelligence + LiveFPL-style cards + live GW score';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.6';badge.title='OTB automatic Gameweek intelligence + LiveFPL-style cards + live GW score everywhere';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){
@@ -334,23 +347,36 @@ function installOtbLivePointsPatch(){
     }finally{LIVE.loading=false;renderScoreStatus();renderLiveGwScore();}
   }
 
-  /* Cards only swap their xp-value for a real GW score in "Selected GW"
-     view (selectedGwView()). In "Total across the whole period" view a
-     card's xp-value is a multi-GW horizon total, not a single gameweek's
-     points, so there is no real number to substitute — swapping it for
-     GW{S.gw}'s actual score there would silently misrepresent what the
-     figure means, not correct it. */
+  /* Marcus, 22 Aug (follow-up): "on the player cards I still want to see
+     the actual points that each player scored though for that gw. its
+     still showing expected points." — in "Total across the whole
+     period" view, cardHTML's own xp-value is a multi-GW horizon total
+     (e.g. "GW1-2 XP"), which still can't be swapped for a single GW's
+     real score without misrepresenting the number, but that total isn't
+     the only place a single gameweek's points appear on the card:
+     app-core.js already renders a secondary line underneath it in that
+     same view — "GW1 6.1 xP · fixture" — showing GW{S.gw}'s own figure
+     on its own. THAT line has no such conflict, and is exactly the
+     "what did this player actually score this gameweek" figure Marcus
+     is looking for on the card, so it now gets swapped for the real
+     score independent of the Total/Selected-GW toggle, the same as the
+     header chip and callout bar already are. The primary xp-value still
+     only swaps in Selected-GW view, where it truly is a single-GW
+     figure. */
   const projectedCardHTML=cardHTML;
   cardHTML=function(p,benchPos=null){
     let html=projectedCardHTML(p,benchPos);
-    if(!selectedGwView()||!liveScoreReady())return html;
+    if(!liveScoreReady())return html;
     const pts=actualForPlayer(p);if(pts===null)return html;
-    if(S.shotMode)return html.replace(/<div class="cstat">[^<]*<\/div>/,`<div class="cstat">${pts}</div>`);
-    html=html.replace(/<div class="therm"[^>]*><\/div>/,'');
-    return html
-      .replace(/<span class="xp-value">[^<]*<\/span><span class="xp-label">[^<]*<\/span>/,`<span class="xp-value">${pts}</span><span class="xp-label">GW${S.gw} pts</span>`)
-      .replace(/expected-points details/g,'official GW-points result')
-      .replace(/expected-points total/g,'official GW-points result');
+    if(selectedGwView()){
+      if(S.shotMode)return html.replace(/<div class="cstat">[^<]*<\/div>/,`<div class="cstat">${pts}</div>`);
+      html=html.replace(/<div class="therm"[^>]*><\/div>/,'');
+      html=html
+        .replace(/<span class="xp-value">[^<]*<\/span><span class="xp-label">[^<]*<\/span>/,`<span class="xp-value">${pts}</span><span class="xp-label">GW${S.gw} pts</span>`)
+        .replace(/expected-points details/g,'official GW-points result')
+        .replace(/expected-points total/g,'official GW-points result');
+    }
+    return html.replace(/<span class="secondary-value">GW\d+ [^<]*<\/span>/,`<span class="secondary-value">GW${S.gw} ${pts} pts (actual)</span>`);
   };
 
   function pendingScorerCount(){

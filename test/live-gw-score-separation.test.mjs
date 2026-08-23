@@ -60,10 +60,36 @@ test('the predictive spine is never overwritten with actual points — it always
   assert.match(wrapper[0],/renderLiveGwScore\(\)/,'renderSpine must still trigger the separate live score render');
 });
 
-test('cards only substitute a real GW score in Selected-GW view, since a horizon total has no single GW figure to substitute',()=>{
+test('a card\'s primary xp-value only substitutes a real GW score in Selected-GW view, since a horizon total has no single GW figure to substitute',()=>{
   const fn=app.match(/cardHTML=function\(p,benchPos=null\)\{[\s\S]*?\n  \};/);
   assert.ok(fn,'cardHTML override must exist');
-  assert.match(fn[0],/if\(!selectedGwView\(\)\|\|!liveScoreReady\(\)\)return html;/,'must require Selected-GW view before swapping a card\'s xp-value for a real score');
+  assert.match(fn[0],/if\(!liveScoreReady\(\)\)return html;/,'must still require live data before doing anything');
+  assert.match(fn[0],/if\(selectedGwView\(\)\)\{/,'the primary xp-value swap must stay gated behind Selected-GW view');
+});
+
+/* Marcus, 22 Aug (2nd follow-up): "on the player cards I still want to
+   see the actual points that each player scored though for that gw.
+   its still showing expected points." In "Total across the whole
+   period" view the primary xp-value is correctly left as a horizon
+   total (see above), but the card's secondary line — "GW{n} {x} xP ·
+   fixture", app-core.js's own single-gameweek figure shown underneath
+   that total — has no such conflict and is exactly the per-GW actual
+   score Marcus is asking for, so it swaps to real points independent
+   of the Total/Selected-GW toggle, same as the header chip and callout
+   bar already do. */
+test('the card\'s secondary single-GW line swaps to real points regardless of the Total/Selected-GW toggle',()=>{
+  const fn=app.match(/cardHTML=function\(p,benchPos=null\)\{[\s\S]*?\n  \};/);
+  assert.ok(fn,'cardHTML override must exist');
+  assert.match(fn[0],/secondary-value/,'must target the stable secondary-value span, not the whole-period toggle');
+  const afterSelectedGwBlock=fn[0].slice(fn[0].indexOf('if(selectedGwView()){'));
+  const closeOfBlock=afterSelectedGwBlock.indexOf('\n    }\n');
+  const outsideTheBlock=afterSelectedGwBlock.slice(closeOfBlock);
+  assert.match(outsideTheBlock,/secondary-value/,'the secondary-value swap must run OUTSIDE the selectedGwView()-gated block, so it applies in whole-period view too');
+});
+
+test('app-core.js wraps the card secondary line\'s figure in a stable span the patch layer can target',()=>{
+  const core=readFileSync(new URL('../app-core.js',import.meta.url),'utf8');
+  assert.match(core,/<span class="secondary-value">GW\$\{S\.gw\} \$\{r\.x\.toFixed\(1\)\} xP<\/span>/);
 });
 
 test('renderLiveGwScore exists and writes into the header chip AND the in-page callout bar',()=>{

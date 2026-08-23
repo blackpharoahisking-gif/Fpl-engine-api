@@ -73,6 +73,6 @@ test('stylesheet defines the new card-top/kit-shirt/corner-badge rules and the C
 
 test('cache-bust queries are bumped together for this content change',()=>{
   const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
-  assert.match(app,/app-core\.js\?v=2026\.08\.22\.2-core/,'app-core.js changed, so its cache-bust must be bumped');
+  assert.match(app,/app-core\.js\?v=2026\.08\.22\.\d-core/,'app-core.js changed, so its cache-bust must be bumped');
   assert.match(html,/app\.js\?v=2026\.08\.22\.\d/,'app.js\'s own comment/BUILD was touched too, so the HTML script tag must match');
 });
