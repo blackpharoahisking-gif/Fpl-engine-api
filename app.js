@@ -1,4 +1,4 @@
-/* OTB 2026.08.23.3 — a card's bright headline figure is the live GW score
+/* OTB 2026.08.23.4 — a card's bright headline figure is the live GW score
    in every view, including the official current value before that player's
    fixture has kicked off, the live GW score's guaranteed-visible home,
    separating predictive points from actual points, the LiveFPL-style card
@@ -169,6 +169,10 @@
    2026.08.23.3: player-card live points now include the effective captain
    multiplier, matching the contribution shown in the squad's live total.
    This covers normal captaincy, Triple Captain and vice-captain promotion.
+   2026.08.23.4: FPL team imports now preserve the imported captain and
+   vice-captain as authoritative selections. Previously ensureCaptainValid()
+   immediately replaced them with OTB's projected choices because the import
+   did not set the corresponding manual-selection flags.
    Nothing is lost to make room: the displaced projection is captured
    verbatim from the markup — its value AND its own label — and written
    onto the secondary line ahead of the fixture text, so the card still
@@ -178,7 +182,7 @@
    selectedGwView() gated nothing after this and was removed. */
 (function loadOtbCore(){
   const script=document.createElement('script');
-  script.src='app-core.js?v=2026.08.22.4-core';
+  script.src='app-core.js?v=2026.08.23.4-core';
   script.async=false;
   script.onload=()=>{
     try{installOtbLivePointsPatch()}
