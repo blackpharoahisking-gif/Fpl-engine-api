@@ -105,6 +105,13 @@ test('a player who is on the pitch right now shows real points labelled live, no
   assert.equal(head.label,'GW1 live','points are real but the match is still running, so it must not read as settled');
 });
 
+test('the active captain card shows his multiplied contribution to the live GW total',()=>{
+  const ctx=sandbox();
+  ctx.S.cap=9;
+  const head=headline(ctx.__f.cardHTML(player(9,'LIV')));
+  assert.deepEqual(head,{value:'4',label:'GW1 live'},'2 raw points with the normal captain multiplier must display as 4');
+});
+
 test('the horizon projection the live score displaces is moved onto the secondary line, keeping its label and the fixture text',()=>{
   const ctx=sandbox();
   const line=secondaryLine(ctx.__f.cardHTML(player(7,'ARS')));
