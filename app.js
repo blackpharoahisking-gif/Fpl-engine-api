@@ -1,5 +1,6 @@
-/* OTB 2026.08.22.3 — LiveFPL-style card redesign, on top of automatic
-   Gameweek intelligence and snapshots.
+/* OTB 2026.08.22.4 — separates predictive points from actual points, on
+   top of the LiveFPL-style card redesign and automatic Gameweek
+   intelligence/snapshots.
    The production application remains byte-for-byte in app-core.js. This file
    loads it first, then adds a display-only live-points layer. Projection maths,
    optimiser state, role intelligence and Verdict logic are not changed here.
@@ -83,9 +84,27 @@
    explicitly skipped — OTB has no ownership data source wired in and
    Marcus agreed that's a separate feature, not part of this redesign.
    OTB's own stats LiveFPL doesn't have (xPts breakdown, health status,
-   3-GW fixture run) are untouched. This patch layer wasn't touched for
-   the redesign itself — only its cache-bust query for app-core.js is
-   bumped below so returning users actually get the new card. */
+   3-GW fixture run) are untouched.
+   2026.08.22.4: "this last update broke the live scoring update that
+   shows current gw score...i think im on 40 pts...we should separate
+   predictive points from actual points." The live score wasn't actually
+   broken by the card redesign — it had always been gated behind
+   selectedGwView() (Engine > Options > "Points shown: Selected gameweek
+   only"), a setting invisible from the Squad tab that defaults to
+   "Total across the whole period". So on a normal load the projected
+   multi-GW horizon total sat exactly where the live score should have
+   been, with nothing on screen explaining a mode switch was needed —
+   indistinguishable from broken. Fixed by actually separating the two,
+   not just re-defaulting a toggle: liveDataRequested()/liveScoreReady()
+   now key only off the gameweek, its deadline and the Score mode — never
+   S.display — and drive a new, always-visible header chip (#hLiveGw)
+   independent of whatever scope the predictive spine is set to. The
+   spine itself (#spineTotal/#hXpts) is no longer overwritten with actual
+   data, so "Projected scoring points" now means that, always. Only one
+   place keeps caring about selectedGwView(): an individual card's
+   xp-value means a multi-GW horizon total in "whole period" mode, so it
+   correctly stays a projection there — swapping it for a single GW's
+   real score would misrepresent the number, not fix it. */
 (function loadOtbCore(){
   const script=document.createElement('script');
   script.src='app-core.js?v=2026.08.22.2-core';
@@ -103,7 +122,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.22.3';
+  const BUILD='2026.08.22.4';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -112,7 +131,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.3';badge.title='OTB automatic Gameweek intelligence + LiveFPL-style cards';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.4';badge.title='OTB automatic Gameweek intelligence + LiveFPL-style cards + live GW score';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){
@@ -134,10 +153,37 @@ function installOtbLivePointsPatch(){
   const deadlineForGw=gw=>Date.parse(eventForGw(gw)?.deadline_time||'');
   const deadlinePassed=gw=>{const t=deadlineForGw(gw);return Number.isFinite(t)&&Date.now()>=t};
   const selectedGwView=()=>S.display!=='total';
-  const actualRequested=()=>selectedGwView()&&deadlinePassed(S.gw)&&scoreMode!=='expected';
-  const actualReady=()=>actualRequested()&&LIVE.gw===Number(S.gw)&&LIVE.rows.size>0;
+
+  /* Marcus, 22 Aug: "this last update broke the live scoring update that
+     shows current gw score...we should separate predictive points from
+     actual points" — the live GW score was entirely gated behind
+     "Points shown: Selected gameweek only", a setting that only lives in
+     Engine > Options and defaults to "Total across the whole period", so
+     on a fresh load (or the Squad tab, where that setting isn't even
+     visible) the live score was invisible and the projected multi-GW
+     total sat in its place instead — looking like the live number had
+     stopped working, not like a mode the user needed to switch.
+
+     Fixed by decoupling the two concerns properly instead of patching the
+     default: liveDataRequested/liveScoreReady below answer "is GW{n}'s
+     live data available" using ONLY the gameweek and the deadline, never
+     S.display — that display toggle now only controls how the PROJECTED
+     spine is scoped (one gameweek vs the whole planning horizon), and
+     never decides whether real points are shown at all. The live score
+     gets its own always-visible header chip (#hLiveGw) and its own
+     status line, populated by renderLiveGwScore() below, and the
+     predictive spine (renderSpine/#spineTotal/#hXpts) is no longer
+     overwritten with actual data — it always shows what its own label
+     says, "Projected scoring points", full stop. selectedGwView() is
+     kept only for the one place actual data still needs it: an
+     individual card's xp-value is a single number that means a
+     multi-GW horizon total in "whole period" mode, so it must stay a
+     projection there — swapping it for a single GW's real points would
+     be wrong, not more accurate. */
+  const liveDataRequested=()=>deadlinePassed(S.gw)&&scoreMode!=='expected';
+  const liveScoreReady=()=>liveDataRequested()&&LIVE.gw===Number(S.gw)&&LIVE.rows.size>0;
   const actualForPlayer=p=>{
-    if(!actualReady()||p?.apiId==null)return null;
+    if(!liveScoreReady()||p?.apiId==null)return null;
     const row=LIVE.rows.get(Number(p.apiId));
     return row&&Number.isFinite(Number(row.pts))?Number(row.pts):null;
   };
@@ -232,7 +278,7 @@ function installOtbLivePointsPatch(){
       scoreMode=sel.value;
       try{localStorage.setItem(SCORE_KEY,scoreMode)}catch(_){ }
       renderPitch();renderSpine();renderScoreStatus();
-      if(actualRequested())refreshLiveGwPoints({force:true});
+      if(liveDataRequested())refreshLiveGwPoints({force:true});
     });
   }
 
@@ -241,18 +287,14 @@ function installOtbLivePointsPatch(){
     const sel=document.getElementById('gwScoreView'),status=document.getElementById('gwScoreStatus');
     if(sel)sel.value=scoreMode;
     if(!status)return;
-    if(!selectedGwView()){
-      status.textContent=deadlinePassed(S.gw)?'Whole-period view = xPts. Choose Selected GW for live points.':'Whole-period view = expected xPts.';
-      return;
-    }
     if(scoreMode==='expected'){
-      status.textContent=`GW${S.gw} expected xPts selected.`;return;
+      status.textContent='Expected xPts forced — live GW points hidden.';return;
     }
     if(!deadlinePassed(S.gw)){
       status.textContent=`GW${S.gw} points unlock after the deadline.`;return;
     }
     if(LIVE.loading){status.textContent=`Loading GW${S.gw} official points…`;return;}
-    if(actualReady()){
+    if(liveScoreReady()){
       const age=Math.max(0,Math.floor((Date.now()-LIVE.loadedAt)/60000)),pending=pendingScorerCount();
       const freshness=age<1?'live':age+'m old';
       status.textContent=pending>0
@@ -264,11 +306,11 @@ function installOtbLivePointsPatch(){
   }
 
   async function refreshLiveGwPoints({force=false}={}){
-    if(!actualRequested()||navigator.onLine===false)return false;
+    if(!liveDataRequested()||navigator.onLine===false)return false;
     if(LIVE.loading)return false;
     if(!force&&LIVE.gw===Number(S.gw)&&LIVE.rows.size>0&&Date.now()-LIVE.loadedAt<45000)return true;
     const requestedGw=Number(S.gw);
-    LIVE.loading=true;LIVE.error='';renderScoreStatus();
+    LIVE.loading=true;LIVE.error='';renderScoreStatus();renderLiveGwScore();
     try{
       const payload=await fetchJSON(`${API_BASE}/api/event-live?gw=${requestedGw}`,15000);
       const rows=actualRowsFromPayload(payload);
@@ -278,14 +320,20 @@ function installOtbLivePointsPatch(){
       requestAnimationFrame(()=>{renderPitch();renderSpine();renderScoreStatus()});
       return true;
     }catch(err){
-      LIVE.error=String(err?.message||err);renderScoreStatus();return false;
-    }finally{LIVE.loading=false;renderScoreStatus();}
+      LIVE.error=String(err?.message||err);renderScoreStatus();renderLiveGwScore();return false;
+    }finally{LIVE.loading=false;renderScoreStatus();renderLiveGwScore();}
   }
 
+  /* Cards only swap their xp-value for a real GW score in "Selected GW"
+     view (selectedGwView()). In "Total across the whole period" view a
+     card's xp-value is a multi-GW horizon total, not a single gameweek's
+     points, so there is no real number to substitute — swapping it for
+     GW{S.gw}'s actual score there would silently misrepresent what the
+     figure means, not correct it. */
   const projectedCardHTML=cardHTML;
   cardHTML=function(p,benchPos=null){
     let html=projectedCardHTML(p,benchPos);
-    if(!actualReady())return html;
+    if(!selectedGwView()||!liveScoreReady())return html;
     const pts=actualForPlayer(p);if(pts===null)return html;
     if(S.shotMode)return html.replace(/<div class="cstat">[^<]*<\/div>/,`<div class="cstat">${pts}</div>`);
     html=html.replace(/<div class="therm"[^>]*><\/div>/,'');
@@ -296,16 +344,36 @@ function installOtbLivePointsPatch(){
   };
 
   function pendingScorerCount(){
-    if(!actualReady())return 0;
+    if(!liveScoreReady())return 0;
     const lineup=resolveActualLineup();
     return lineup.scorers.filter(p=>actualForPlayer(p)===null||!playerLocked(p,S.gw)).length;
   }
 
-  const projectedRenderSpine=renderSpine;
-  renderSpine=function(){
-    const out=projectedRenderSpine();
-    const key=document.querySelector('#spineWrap .spine-key');
-    if(!actualReady()){if(key)key.style.display='';return out;}
+  /* The predictive spine (#spineTotal/#hXpts, driven purely by
+     projectedRenderSpine — app-core.js's original renderSpine) is never
+     touched here: it always shows the projected figure its own label
+     already says it shows. The live GW score is a fully separate,
+     always-visible header chip (#hLiveGw), independent of whatever the
+     predictive spine's "Points shown" scope is set to. */
+  function renderLiveGwScore(){
+    const val=document.getElementById('hLiveGw'),label=document.getElementById('hLiveGwLabel'),wrap=document.getElementById('hLiveGwWrap');
+    if(!val)return;
+    if(label)label.textContent=`GW${S.gw} Score`;
+    if(scoreMode==='expected'){
+      val.textContent='—';val.className='v mono';
+      if(wrap)wrap.title='Expected xPts forced — live GW points hidden. Switch Score to Auto or GW points to see it.';
+      return;
+    }
+    if(!deadlinePassed(S.gw)){
+      val.textContent='—';val.className='v mono';
+      if(wrap)wrap.title=`GW${S.gw} points unlock after the deadline.`;
+      return;
+    }
+    if(!liveScoreReady()){
+      val.textContent=LIVE.loading?'…':'—';val.className='v mono';
+      if(wrap)wrap.title=LIVE.error?`GW points unavailable · ${LIVE.error}`:`GW${S.gw} official points pending.`;
+      return;
+    }
     const lineup=resolveActualLineup(),scorers=lineup.scorers;
     let sum=0,pending=0;
     for(const p of scorers){
@@ -316,8 +384,7 @@ function installOtbLivePointsPatch(){
       sum+=(actual!==null?actual:projectedForPlayer(p))*mult;
     }
     sum=Math.round(sum*10)/10;
-    const total=document.getElementById('spineTotal'),head=document.getElementById('hXpts'),label=document.getElementById('hXptsLabel');
-    if(total)total.textContent=String(sum);if(head)head.textContent=String(sum);
+    val.textContent=String(sum);val.className='v mono good';
     const notes=[];
     if(pending>0)notes.push(`${pending} of ${scorers.length} not yet final (in progress or shown as projected xPts)`);
     if(lineup.capPromoted)notes.push('captain did not play — vice-captain multiplier applied');
@@ -325,11 +392,13 @@ function installOtbLivePointsPatch(){
     if(lineup.subsInCount)notes.push(`${lineup.subsInCount} outfield autosub${lineup.subsInCount===1?'':'s'} applied`);
     if(lineup.unfilledSubCount)notes.push(`${lineup.unfilledSubCount} missing starter${lineup.unfilledSubCount===1?'':'s'} had no legal bench cover`);
     const noteText=notes.length?` ${notes.join('; ')}.`:'';
-    const title=`Official FPL GW${S.gw} player points for the actual scoring XI${lineup.benchScoring?' plus Bench Boost':''} — autosubs and vice-captain promotion applied where each player's own fixture has finished.${noteText}`;
-    if(label){label.textContent=`${lineup.benchScoring?'BB 15':'XI'} GW points${pending>0?' (partial)':''}`;label.title=title;}
-    if(head){head.title=title;head.setAttribute('aria-label',`${title} ${sum} points`);}
-    const spine=document.getElementById('spine');if(spine)spine.innerHTML=`<div style="width:100%;background:var(--mint)" title="${pending>0?'Partial — some players not yet final':'Official FPL GW points'}"></div>`;
-    if(key)key.style.display='none';
+    if(wrap)wrap.title=`Official FPL GW${S.gw} points for the actual scoring XI${lineup.benchScoring?' plus Bench Boost':''} — autosubs and vice-captain promotion applied where each player's own fixture has finished.${noteText}`;
+  }
+
+  const projectedRenderSpine=renderSpine;
+  renderSpine=function(){
+    const out=projectedRenderSpine();
+    renderLiveGwScore();
     return out;
   };
 
@@ -353,10 +422,10 @@ function installOtbLivePointsPatch(){
     };
   }
 
-  ensureScoreControl();renderScoreStatus();
+  ensureScoreControl();renderScoreStatus();renderLiveGwScore();
   try{if(typeof renderAccuracy==='function')renderAccuracy()}catch(_){ }
-  document.getElementById('gwSel')?.addEventListener('change',()=>setTimeout(()=>{LIVE.error='';renderScoreStatus();if(actualRequested())refreshLiveGwPoints({force:true});},0));
-  displaySelect?.addEventListener('change',()=>setTimeout(()=>{renderScoreStatus();if(actualRequested())refreshLiveGwPoints({force:true});},0));
-  setInterval(()=>{if(actualRequested())refreshLiveGwPoints();},60000);
-  if(actualRequested())setTimeout(()=>refreshLiveGwPoints({force:true}),0);
+  document.getElementById('gwSel')?.addEventListener('change',()=>setTimeout(()=>{LIVE.error='';renderScoreStatus();renderLiveGwScore();if(liveDataRequested())refreshLiveGwPoints({force:true});},0));
+  displaySelect?.addEventListener('change',()=>setTimeout(()=>{renderPitch();renderScoreStatus();if(liveDataRequested())refreshLiveGwPoints({force:true});},0));
+  setInterval(()=>{if(liveDataRequested())refreshLiveGwPoints();},60000);
+  if(liveDataRequested())setTimeout(()=>refreshLiveGwPoints({force:true}),0);
 }

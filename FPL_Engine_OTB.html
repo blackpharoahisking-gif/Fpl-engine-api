@@ -300,6 +300,7 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
   <div class="chipstat"><span class="k">Squad</span><span class="v mono" id="hSquad">0/15</span></div>
   <div class="chipstat"><span class="k">Bank</span><span class="v mono good" id="hBank">100.0</span></div>
   <div class="chipstat"><span class="k" id="hXptsLabel">XI xPts</span><span class="v mono info" id="hXpts">0.0</span></div>
+  <div class="chipstat" id="hLiveGwWrap" title="Official FPL points for the current gameweek, once the deadline has passed. Always shown separately from the projected xPts figures — never blended into them."><span class="k" id="hLiveGwLabel">GW Score</span><span class="v mono good" id="hLiveGw">—</span></div>
   <div class="chipstat diagnostic-chip"><span class="k">Engineering</span><span class="v mono" id="hTests" style="font-size:13px">—</span></div>
   <div class="chipstat diagnostic-chip"><span class="k">Season</span><span class="v mono bad" id="hSeason" style="font-size:12px">PENDING</span></div>
   <div class="chipstat diagnostic-chip"><span class="k">Worker</span><span class="v mono" id="hWorker" style="font-size:12px">UNKNOWN</span></div>
@@ -898,5 +899,5 @@ function run(p){
 }
 onmessage=e=>{if(e.data?.type==='run')run(e.data.payload)};
 </script>
-<script src="app.js?v=2026.08.22.3"></script>
+<script src="app.js?v=2026.08.22.4"></script>
 </body></html>
