@@ -289,6 +289,22 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
 .corner-badge.cap-badge{background:var(--mint);color:var(--pl-ink)}
 .corner-badge.vice-badge{background:var(--cyan);color:var(--pl-ink)}
 @media(max-width:560px){.kit-shirt{width:22px;height:22px}.card-top{gap:5px;padding:6px 6px 2px}.corner-badge{width:14px;height:14px;font-size:8px}}
+/* Marcus, 22 Aug: the new #hLiveGw header chip is correct in principle but
+   landed 5th among the header's own <div> children (brand, hdr-spacer,
+   then the chipstat row), which is exactly what header .chipstat:nth-of-
+   type(n+5){display:none} at <=560px truncates on a narrow phone — so on
+   his actual device it was invisible right alongside Bank/XI xPts, which
+   already had the same problem before this chip existed. Rather than
+   touch that existing narrow-header truncation (it may be deliberately
+   decluttering for other reasons), the live score also gets a second,
+   guaranteed-visible home in the normal page flow: a callout bar directly
+   under the predictive spine on the Squad tab, which nothing truncates. */
+.live-gw-bar{display:flex;align-items:center;gap:14px;margin:0 18px 14px;padding:11px 14px;border:1px solid rgba(0,255,135,.4);border-left:4px solid var(--mint);border-radius:6px;background:rgba(0,255,135,.08)}
+.live-gw-num{font-family:Archivo;font-variation-settings:'wdth' 118,'wght' 800;font-size:30px;line-height:.9;color:var(--mint)}
+.live-gw-info{min-width:0}
+.live-gw-lab{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mint);font-weight:700}
+.live-gw-status{font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4}
+@media(max-width:560px){.live-gw-bar{margin:0 10px 12px;padding:9px 11px;gap:10px}.live-gw-num{font-size:26px}}
 </style>
 <!-- OTB RC4.4 Strategy Laboratory & Six-Style Comparison -->
 </head>
@@ -337,6 +353,7 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
 </section>
 <section class="col centre" id="colCentre">
   <div class="otb-banner"><span>⚽ OTB</span><span>⚽ OTB</span></div><div class="qf-grid"><button type="button" class="qf-card" id="btnShotMode"><span class="qf-icon">📷</span><span class="qf-label">Compact XI</span></button><button type="button" class="qf-card" id="btnJumpAuto"><span class="qf-icon">⚡</span><span class="qf-label">Auto-complete</span></button><button type="button" class="qf-card" id="btnClearSquad"><span class="qf-icon">🗑️</span><span class="qf-label">Clear All</span></button><button type="button" class="qf-card" id="btnJumpNews"><span class="qf-icon">📰</span><span class="qf-label">News</span></button><button type="button" class="qf-card" id="btnJumpImport"><span class="qf-icon">📥</span><span class="qf-label">Import team</span></button></div><span class="note" id="shotNote"></span><div class="spine-wrap" id="spineWrap"><div class="spine-top"><div class="spine-total mono" id="spineTotal">0.0</div><div class="spine-lab">Projected scoring points<br>Gameweek <span id="spineGw">1</span></div><div style="margin-left:auto;text-align:right"><div class="spine-lab" style="padding:0 0 3px">Gameweek</div><select id="gwSel" class="control" style="width:auto"></select><label style="font-size:9px;color:var(--muted);display:flex;align-items:center;gap:3px;margin-top:4px"><input type="checkbox" id="gwFollow" style="width:auto">Follow current GW</label></div></div><div class="spine" id="spine"></div><div class="spine-key"><span><i class="dot" style="background:#00FF87"></i>Attack</span><span><i class="dot" style="background:#04F5FF"></i>Clean sheets</span><span><i class="dot" style="background:#B072FF"></i>DefCon</span><span><i class="dot" style="background:#EAFF04"></i>Bonus</span><span><i class="dot" style="background:#6E5A75"></i>Appearance</span><span><i class="dot" style="background:#FF8C42"></i>Other</span></div></div>
+  <div class="live-gw-bar" id="liveGwBar" style="display:none"><div class="live-gw-num mono" id="liveGwNum">0.0</div><div class="live-gw-info"><div class="live-gw-lab">Live GW<span id="liveGwGwLabel">1</span> score</div><div class="live-gw-status" id="liveGwStatusText"></div></div></div>
   <div class="decision-card" id="uxDecision" aria-live="polite"><div class="decision-icon" id="uxDecisionIcon">🧭</div><div class="decision-copy"><div class="decision-kicker">Recommended next action</div><div class="decision-title" id="uxDecisionTitle">Build your squad</div><div class="decision-note" id="uxDecisionNote">Add players manually or use Auto-complete to create a legal starting point.</div></div><button type="button" class="decision-action" id="uxDecisionAction">Open builder</button></div>
   <div id="squadStructureNote" class="squad-structure-note" aria-live="polite"></div>
   <div class="pitch" id="pitchBox"><div class="line" id="rGK"></div><div class="line" id="rDEF"></div><div class="line" id="rMID"></div><div class="line" id="rFWD" style="margin-bottom:2px"></div></div>
@@ -899,5 +916,5 @@ function run(p){
 }
 onmessage=e=>{if(e.data?.type==='run')run(e.data.payload)};
 </script>
-<script src="app.js?v=2026.08.22.4"></script>
+<script src="app.js?v=2026.08.22.5"></script>
 </body></html>

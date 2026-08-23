@@ -16,10 +16,19 @@ import test from 'node:test';
 
    Fix: the live score is now computed independently of S.display
    (liveDataRequested/liveScoreReady key only off the gameweek, its
-   deadline and scoreMode) and rendered into its own always-visible
-   header chip (#hLiveGw), never blended into the predictive spine
-   (#spineTotal/#hXpts), which now always shows exactly what its own
-   label says — the projected figure, nothing else. */
+   deadline and scoreMode) and rendered into a header chip (#hLiveGw),
+   never blended into the predictive spine (#spineTotal/#hXpts), which
+   now always shows exactly what its own label says — the projected
+   figure, nothing else.
+
+   Follow-up, same phone: the header chip alone still didn't show on
+   Marcus's actual device — it lands 5th among the header's own <div>
+   children (brand, hdr-spacer, then the chipstat row), which a narrow-
+   phone CSS rule (header .chipstat:nth-of-type(n+5)) truncates, hiding
+   it right alongside Bank/XI xPts, which already had the same problem
+   before this chip existed. Rather than touch that existing truncation,
+   the live score also gets a callout bar (#liveGwBar) in the normal
+   page flow under the Squad tab's spine, which nothing truncates. */
 
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../FPL_Engine_OTB.html',import.meta.url),'utf8');
@@ -57,17 +66,43 @@ test('cards only substitute a real GW score in Selected-GW view, since a horizon
   assert.match(fn[0],/if\(!selectedGwView\(\)\|\|!liveScoreReady\(\)\)return html;/,'must require Selected-GW view before swapping a card\'s xp-value for a real score');
 });
 
-test('renderLiveGwScore exists and writes into the new, always-visible header chip',()=>{
+test('renderLiveGwScore exists and writes into the header chip AND the in-page callout bar',()=>{
   assert.match(app,/function renderLiveGwScore\(\)\{/);
   const fn=app.match(/function renderLiveGwScore\(\)\{[\s\S]*?\n  \}/)[0];
   assert.match(fn,/getElementById\('hLiveGw'\)/);
   assert.match(fn,/getElementById\('hLiveGwLabel'\)/);
   assert.match(fn,/getElementById\('hLiveGwWrap'\)/);
+  assert.match(fn,/getElementById\('liveGwBar'\)/,'must also drive the in-page callout bar, not only the header chip');
+  assert.match(fn,/getElementById\('liveGwNum'\)/);
+  assert.match(fn,/getElementById\('liveGwStatusText'\)/);
   assert.match(fn,/liveScoreReady\(\)/);
+});
+
+/* Marcus, 22 Aug (follow-up, same phone): the header chip alone wasn't
+   enough — it lands 5th among the header's own <div> children (brand,
+   hdr-spacer, then the chipstat row), which is exactly what a narrow-
+   phone rule (header .chipstat:nth-of-type(n+5)) truncates, hiding it
+   right alongside Bank/XI xPts, which already had the same problem. The
+   callout bar lives in the normal page flow under the Squad tab's
+   spine, which that header rule cannot reach — pin that it isn't itself
+   inside the header. */
+test('the live score callout bar lives in the page flow, not inside the header the narrow-phone rule truncates',()=>{
+  const headerStart=html.indexOf('<header');
+  const headerEnd=html.indexOf('</header>');
+  const barPos=html.indexOf('id="liveGwBar"');
+  assert.ok(barPos>=0,'liveGwBar must exist');
+  assert.ok(barPos<headerStart||barPos>headerEnd,'the callout bar must not be inside <header>, or the same truncation rule would hide it too');
 });
 
 test('the header markup has a dedicated live-score chip, separate from the XI xPts chip',()=>{
   assert.match(html,/id="hLiveGwWrap"/);
   assert.match(html,/id="hLiveGwLabel"/);
   assert.match(html,/id="hLiveGw">/);
+});
+
+test('the callout bar markup exists with its number, gameweek label and status line',()=>{
+  assert.match(html,/id="liveGwBar"/);
+  assert.match(html,/id="liveGwNum"/);
+  assert.match(html,/id="liveGwGwLabel"/);
+  assert.match(html,/id="liveGwStatusText"/);
 });

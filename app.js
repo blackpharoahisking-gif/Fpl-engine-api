@@ -1,6 +1,7 @@
-/* OTB 2026.08.22.4 — separates predictive points from actual points, on
-   top of the LiveFPL-style card redesign and automatic Gameweek
-   intelligence/snapshots.
+/* OTB 2026.08.22.5 — gives the live GW score a second, guaranteed-visible
+   home, on top of separating predictive points from actual points, the
+   LiveFPL-style card redesign, and automatic Gameweek intelligence/
+   snapshots.
    The production application remains byte-for-byte in app-core.js. This file
    loads it first, then adds a display-only live-points layer. Projection maths,
    optimiser state, role intelligence and Verdict logic are not changed here.
@@ -97,14 +98,23 @@
    indistinguishable from broken. Fixed by actually separating the two,
    not just re-defaulting a toggle: liveDataRequested()/liveScoreReady()
    now key only off the gameweek, its deadline and the Score mode — never
-   S.display — and drive a new, always-visible header chip (#hLiveGw)
-   independent of whatever scope the predictive spine is set to. The
-   spine itself (#spineTotal/#hXpts) is no longer overwritten with actual
-   data, so "Projected scoring points" now means that, always. Only one
-   place keeps caring about selectedGwView(): an individual card's
-   xp-value means a multi-GW horizon total in "whole period" mode, so it
-   correctly stays a projection there — swapping it for a single GW's
-   real score would misrepresent the number, not fix it. */
+   S.display — and drive a header chip (#hLiveGw) independent of whatever
+   scope the predictive spine is set to. The spine itself
+   (#spineTotal/#hXpts) is no longer overwritten with actual data, so
+   "Projected scoring points" now means that, always. Only one place
+   keeps caring about selectedGwView(): an individual card's xp-value
+   means a multi-GW horizon total in "whole period" mode, so it correctly
+   stays a projection there — swapping it for a single GW's real score
+   would misrepresent the number, not fix it.
+   2026.08.22.5: the header chip alone still wasn't visible on Marcus's
+   actual phone — it's the 5th <div> child of <header> (brand,
+   hdr-spacer, then the chip row), which a narrow-phone rule
+   (header .chipstat:nth-of-type(n+5){display:none} at <=560px) was
+   already truncating before this chip existed, same as it already hid
+   Bank/XI xPts there. Rather than touch that existing truncation, added
+   a second, guaranteed-visible home: a callout bar (#liveGwBar) in the
+   normal page flow directly under the Squad tab's predictive spine,
+   populated by the same renderLiveGwScore(). */
 (function loadOtbCore(){
   const script=document.createElement('script');
   script.src='app-core.js?v=2026.08.22.2-core';
@@ -122,7 +132,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.22.4';
+  const BUILD='2026.08.22.5';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -131,7 +141,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.4';badge.title='OTB automatic Gameweek intelligence + LiveFPL-style cards + live GW score';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.5';badge.title='OTB automatic Gameweek intelligence + LiveFPL-style cards + live GW score';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){
@@ -352,26 +362,37 @@ function installOtbLivePointsPatch(){
   /* The predictive spine (#spineTotal/#hXpts, driven purely by
      projectedRenderSpine — app-core.js's original renderSpine) is never
      touched here: it always shows the projected figure its own label
-     already says it shows. The live GW score is a fully separate,
-     always-visible header chip (#hLiveGw), independent of whatever the
-     predictive spine's "Points shown" scope is set to. */
+     already says it shows. The live GW score gets two separate,
+     always-in-flow homes, independent of whatever the predictive
+     spine's "Points shown" scope is set to: the header chip (#hLiveGw)
+     for wide viewports, and — because that chip sits 5th among the
+     header's own <div> children and a narrow-phone rule truncates the
+     header to its first two chips, hiding it exactly like it already
+     hid Bank/XI xPts — a callout bar (#liveGwBar) directly under the
+     Squad tab's spine, which nothing truncates. */
   function renderLiveGwScore(){
     const val=document.getElementById('hLiveGw'),label=document.getElementById('hLiveGwLabel'),wrap=document.getElementById('hLiveGwWrap');
-    if(!val)return;
+    const bar=document.getElementById('liveGwBar'),barNum=document.getElementById('liveGwNum'),barGw=document.getElementById('liveGwGwLabel'),barStatus=document.getElementById('liveGwStatusText');
     if(label)label.textContent=`GW${S.gw} Score`;
+    if(barGw)barGw.textContent=String(S.gw);
+    if(bar)bar.style.display=deadlinePassed(S.gw)?'flex':'none';
+    const setIdle=(text,title)=>{
+      if(val){val.textContent='—';val.className='v mono';}
+      if(wrap)wrap.title=title;
+      if(barNum)barNum.textContent='—';
+      if(barStatus)barStatus.textContent=text;
+    };
     if(scoreMode==='expected'){
-      val.textContent='—';val.className='v mono';
-      if(wrap)wrap.title='Expected xPts forced — live GW points hidden. Switch Score to Auto or GW points to see it.';
+      setIdle('Expected xPts forced — live GW points hidden. Switch Score to Auto or GW points to see it.','Expected xPts forced — live GW points hidden. Switch Score to Auto or GW points to see it.');
       return;
     }
-    if(!deadlinePassed(S.gw)){
-      val.textContent='—';val.className='v mono';
-      if(wrap)wrap.title=`GW${S.gw} points unlock after the deadline.`;
-      return;
-    }
+    if(!deadlinePassed(S.gw))return;
     if(!liveScoreReady()){
-      val.textContent=LIVE.loading?'…':'—';val.className='v mono';
-      if(wrap)wrap.title=LIVE.error?`GW points unavailable · ${LIVE.error}`:`GW${S.gw} official points pending.`;
+      if(val){val.textContent=LIVE.loading?'…':'—';val.className='v mono';}
+      const text=LIVE.loading?`Loading GW${S.gw} official points…`:(LIVE.error?`GW points unavailable · ${LIVE.error}`:`GW${S.gw} official points pending.`);
+      if(wrap)wrap.title=text;
+      if(barNum)barNum.textContent=LIVE.loading?'…':'—';
+      if(barStatus)barStatus.textContent=text;
       return;
     }
     const lineup=resolveActualLineup(),scorers=lineup.scorers;
@@ -384,7 +405,8 @@ function installOtbLivePointsPatch(){
       sum+=(actual!==null?actual:projectedForPlayer(p))*mult;
     }
     sum=Math.round(sum*10)/10;
-    val.textContent=String(sum);val.className='v mono good';
+    if(val){val.textContent=String(sum);val.className='v mono good';}
+    if(barNum)barNum.textContent=String(sum);
     const notes=[];
     if(pending>0)notes.push(`${pending} of ${scorers.length} not yet final (in progress or shown as projected xPts)`);
     if(lineup.capPromoted)notes.push('captain did not play — vice-captain multiplier applied');
@@ -392,7 +414,9 @@ function installOtbLivePointsPatch(){
     if(lineup.subsInCount)notes.push(`${lineup.subsInCount} outfield autosub${lineup.subsInCount===1?'':'s'} applied`);
     if(lineup.unfilledSubCount)notes.push(`${lineup.unfilledSubCount} missing starter${lineup.unfilledSubCount===1?'':'s'} had no legal bench cover`);
     const noteText=notes.length?` ${notes.join('; ')}.`:'';
-    if(wrap)wrap.title=`Official FPL GW${S.gw} points for the actual scoring XI${lineup.benchScoring?' plus Bench Boost':''} — autosubs and vice-captain promotion applied where each player's own fixture has finished.${noteText}`;
+    const title=`Official FPL GW${S.gw} points for the actual scoring XI${lineup.benchScoring?' plus Bench Boost':''} — autosubs and vice-captain promotion applied where each player's own fixture has finished.${noteText}`;
+    if(wrap)wrap.title=title;
+    if(barStatus)barStatus.textContent=notes.length?`${notes.join('; ')}.`:'Official — autosubs and vice-captaincy applied.';
   }
 
   const projectedRenderSpine=renderSpine;
