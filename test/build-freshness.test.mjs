@@ -32,3 +32,9 @@ test('refresh-now always navigates to a unique URL',()=>{
   assert.match(core,/location\.assign\(url\.toString\(\)\)/);
   assert.match(core,/button\.textContent='Refreshing…'/);
 });
+
+test('current build identity comes from the HTML that actually loaded',()=>{
+  assert.match(core,/const APP_BUILD=document\.documentElement\.dataset\.build\|\|document\.querySelector\('meta\[name="otb-build"\]'\)\?\.content/);
+  assert.doesNotMatch(core,/const APP_BUILD='2026\.08\.22\.1'/,
+    'a hardcoded old build would recreate the permanent update loop after every successful refresh');
+});
