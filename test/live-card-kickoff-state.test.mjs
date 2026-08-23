@@ -3,14 +3,11 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
 
-/* Marcus, 23 Aug: his cards read "GW1 0 pts (actual)" for several players.
-   Checked against the live feed rather than assuming: GW1's deadline was
-   21 Aug and at that moment only 6 of its 10 fixtures had finished — four
-   had not kicked off at all. FPL's event-live endpoint lists an element
-   with every stat zeroed before its fixture begins, so the 0 it returns
-   means "nothing recorded yet", not "played and scored nothing". The card
-   was presenting that as a settled result, which is worse than showing
-   nothing: it looks like a player blanked when he simply has not played.
+/* Marcus, 23 Aug: live GW cards must show the current official score,
+   including 0 before kickoff, rather than reverting to expected points.
+   A pre-kickoff 0 is not a final blank, so it is labelled "live"; after
+   the fixture finishes the same slot is labelled "pts". Projections remain
+   visible on the secondary line and remain primary before the GW deadline.
 
    These are behavioural, not regex pins: the real cardHTML from
    app-core.js and the real patch layer from app.js are stitched into a vm
@@ -86,14 +83,13 @@ const headline=html=>{
   return m?{value:m[1],label:m[2]}:null;
 };
 
-test('a player whose fixture has not kicked off keeps his projection instead of being reported as a 0-point result',()=>{
+test('a player whose fixture has not kicked off shows the current official live GW score, not xP',()=>{
   const ctx=sandbox();
   const p=player(8,'BHA');
   assert.equal(ctx.__f.playerStarted(p,1),false,'BHA fixture has started:false and the player has no minutes');
   const html=ctx.__f.cardHTML(p);
-  assert.deepEqual(headline(html),{value:'5.6',label:'GW1-2 xP'},'the headline must stay the projection, untouched');
-  assert.doesNotMatch(html,/0 pts/,'the exact string Marcus saw must be gone');
-  assert.match(secondaryLine(html),/GW1 3\.0 xP/,'and the per-GW line stays projected too');
+  assert.deepEqual(headline(html),{value:'0',label:'GW1 live'},'the bright headline must show the official current-GW value even before kickoff');
+  assert.match(secondaryLine(html),/5\.6 GW1-2 xP/,'the displaced horizon projection remains available on the secondary line');
 });
 
 test('a player whose fixture has finished puts his real points in the bright headline slot, labelled as the settled result',()=>{
