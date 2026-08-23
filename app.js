@@ -1,5 +1,5 @@
-/* OTB 2026.08.23.1 — a card's bright headline figure is the live GW score
-   in every view, on top of only reporting a real result once that player's
+/* OTB 2026.08.23.2 — a card's bright headline figure is the live GW score
+   in every view, including the official current value before that player's
    fixture has kicked off, the live GW score's guaranteed-visible home,
    separating predictive points from actual points, the LiveFPL-style card
    redesign, and automatic Gameweek intelligence/snapshots.
@@ -435,7 +435,6 @@ function installOtbLivePointsPatch(){
        before kickoff: it is the player's current official GW score, not a
        prediction. Projections remain available on the secondary line and
        when a future/pre-deadline build is being viewed. */
-    const started=playerStarted(p,S.gw);
     const settled=playerLocked(p,S.gw);
     if(S.shotMode)return html.replace(/<div class="cstat">[^<]*<\/div>/,`<div class="cstat">${pts}</div>`);
     /* Marcus, 23 Aug: "the numbers shown in bright green want that to be
