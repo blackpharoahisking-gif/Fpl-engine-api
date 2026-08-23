@@ -26,3 +26,9 @@ test('published build metadata agrees across the HTML shell and app patch',()=>{
   assert.equal(htmlBuild,metaBuild);
   assert.equal(htmlBuild,appBuild);
 });
+
+test('refresh-now always navigates to a unique URL',()=>{
+  assert.match(core,/url\.searchParams\.set\('reload',stamp\)/);
+  assert.match(core,/location\.assign\(url\.toString\(\)\)/);
+  assert.match(core,/button\.textContent='Refreshing…'/);
+});
