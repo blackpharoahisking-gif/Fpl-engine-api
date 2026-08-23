@@ -94,6 +94,8 @@ let BUILD_CHECKING=false,BUILD_LAST_CHECK=0,BUILD_REMOTE='';
 function buildParts(value){return String(value||'').match(/\d+/g)?.map(Number)||[]}
 function compareBuilds(a,b){const aa=buildParts(a),bb=buildParts(b),n=Math.max(aa.length,bb.length);for(let i=0;i<n;i++){const d=(aa[i]||0)-(bb[i]||0);if(d)return d>0?1:-1}return 0}
 function buildFromHtml(html){return /<html[^>]*\bdata-build=["']([^"']+)["']/i.exec(String(html||''))?.[1]||/<meta[^>]*name=["']otb-build["'][^>]*content=["']([^"']+)["']/i.exec(String(html||''))?.[1]||''}
+function buildFromJs(js){return /\/\*\s*OTB\s+(\d{4}\.\d{2}\.\d{2}\.\d+)/i.exec(String(js||''))?.[1]||''}
+function newestBuild(...values){return values.filter(Boolean).sort(compareBuilds).at(-1)||''}
 function buildShort(value=APP_BUILD){const p=buildParts(value);return p.length>=4?`${String(p[1]).padStart(2,'0')}.${String(p[2]).padStart(2,'0')}.${p[3]}`:String(value||'—')}
 function showBuildUpdate(remote){BUILD_REMOTE=remote;const box=document.getElementById('buildUpdateBanner'),copy=document.getElementById('buildUpdateCopy');if(copy)copy.textContent=`This device is on ${APP_BUILD}; the live site is ${remote}. Refresh once to load it without cached HTML.`;box?.classList.remove('hide-control')}
 async function checkBuildFreshness({manual=false,force=false}={}){
@@ -101,10 +103,15 @@ async function checkBuildFreshness({manual=false,force=false}={}){
   if(!force&&Date.now()-BUILD_LAST_CHECK<BUILD_CHECK_COOLDOWN_MS)return false;
   const badge=document.getElementById('buildBadge');BUILD_CHECKING=true;BUILD_LAST_CHECK=Date.now();badge?.classList.add('checking');
   try{
-    const url=new URL(location.href);url.hash='';url.search='';url.searchParams.set('otb-build-check',Date.now());
-    const response=await fetch(url.toString(),{cache:'no-store',headers:{Accept:'text/html'}});
-    if(!response.ok)throw new Error(`HTTP ${response.status}`);
-    const remote=buildFromHtml(await response.text());
+    const stamp=Date.now(),pageUrl=new URL(location.href);pageUrl.hash='';pageUrl.search='';pageUrl.searchParams.set('otb-build-check',stamp);
+    const appUrl=new URL('app.js',pageUrl);appUrl.searchParams.set('otb-build-check',stamp);
+    const [pageResponse,appResponse]=await Promise.all([
+      fetch(pageUrl.toString(),{cache:'no-store',headers:{Accept:'text/html'}}),
+      fetch(appUrl.toString(),{cache:'no-store',headers:{Accept:'text/javascript'}})
+    ]);
+    if(!pageResponse.ok)throw new Error(`HTML HTTP ${pageResponse.status}`);
+    if(!appResponse.ok)throw new Error(`app.js HTTP ${appResponse.status}`);
+    const remote=newestBuild(buildFromHtml(await pageResponse.text()),buildFromJs(await appResponse.text()));
     if(!remote)throw new Error('build metadata missing');
     if(remote&&compareBuilds(remote,APP_BUILD)>0){showBuildUpdate(remote);return true}
     if(manual)flash(`This device is current — OTB build ${APP_BUILD}.`);
