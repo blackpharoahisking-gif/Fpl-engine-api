@@ -1,4 +1,4 @@
-/* OTB 2026.08.23.2 — a card's bright headline figure is the live GW score
+/* OTB 2026.08.23.3 — a card's bright headline figure is the live GW score
    in every view, including the official current value before that player's
    fixture has kicked off, the live GW score's guaranteed-visible home,
    separating predictive points from actual points, the LiveFPL-style card
@@ -166,6 +166,9 @@
    shows that player's current official GW score, including 0 before kickoff.
    Expected points stay on the secondary line and remain primary for future
    or pre-deadline builds.
+   2026.08.23.3: player-card live points now include the effective captain
+   multiplier, matching the contribution shown in the squad's live total.
+   This covers normal captaincy, Triple Captain and vice-captain promotion.
    Nothing is lost to make room: the displaced projection is captured
    verbatim from the markup — its value AND its own label — and written
    onto the secondary line ahead of the fixture text, so the card still
@@ -429,7 +432,12 @@ function installOtbLivePointsPatch(){
   cardHTML=function(p,benchPos=null){
     let html=projectedCardHTML(p,benchPos);
     if(!liveScoreReady())return html;
-    const pts=actualForPlayer(p);if(pts===null)return html;
+    const rawPts=actualForPlayer(p);if(rawPts===null)return html;
+    /* Card points must match the contribution to the manager's GW total,
+       so apply the effective armband here too. resolveActualLineup() already
+       handles captain no-show promotion to vice and the chip multiplier. */
+    const liveLineup=resolveActualLineup();
+    const pts=rawPts*(p.id===liveLineup.effectiveCapId?liveLineup.capMultiplier:1);
     /* Once a gameweek is live, the official current-GW value owns the
        bright headline on every player card. This deliberately includes 0
        before kickoff: it is the player's current official GW score, not a
