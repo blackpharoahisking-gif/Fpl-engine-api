@@ -119,7 +119,14 @@ async function checkBuildFreshness({manual=false,force=false}={}){
   }catch(e){if(manual)flash('Build check could not reach GitHub Pages. Your current session remains available.');return false}
   finally{BUILD_CHECKING=false;badge?.classList.remove('checking')}
 }
-function applyFreshBuild(){const url=new URL(location.href);url.hash='';url.search='';url.searchParams.set('build',BUILD_REMOTE||Date.now());location.replace(url.toString())}
+function applyFreshBuild(){
+  const button=document.getElementById('btnApplyBuildUpdate'),url=new URL(location.href),stamp=Date.now();
+  if(button){button.disabled=true;button.textContent='Refreshing…'}
+  url.hash='';url.search='';
+  url.searchParams.set('build',BUILD_REMOTE||APP_BUILD);
+  url.searchParams.set('reload',stamp);
+  location.assign(url.toString())
+}
 function initBuildFreshness(){
   const badge=document.getElementById('buildBadge');if(badge){badge.textContent=`BUILD ${buildShort()}`;badge.onclick=()=>checkBuildFreshness({manual:true,force:true})}
   const apply=document.getElementById('btnApplyBuildUpdate');if(apply)apply.onclick=applyFreshBuild;
