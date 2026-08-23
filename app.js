@@ -1,4 +1,4 @@
-/* OTB 2026.08.22.8 — a card's bright headline figure is the live GW score
+/* OTB 2026.08.23.1 — a card's bright headline figure is the live GW score
    in every view, on top of only reporting a real result once that player's
    fixture has kicked off, the live GW score's guaranteed-visible home,
    separating predictive points from actual points, the LiveFPL-style card
@@ -160,6 +160,12 @@
    that as small print under a large projection. The headline slot now
    carries the live score in every view, labelled "GW{n} pts" once the
    fixture is finished and "GW{n} live" while it is still running.
+   2026.08.23.1: restored the intended live-card rule after a regression
+   kept xP visible for players whose fixtures had not kicked off. Once the
+   selected GW is live and official data is ready, every card headline now
+   shows that player's current official GW score, including 0 before kickoff.
+   Expected points stay on the secondary line and remain primary for future
+   or pre-deadline builds.
    Nothing is lost to make room: the displaced projection is captured
    verbatim from the markup — its value AND its own label — and written
    onto the secondary line ahead of the fixture text, so the card still
@@ -424,11 +430,12 @@ function installOtbLivePointsPatch(){
     let html=projectedCardHTML(p,benchPos);
     if(!liveScoreReady())return html;
     const pts=actualForPlayer(p);if(pts===null)return html;
-    /* A 0 from FPL's live endpoint before kickoff is "nothing recorded
-       yet", not a result — keep showing the projection until this
-       player's own fixture has actually started, then label it honestly:
-       "live" while the match is running, "pts" once it has finished. */
-    if(!playerStarted(p,S.gw))return html;
+    /* Once a gameweek is live, the official current-GW value owns the
+       bright headline on every player card. This deliberately includes 0
+       before kickoff: it is the player's current official GW score, not a
+       prediction. Projections remain available on the secondary line and
+       when a future/pre-deadline build is being viewed. */
+    const started=playerStarted(p,S.gw);
     const settled=playerLocked(p,S.gw);
     if(S.shotMode)return html.replace(/<div class="cstat">[^<]*<\/div>/,`<div class="cstat">${pts}</div>`);
     /* Marcus, 23 Aug: "the numbers shown in bright green want that to be
