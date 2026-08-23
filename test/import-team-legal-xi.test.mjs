@@ -42,3 +42,13 @@ test('a corrupted or unexpected import still self-heals to a legal 11-player XI 
   assert.match(fn[0],/if\(S\.start\.size!==11\|\|xiLegality\(\[\.\.\.S\.start\]\)!==null\)autoXI\(\)/,
     'must self-heal via autoXI(), the same pattern already used when restoring saved state');
 });
+
+test('imported captain and vice-captain survive captain validation',()=>{
+  const fn=app.match(/function applyImportedFplTeam\([\s\S]*?\n\}/);
+  assert.ok(fn,'applyImportedFplTeam must exist');
+  const body=fn[0];
+  assert.match(body,/S\.capManual=S\.cap!=null;S\.viceManual=S\.vice!=null;/,
+    'the imported FPL armbands must be marked authoritative before ensureCaptainValid runs');
+  assert.ok(body.indexOf('S.capManual=S.cap!=null')<body.indexOf('ensureCaptainValid()'),
+    'manual flags must be set before validation can auto-replace the imported armbands');
+});
