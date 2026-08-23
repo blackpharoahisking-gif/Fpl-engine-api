@@ -1,7 +1,8 @@
-/* OTB 2026.08.22.6 — cards show real per-GW points even in whole-period
-   view, on top of giving the live GW score a second guaranteed-visible
-   home, separating predictive points from actual points, the LiveFPL-
-   style card redesign, and automatic Gameweek intelligence/snapshots.
+/* OTB 2026.08.22.7 — a card only reports a real result once that player's
+   own fixture has kicked off, on top of cards showing real per-GW points
+   in whole-period view, the live GW score's guaranteed-visible home,
+   separating predictive points from actual points, the LiveFPL-style card
+   redesign, and automatic Gameweek intelligence/snapshots.
    The production application remains byte-for-byte in app-core.js. This file
    loads it first, then adds a display-only live-points layer. Projection maths,
    optimiser state, role intelligence and Verdict logic are not changed here.
@@ -127,10 +128,32 @@
    the header chip and callout bar already are — wrapped app-core.js's
    secondary value in a stable <span class="secondary-value"> so this
    patch layer has something reliable to target, mirroring how xp-value/
-   xp-label already work. */
+   xp-label already work.
+   2026.08.22.7: .6 then reported "GW1 0 pts (actual)" for players who had
+   not kicked off. Checked the live feed rather than guessing: GW1's
+   deadline was 21 Aug and only 6 of its 10 fixtures had finished, four
+   not started at all. FPL's event-live endpoint lists an element with
+   every stat zeroed BEFORE its fixture begins, so its 0 means "nothing
+   recorded yet", not "played and scored nothing" — the .4 note in this
+   same header assumed such a player would simply be absent from the
+   payload, and that assumption was wrong. Presenting it as a settled
+   result is worse than showing nothing: it reads as a blank. Cards now
+   hold the projection until playerStarted() confirms kickoff (the
+   fixture's own started/finished flags, with recorded minutes as
+   independent proof so a stale flag cannot hide someone demonstrably
+   playing), then label honestly — "live" while the match runs, "actual"
+   once it is finished. app-core.js's fixtureListFor now surfaces the
+   started flag applyFixtures already stored in FIX_META.
+   The headline live score is deliberately left as FPL's true running
+   total — it is the number Marcus is checking against the FPL app, so it
+   must match it, not out-guess it — but the status line no longer claims
+   unstarted players are "shown as projected xPts" when they are in fact
+   counted as their own live 0. It now states what is true: how many are
+   final, how many are still playing, how many are yet to kick off, and
+   whether Bench Boost is why the count is 15 rather than 11. */
 (function loadOtbCore(){
   const script=document.createElement('script');
-  script.src='app-core.js?v=2026.08.22.3-core';
+  script.src='app-core.js?v=2026.08.22.4-core';
   script.async=false;
   script.onload=()=>{
     try{installOtbLivePointsPatch()}
@@ -145,7 +168,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.22.6';
+  const BUILD='2026.08.22.7';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -154,7 +177,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.6';badge.title='OTB automatic Gameweek intelligence + LiveFPL-style cards + live GW score everywhere';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.7';badge.title='OTB automatic Gameweek intelligence + LiveFPL-style cards + live GW score everywhere';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){
@@ -228,6 +251,26 @@ function installOtbLivePointsPatch(){
     return row&&Number.isFinite(Number(row.min))?Number(row.min):null;
   };
   const liveMinutesOrZero=p=>{const m=liveMinutes(p);return m===null?0:m};
+
+  /* Marcus, 23 Aug: cards were reading "GW1 0 pts (actual)" for players
+     whose match had not kicked off. Confirmed against the live fixture
+     feed: GW1's deadline was 21 Aug and only 6 of its 10 fixtures had
+     finished, with four still to start — FPL's event-live endpoint lists
+     an element with every stat zeroed before its fixture begins, so a 0
+     there means "nothing recorded yet", NOT "played and scored nothing".
+     Presenting that as an actual result is worse than showing nothing.
+     Reads the fixture's own started/finished flags (FIX_META, the same
+     source playerLocked already uses) and treats any recorded minutes as
+     independent proof of kickoff, so a missing or stale flag can never
+     hide a player who is demonstrably on the pitch. */
+  const playerStarted=(p,gw)=>{
+    if(!p)return false;
+    if(liveMinutesOrZero(p)>0)return true;
+    try{
+      const fx=(typeof fixtureListFor==='function')?fixtureListFor(p.t,gw):[];
+      return fx.some(f=>!!f.started||!!f.finished);
+    }catch(_){return false}
+  };
 
   /* Decides the actual scoring XI for the gameweek: who was subbed out,
      who came on, whether the captain armband moved to the vice-captain.
@@ -321,7 +364,7 @@ function installOtbLivePointsPatch(){
       const age=Math.max(0,Math.floor((Date.now()-LIVE.loadedAt)/60000)),pending=pendingScorerCount();
       const freshness=age<1?'live':age+'m old';
       status.textContent=pending>0
-        ? `GW${S.gw} official points · ${freshness} · ${pending} of your XI not yet final (in progress or projected)`
+        ? `GW${S.gw} official points · ${freshness} · ${pending} of your XI not yet final (still playing or yet to kick off)`
         : `GW${S.gw} official points · ${freshness} · autosubs and vice-captaincy applied`;
       return;
     }
@@ -368,6 +411,12 @@ function installOtbLivePointsPatch(){
     let html=projectedCardHTML(p,benchPos);
     if(!liveScoreReady())return html;
     const pts=actualForPlayer(p);if(pts===null)return html;
+    /* A 0 from FPL's live endpoint before kickoff is "nothing recorded
+       yet", not a result — keep showing the projection until this
+       player's own fixture has actually started, then label it honestly:
+       "live" while the match is running, "actual" once it has finished. */
+    if(!playerStarted(p,S.gw))return html;
+    const resultTag=playerLocked(p,S.gw)?'actual':'live';
     if(selectedGwView()){
       if(S.shotMode)return html.replace(/<div class="cstat">[^<]*<\/div>/,`<div class="cstat">${pts}</div>`);
       html=html.replace(/<div class="therm"[^>]*><\/div>/,'');
@@ -376,13 +425,13 @@ function installOtbLivePointsPatch(){
         .replace(/expected-points details/g,'official GW-points result')
         .replace(/expected-points total/g,'official GW-points result');
     }
-    return html.replace(/<span class="secondary-value">GW\d+ [^<]*<\/span>/,`<span class="secondary-value">GW${S.gw} ${pts} pts (actual)</span>`);
+    return html.replace(/<span class="secondary-value">GW\d+ [^<]*<\/span>/,`<span class="secondary-value">GW${S.gw} ${pts} pts (${resultTag})</span>`);
   };
 
   function pendingScorerCount(){
     if(!liveScoreReady())return 0;
     const lineup=resolveActualLineup();
-    return lineup.scorers.filter(p=>actualForPlayer(p)===null||!playerLocked(p,S.gw)).length;
+    return lineup.scorers.filter(p=>!playerLocked(p,S.gw)).length;
   }
 
   /* The predictive spine (#spineTotal/#hXpts, driven purely by
@@ -422,27 +471,30 @@ function installOtbLivePointsPatch(){
       return;
     }
     const lineup=resolveActualLineup(),scorers=lineup.scorers;
-    let sum=0,pending=0;
+    let sum=0,waiting=0,playing=0;
     for(const p of scorers){
       const mult=p.id===lineup.effectiveCapId?lineup.capMultiplier:1;
       const actual=actualForPlayer(p);
-      const settled=actual!==null&&playerLocked(p,S.gw);
-      if(!settled)pending++;
+      if(!playerStarted(p,S.gw))waiting++;
+      else if(!playerLocked(p,S.gw))playing++;
       sum+=(actual!==null?actual:projectedForPlayer(p))*mult;
     }
     sum=Math.round(sum*10)/10;
     if(val){val.textContent=String(sum);val.className='v mono good';}
     if(barNum)barNum.textContent=String(sum);
+    const settledCount=Math.max(0,scorers.length-waiting-playing);
     const notes=[];
-    if(pending>0)notes.push(`${pending} of ${scorers.length} not yet final (in progress or shown as projected xPts)`);
+    if(lineup.benchScoring)notes.push('Bench Boost — all 15 count');
+    if(playing>0)notes.push(`${playing} still playing`);
+    if(waiting>0)notes.push(`${waiting} yet to kick off`);
     if(lineup.capPromoted)notes.push('captain did not play — vice-captain multiplier applied');
     if(lineup.gkSwapped)notes.push('goalkeeper autosub applied');
     if(lineup.subsInCount)notes.push(`${lineup.subsInCount} outfield autosub${lineup.subsInCount===1?'':'s'} applied`);
     if(lineup.unfilledSubCount)notes.push(`${lineup.unfilledSubCount} missing starter${lineup.unfilledSubCount===1?'':'s'} had no legal bench cover`);
-    const noteText=notes.length?` ${notes.join('; ')}.`:'';
-    const title=`Official FPL GW${S.gw} points for the actual scoring XI${lineup.benchScoring?' plus Bench Boost':''} — autosubs and vice-captain promotion applied where each player's own fixture has finished.${noteText}`;
-    if(wrap)wrap.title=title;
-    if(barStatus)barStatus.textContent=notes.length?`${notes.join('; ')}.`:'Official — autosubs and vice-captaincy applied.';
+    const lead=`${settledCount} of ${scorers.length} final`;
+    const noteText=notes.length?` · ${notes.join(' · ')}`:'';
+    if(wrap)wrap.title=`Your real FPL GW${S.gw} running total — the same number FPL shows right now, not a forecast. Autosubs and vice-captain promotion are applied once a player's own fixture has finished. ${lead}${noteText}.`;
+    if(barStatus)barStatus.textContent=`${lead}${noteText}.`;
   }
 
   const projectedRenderSpine=renderSpine;

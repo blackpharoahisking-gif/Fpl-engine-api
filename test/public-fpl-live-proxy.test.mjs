@@ -6,7 +6,7 @@ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const worker=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 
 test('live score bridge loads the untouched app core and exposes official GW points',()=>{
-  assert.match(app,/app-core\.js\?v=2026\.08\.22\.3-core/);
+  assert.match(app,/app-core\.js\?v=2026\.08\.22\.4-core/);
   assert.match(app,/GW points/);
   assert.match(app,/actualRowsFromPayload\(payload\)/);
   assert.match(app,/const projectedCardHTML=cardHTML/);
@@ -28,10 +28,11 @@ test('the live path no longer gates on a fixed row-count threshold',()=>{
   assert.match(app,/LIVE\.rows\.size\s*>\s*0/,'readiness should key off hearing back at all, not a magic count');
 });
 
-test('a scorer who has not kicked off yet is blended in via their own projected xPts, not dropped',()=>{
-  assert.match(app,/projectedForPlayer/,'renderSpine needs a per-player projected fallback');
+test('a scorer FPL returns no row at all for falls back to their own projected xPts rather than being dropped',()=>{
+  assert.match(app,/projectedForPlayer/,'the live total needs a per-player fallback for a scorer with no live row');
   assert.match(app,/project\(p,S\.gw\)/,'the fallback must reuse the same project() every card already calls');
-  assert.match(app,/pending\+\+/,'pending scorers must be counted, not silently absorbed into the total');
+  assert.match(app,/waiting\+\+/,'scorers whose fixture has not kicked off must be counted, not silently absorbed into the total');
+  assert.match(app,/playing\+\+/,'scorers whose fixture is still running must be counted separately from those yet to start');
   assert.doesNotMatch(app,/if\(pts===null\)continue;sum\+=pts/,'the old skip-if-missing summing must be gone');
 });
 
