@@ -1677,7 +1677,7 @@ async function healthData(env) {
   return {
     status,
     service: 'FPL Engine API',
-    release: 'v2.29.0-gameweek-intelligence',
+    release: 'v2.29.1-baseline-selection',
     season: m.season || configuredSeason(env),
     schemaVersion: WORKER_SCHEMA_VERSION,
     storedSchemaVersion: num(m.schema_version, 0),
@@ -2016,7 +2016,7 @@ export default {
         default:
           return json({
             service: 'FPL Engine API',
-            release: 'v2.29.0-gameweek-intelligence',
+            release: 'v2.29.1-baseline-selection',
             frontendRoutes: [
               '/bootstrap-static/', '/fixtures/', '/api/news?hours=72',
               '/api/deltas?hours=24', '/api/price-intelligence?hours=24',
