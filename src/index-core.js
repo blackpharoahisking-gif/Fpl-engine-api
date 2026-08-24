@@ -610,15 +610,21 @@ function evaluationActualUpsert(env, row) {
   );
 }
 
+export function nextEvaluationBaselineEvent(events, currentMs = Date.now()) {
+  return (events || [])
+    .map((event) => ({ event, deadlineMs: Date.parse(event?.deadline_time || '') }))
+    .filter(({ deadlineMs }) => Number.isFinite(deadlineMs) && deadlineMs > currentMs)
+    .sort((a, b) => a.deadlineMs - b.deadlineMs)[0]?.event || null;
+}
+
 async function captureOfficialBaselineIfDue(env, boot, fixtures, serverHash, timestamp) {
   await ensureEvaluationSchema(env);
   const season = seasonFromBootstrap(boot);
-  const event = (boot.events || [])
-    .filter((e) => !e.finished && Number.isFinite(Date.parse(e.deadline_time || '')))
-    .sort((a, b) => Date.parse(a.deadline_time) - Date.parse(b.deadline_time))[0];
+  const currentMs = Date.now();
+  const event = nextEvaluationBaselineEvent(boot.events, currentMs);
   if (!event) return { ok: true, skipped: true, reason: 'No future deadline' };
   const deadlineMs = Date.parse(event.deadline_time);
-  const until = deadlineMs - Date.now();
+  const until = deadlineMs - currentMs;
   if (until <= 0 || until > EVALUATION_BASELINE_WINDOW_MS) {
     return { ok: true, skipped: true, reason: 'Baseline window is not open', gw: event.id };
   }
