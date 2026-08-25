@@ -2017,7 +2017,7 @@ async function healthData(env) {
   return {
     status,
     service: 'FPL Engine API',
-    release: 'v2.30.0-review-integrity',
+    release: 'v2.31.0-review-persistence',
     season: m.season || configuredSeason(env),
     schemaVersion: WORKER_SCHEMA_VERSION,
     storedSchemaVersion: num(m.schema_version, 0),
@@ -2356,7 +2356,7 @@ export default {
         default:
           return json({
             service: 'FPL Engine API',
-            release: 'v2.30.0-review-integrity',
+            release: 'v2.31.0-review-persistence',
             frontendRoutes: [
               '/bootstrap-static/', '/fixtures/', '/api/news?hours=72',
               '/api/deltas?hours=24', '/api/price-intelligence?hours=24',

@@ -105,11 +105,130 @@ test('first-gameweek reviews declare their limited sample instead of overstating
   assert.equal(report.evidenceLabel, 'FIRST_WEEK');
   assert.equal(report.sample.priorGameweeks, 0);
   assert.equal(report.sections.hiddenGems[0].evidenceLabel, 'FIRST_WEEK');
+  assert.deepEqual(report.sections.hiddenGems[0].persistence, {
+    status: 'NEW',
+    signalGameweeks: 1,
+    sampleGameweeks: 1,
+    priorSignalGameweeks: 0,
+    recentPriorSignalGameweeks: 0,
+    rollingXGI: .5,
+    rollingMinutes: 90,
+    rollingStarts: 1,
+    windowGameweeks: [1],
+  });
   assert.equal(report.sections.roleRisers.length, 0);
   assert.equal(report.final, false);
   assert.equal(report.dataChecked, false);
   assert.equal(report.methodology.scoringPolicy.version, FPL_SCORING_POLICY.version);
   assert.match(report.methodology.warning, /not automatic transfer instructions/i);
+});
+
+test('visible low-owned cards balance persistent evidence with the strongest new signals', () => {
+  const elements = Array.from({ length: 7 }, (_, index) => ({
+    id: 101 + index,
+    web_name: `Signal ${index + 1}`,
+    team: 1,
+    element_type: 3,
+    now_cost: 50,
+    selected_by_percent: String(2 + index),
+    status: 'a',
+  }));
+  const signalBootstrap = { teams: bootstrap.teams, elements };
+  const xgi = [1.05, .95, .85, .75, .65, .55, .45];
+  const rows = normalizeGameweekStats({
+    season: '2026/27', gw: 2, bootstrap: signalBootstrap,
+    live: { elements: elements.map((player, index) => liveRow(player.id, {
+      total_points: 6,
+      expected_goal_involvements: String(xgi[index]),
+    })) },
+    capturedAt: '2026-08-31T00:00:00.000Z',
+  });
+  const priorPersistent = {
+    ...rows.find((row) => row.player_id === 107),
+    gw: 1,
+    expected_goal_involvements: .60,
+  };
+  const report = buildGameweekIntelligence({
+    season: '2026/27', gw: 2, generatedAt: '2026-08-31T00:00:00.000Z',
+    rows, historyRows: [priorPersistent], teams: bootstrap.teams,
+  });
+  const visible = report.sections.hiddenGems.slice(0, 6);
+  assert.deepEqual(visible.map((row) => row.name), [
+    'Signal 1', 'Signal 2', 'Signal 3', 'Signal 4', 'Signal 5', 'Signal 7',
+  ]);
+  assert.equal(visible[0].persistence.status, 'NEW');
+  assert.equal(visible.at(-1).persistence.status, 'REPEATED');
+  assert.equal(visible.at(-1).persistence.signalGameweeks, 2);
+  assert.ok(!visible.some((row) => row.name === 'Signal 6'));
+  assert.match(report.methodology.hiddenGemRanking, /No composite score/);
+});
+
+test('GW1 low-owned golden order is unchanged when every signal is new', () => {
+  const snapshot = [
+    ['De Cuyper', 2, 17, 77, 1.68, 5.5],
+    ['Hinshelwood', 3, 16, 63, 1.43, 1.7],
+    ['Wissa', 4, 4, 90, 1.02, 2.6],
+    ['Lewis-Potter', 3, 10, 90, .89, .8],
+    ['Emersonn', 4, 9, 65, .88, 1.2],
+    ['Gonzalo', 4, 6, 90, .74, 2.8],
+    ['Saka', 3, 5, 90, .72, 8.0],
+  ];
+  const snapshotBootstrap = {
+    teams: bootstrap.teams,
+    elements: snapshot.map(([name, position, , , , ownership], index) => ({
+      id: 201 + index, web_name: name, team: 1, element_type: position,
+      now_cost: 50, selected_by_percent: String(ownership), status: 'a',
+    })),
+  };
+  const rows = normalizeGameweekStats({
+    season: '2026/27', gw: 1, bootstrap: snapshotBootstrap,
+    live: { elements: snapshot.map(([, , points, minutes, xgi], index) => liveRow(201 + index, {
+      total_points: points, minutes, expected_goal_involvements: String(xgi),
+    })) },
+    capturedAt: '2026-08-24T00:00:00.000Z',
+  });
+  const report = buildGameweekIntelligence({
+    season: '2026/27', gw: 1, generatedAt: '2026-08-24T00:00:00.000Z',
+    rows, teams: bootstrap.teams,
+  });
+  assert.deepEqual(report.sections.hiddenGems.slice(0, 6).map((row) => row.name), [
+    'De Cuyper', 'Hinshelwood', 'Wissa', 'Lewis-Potter', 'Emersonn', 'Gonzalo',
+  ]);
+  assert.ok(report.sections.hiddenGems.every((row) => row.persistence.status === 'NEW'));
+});
+
+test('three qualifying weeks become established and expose rolling five-GW evidence', () => {
+  const rows = normalizeGameweekStats({
+    season: '2026/27', gw: 5, bootstrap,
+    live: { elements: [liveRow(1, {
+      total_points: 6,
+      expected_goal_involvements: '.55',
+    })] },
+    capturedAt: '2026-09-21T00:00:00.000Z',
+  });
+  const current = rows[0];
+  const historyRows = [
+    { ...current, gw: 4, minutes: 80, starts: 1, expected_goal_involvements: .50 },
+    { ...current, gw: 3, minutes: 90, starts: 1, expected_goal_involvements: .10 },
+    { ...current, gw: 2, minutes: 70, starts: 1, expected_goal_involvements: .46 },
+    { ...current, gw: 1, minutes: 20, starts: 0, expected_goal_involvements: .20 },
+  ];
+  const report = buildGameweekIntelligence({
+    season: '2026/27', gw: 5, generatedAt: '2026-09-21T00:00:00.000Z',
+    rows, historyRows, teams: bootstrap.teams,
+  });
+  const persistence = report.sections.hiddenGems[0].persistence;
+  assert.deepEqual(persistence, {
+    status: 'ESTABLISHED',
+    signalGameweeks: 3,
+    sampleGameweeks: 5,
+    priorSignalGameweeks: 2,
+    recentPriorSignalGameweeks: 1,
+    rollingXGI: 1.81,
+    rollingMinutes: 350,
+    rollingStarts: 4,
+    windowGameweeks: [5, 4, 3, 2, 1],
+  });
 });
 
 test('blank clubs do not distort league attack baselines or create false role-loss flags', () => {

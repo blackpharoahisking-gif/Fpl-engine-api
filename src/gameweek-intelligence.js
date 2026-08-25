@@ -12,7 +12,7 @@ import {
   repeatableProcessBreakdown,
 } from './fpl-scoring.js';
 
-export const GAMEWEEK_INTELLIGENCE_VERSION = 'gw-intelligence-v3-rule-aware';
+export const GAMEWEEK_INTELLIGENCE_VERSION = 'gw-intelligence-v4-persistence';
 
 const POSITION = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
 const number = (value, fallback = 0) => {
@@ -134,6 +134,55 @@ function playerHistoryEvidence(rows) {
     xGI: sum(recent, 'expected_goal_involvements'),
     points: sum(recent, 'total_points'),
   };
+}
+
+function isLowOwnedEmergingSignal(row) {
+  return number(row?.minutes) >= 60
+    && number(row?.ownership, 100) <= 12
+    && (
+      number(row?.expected_goal_involvements) >= .45
+      || defensiveContributionProcessPoints(row) > 0
+      || (number(row?.position) === 1 && number(row?.saves) >= 4)
+    );
+}
+
+function lowOwnedSignalPersistence(row, historyRows) {
+  const prior = (historyRows || []).slice(0, 4);
+  const sample = [row, ...prior];
+  const priorTwo = prior.slice(0, 2);
+  const signalGameweeks = sample.filter(isLowOwnedEmergingSignal).length;
+  const recentPriorSignalGameweeks = priorTwo.filter(isLowOwnedEmergingSignal).length;
+  const status = signalGameweeks >= 3 && recentPriorSignalGameweeks >= 1
+    ? 'ESTABLISHED'
+    : recentPriorSignalGameweeks >= 1 ? 'REPEATED' : 'NEW';
+  return {
+    status,
+    signalGameweeks,
+    sampleGameweeks: sample.length,
+    priorSignalGameweeks: prior.filter(isLowOwnedEmergingSignal).length,
+    recentPriorSignalGameweeks,
+    rollingXGI: round(sum(sample, 'expected_goal_involvements'), 2),
+    rollingMinutes: round(sum(sample, 'minutes'), 0),
+    rollingStarts: round(sum(sample, 'starts'), 0),
+    windowGameweeks: sample.map((sampleRow) => number(sampleRow.gw)).filter((sampleGw) => sampleGw > 0),
+  };
+}
+
+function balanceLowOwnedSignals(ranked, visibleLimit = 6, totalLimit = 10) {
+  const rankedRows = ranked.map((candidate, rank) => ({ ...candidate, currentRank: rank }));
+  const persistent = rankedRows.filter((candidate) => candidate.persistence.status !== 'NEW').slice(0, 3);
+  const fresh = rankedRows.filter((candidate) => candidate.persistence.status === 'NEW').slice(0, 3);
+  const visible = [...persistent, ...fresh];
+  const chosen = new Set(visible.map((candidate) => candidate.row.player_id));
+  for (const candidate of rankedRows) {
+    if (visible.length >= visibleLimit) break;
+    if (chosen.has(candidate.row.player_id)) continue;
+    visible.push(candidate);
+    chosen.add(candidate.row.player_id);
+  }
+  visible.sort((a, b) => a.currentRank - b.currentRank);
+  const remainder = rankedRows.filter((candidate) => !chosen.has(candidate.row.player_id));
+  return [...visible, ...remainder].slice(0, totalLimit);
 }
 
 function fixtureScoreByTeam(fixtures, gw, teamIdByCode) {
@@ -306,28 +355,33 @@ function signalLists(rows, history, currentTeams) {
     .slice(0, 10)
     .map((row) => decorate(row, `${row.total_points} points from ${row.minutes} minutes; ${round(row.expected_goal_involvements, 2)} xGI.`, 'GAMEWEEK_HAUL'));
 
-  const hiddenGems = rows
-    .filter((row) => row.minutes >= 60 && row.ownership <= 12 && (
-      row.expected_goal_involvements >= .45
-      || defensiveContributionProcessPoints(row) > 0
-      || (row.position === 1 && row.saves >= 4)
-    ))
+  const hiddenGemCandidates = rows
+    .filter(isLowOwnedEmergingSignal)
     .map((row) => {
       const prior = evidence(row);
-      return { row, prior, defensivePoints: defensiveContributionProcessPoints(row) };
+      return {
+        row,
+        prior,
+        defensivePoints: defensiveContributionProcessPoints(row),
+        persistence: lowOwnedSignalPersistence(row, history.get(row.player_id)),
+      };
     })
     .sort((a, b) => b.row.expected_goal_involvements - a.row.expected_goal_involvements
       || b.defensivePoints - a.defensivePoints
       || b.row.saves - a.row.saves
       || b.row.total_points - a.row.total_points
       || a.row.ownership - b.row.ownership
-      || a.row.player_id - b.row.player_id)
-    .slice(0, 10)
-    .map(({ row, prior, defensivePoints }) => decorate(
+      || a.row.player_id - b.row.player_id);
+
+  const hiddenGems = balanceLowOwnedSignals(hiddenGemCandidates)
+    .map(({ row, prior, defensivePoints, persistence }) => decorate(
       row,
-      `${round(row.ownership, 1)}% owned, ${round(row.expected_goal_involvements, 2)} xGI, ${defensivePoints} DC points and ${row.minutes} minutes${prior.gameweeks ? `; ${round(prior.xGI, 2)} xGI across the prior ${prior.gameweeks} GW` : '; first-week evidence only'}. Ranked by xGI, then DC points, saves, Gameweek points and lower ownership.`,
+      `${round(row.ownership, 1)}% owned, ${round(row.expected_goal_involvements, 2)} xGI, ${defensivePoints} DC points and ${row.minutes} minutes${prior.gameweeks ? `; ${round(prior.xGI, 2)} xGI across the prior ${prior.gameweeks} GW` : '; first-week evidence only'}. Current-week strength is ranked by xGI, then DC points, saves, Gameweek points and lower ownership.`,
       'LOW_OWNED_EMERGING',
-      { rankRule: 'XGI_THEN_DC_THEN_SAVES_THEN_POINTS_THEN_OWNERSHIP' },
+      {
+        rankRule: 'BALANCED_PERSISTENCE_AND_NEW_THEN_XGI_DC_SAVES_POINTS_OWNERSHIP',
+        persistence,
+      },
     ));
 
   const underlyingWatch = rows
@@ -431,7 +485,8 @@ export function buildGameweekIntelligence({
       evidenceLabels: 'FIRST_WEEK, EARLY_SAMPLE and MULTI_WEEK describe sample volume only; they are not calibrated probabilities.',
       scoringPolicy: FPL_SCORING_POLICY,
       haulCaution: 'Appearance, position-specific expected goals, expected assists, all-position clean sheets, save points and defensive-contribution points receive process credit. Actual bonus is excluded.',
-      hiddenGemRanking: 'Eligible low-owned players are ordered lexicographically by xGI, defensive-contribution points, saves, Gameweek points, then lower ownership. No composite score is used.',
+      hiddenGemPersistence: 'NEW has no qualifying hit in the prior two sampled Gameweeks. REPEATED has at least one. ESTABLISHED has at least three qualifying hits in the rolling five-Gameweek sample and at least one in the prior two. Club blanks are excluded from the sample.',
+      hiddenGemRanking: 'Eligible low-owned players are ranked lexicographically by current-GW xGI, defensive-contribution points, saves, Gameweek points, then lower ownership. The visible six reserve up to three places for repeated or established signals and up to three for new signals, with unused places filled by current-GW rank. No composite score is used.',
     },
     sections: lists,
     teamTrends: teamReview(currentTeams, priorTeams),
