@@ -36,6 +36,7 @@ const EVALUATION_BASELINE_WINDOW_MS = 35 * 60 * 1000;
 const EVALUATION_MIN_PLAYERS = 300;
 const EVALUATION_MAX_PLAYERS = 800;
 const GAMEWEEK_INTELLIGENCE_MIN_PLAYERS = 300;
+export const GAMEWEEK_FINALITY_GRACE_MS = 14 * 60 * 60 * 1000;
 
 function evaluationCaptureCooldownMs(hoursUntil) {
   if (hoursUntil > 24) return 12 * 3600e3;
@@ -617,6 +618,62 @@ export function nextEvaluationBaselineEvent(events, currentMs = Date.now()) {
     .sort((a, b) => a.deadlineMs - b.deadlineMs)[0]?.event || null;
 }
 
+export function gameweekCompletionStatus(event, fixtures, currentMs = Date.now()) {
+  const gw = Math.trunc(Number(event?.id));
+  const official = event?.finished === true && event?.data_checked === true;
+  if (official) {
+    return {
+      gw,
+      complete: true,
+      official: true,
+      source: 'official-data-checked',
+      fixtureCount: 0,
+      latestKickoffMs: null,
+    };
+  }
+
+  if (!Number.isInteger(gw) || gw < 1) {
+    return {
+      gw: null,
+      complete: false,
+      official: false,
+      source: 'pending',
+      fixtureCount: 0,
+      latestKickoffMs: null,
+    };
+  }
+
+  const rows = (fixtures || []).filter((fixture) =>
+    Math.trunc(Number(fixture?.event ?? fixture?.event_id)) === gw
+  );
+  const kickoffTimes = rows.map((fixture) => Date.parse(fixture?.kickoff_time || ''));
+  const fixturesFinal = rows.length > 0
+    && kickoffTimes.every(Number.isFinite)
+    && rows.every((fixture) =>
+      fixture?.finished === true
+      && fixture?.finished_provisional === true
+      && fixture?.team_h_score !== null
+      && fixture?.team_h_score !== undefined
+      && fixture?.team_a_score !== null
+      && fixture?.team_a_score !== undefined
+    );
+  const latestKickoffMs = kickoffTimes.length && kickoffTimes.every(Number.isFinite)
+    ? Math.max(...kickoffTimes)
+    : null;
+  const graceElapsed = Number.isFinite(latestKickoffMs)
+    && Number.isFinite(currentMs)
+    && currentMs >= latestKickoffMs + GAMEWEEK_FINALITY_GRACE_MS;
+  const complete = fixturesFinal && graceElapsed;
+  return {
+    gw,
+    complete,
+    official: false,
+    source: complete ? 'completed-fixtures-grace' : 'pending',
+    fixtureCount: rows.length,
+    latestKickoffMs,
+  };
+}
+
 async function captureOfficialBaselineIfDue(env, boot, fixtures, serverHash, timestamp) {
   await ensureEvaluationSchema(env);
   const season = seasonFromBootstrap(boot);
@@ -674,21 +731,35 @@ async function captureOfficialBaselineIfDue(env, boot, fixtures, serverHash, tim
   return { ok: true, captured: Math.max(0,statements.length-1), gw: event.id, snapshotId };
 }
 
-async function captureCheckedActuals(env, boot, timestamp) {
+async function captureCheckedActuals(env, boot, fixtures, timestamp) {
   await ensureEvaluationSchema(env);
   const season = seasonFromBootstrap(boot);
-  const checked = (boot.events || []).filter((e) => e.finished && e.data_checked).map((e) => e.id);
-  if (!checked.length) return { ok: true, skipped: true, reason: 'No checked gameweeks' };
+  const timestampMs = Date.parse(timestamp);
+  const currentMs = Number.isFinite(timestampMs) ? timestampMs : Date.now();
+  const completed = (boot.events || [])
+    .map((event) => gameweekCompletionStatus(event,fixtures,currentMs))
+    .filter((status) => status.complete)
+    .sort((a,b) => a.gw - b.gw);
+  if (!completed.length) return { ok: true, skipped: true, reason: 'No completed gameweeks' };
   const existingRows = await env.DB.prepare(
-    `SELECT gw,COUNT(*) AS n FROM evaluation_actuals WHERE season=?1 GROUP BY gw`
+    `SELECT gw,COUNT(*) AS n,MIN(data_checked) AS data_checked
+     FROM evaluation_actuals WHERE season=?1 GROUP BY gw`
   ).bind(season).all();
   const required = Math.max(EVALUATION_MIN_PLAYERS,Math.floor((boot.elements||[]).length*.9));
-  const complete = new Set(existingRows.results.filter((r)=>num(r.n)>=required).map((r) => num(r.gw)));
-  const missing = checked.filter((gw) => !complete.has(gw)).slice(0, 2);
-  if (!missing.length) return { ok: true, skipped: true, reason: 'Checked actuals already captured' };
+  const existing = new Map(existingRows.results.map((row) => [num(row.gw), {
+    complete: num(row.n) >= required,
+    official: num(row.data_checked) === 1,
+  }]));
+  const missing = completed.filter((status) => {
+    const stored = existing.get(status.gw);
+    return !stored?.complete || (status.official && !stored.official);
+  }).slice(0,2);
+  if (!missing.length) return { ok: true, skipped: true, reason: 'Completed actuals already captured' };
   let captured = 0;
   const gameweeks = [];
-  for (const gw of missing) {
+  const finality = {};
+  for (const status of missing) {
+    const gw = status.gw;
     const live = await fplGet(`/event/${gw}/live/`);
     const elements = Array.isArray(live?.elements) ? live.elements : [];
     if (elements.length < EVALUATION_MIN_PLAYERS) throw new Error(`GW${gw} live payload has only ${elements.length} players`);
@@ -700,20 +771,25 @@ async function captureCheckedActuals(env, boot, timestamp) {
         goals:num(st.goals_scored),assists:num(st.assists),clean_sheets:num(st.clean_sheets),
         goals_conceded:num(st.goals_conceded),saves:num(st.saves),bonus:num(st.bonus),bps:num(st.bps),
         defensive_contribution:num(st.defensive_contribution ?? st.defensive_contributions),
-        yellow_cards:num(st.yellow_cards),red_cards:num(st.red_cards),captured_at:timestamp,data_checked:1,
+        yellow_cards:num(st.yellow_cards),red_cards:num(st.red_cards),captured_at:timestamp,
+        data_checked:status.official?1:0,
       }));
     }
     for (let i = 0; i < statements.length; i += 80) await env.DB.batch(statements.slice(i, i + 80));
     captured += statements.length;
     gameweeks.push(gw);
-    await metaUpsert(env,`evaluation_actual_gw_${gw}`,timestamp,timestamp).run();
+    finality[gw]=status.source;
+    await env.DB.batch([
+      metaUpsert(env,`evaluation_actual_gw_${gw}`,timestamp,timestamp),
+      metaUpsert(env,`evaluation_actual_finality_gw_${gw}`,status.source,timestamp),
+    ]);
   }
   await env.DB.batch([
     metaUpsert(env,'evaluation_last_actual_at',timestamp,timestamp),
     metaUpsert(env,'evaluation_last_actual_gw',Math.max(...gameweeks),timestamp),
     metaUpsert(env,'evaluation_schema_version',EVALUATION_SCHEMA_VERSION,timestamp),
   ]);
-  return { ok: true, captured, gameweeks };
+  return { ok: true, captured, gameweeks, finality };
 }
 
 let GAMEWEEK_INTELLIGENCE_SCHEMA_READY = false;
@@ -838,32 +914,44 @@ function gameweekReviewUpsert(env, { season, gw, sourceHash, generatedAt, report
 async function captureGameweekIntelligence(env, boot, fixtures, timestamp) {
   await ensureGameweekIntelligenceSchema(env);
   const season = seasonFromBootstrap(boot);
-  const checked = (boot.events || [])
-    .filter((event) => event.finished && event.data_checked)
-    .map((event) => num(event.id))
-    .sort((a, b) => b - a);
-  if (!checked.length) return { ok: true, skipped: true, reason: 'No data-checked gameweeks' };
+  const timestampMs = Date.parse(timestamp);
+  const currentMs = Number.isFinite(timestampMs) ? timestampMs : Date.now();
+  const completed = (boot.events || [])
+    .map((event) => gameweekCompletionStatus(event,fixtures,currentMs))
+    .filter((status) => status.complete)
+    .sort((a,b) => a.gw - b.gw);
+  if (!completed.length) return { ok: true, skipped: true, reason: 'No completed gameweeks' };
   const required = Math.max(GAMEWEEK_INTELLIGENCE_MIN_PLAYERS, Math.floor((boot.elements || []).length * .9));
-  const existing = await env.DB.prepare(
+  const [existing,finalityRows] = await Promise.all([env.DB.prepare(
     `SELECT reviews.gw,reviews.review_version,COUNT(stats.player_id) AS stats_count
      FROM gameweek_reviews AS reviews
      LEFT JOIN gameweek_player_stats AS stats
        ON stats.season=reviews.season AND stats.gw=reviews.gw
      WHERE reviews.season=?1
      GROUP BY reviews.gw,reviews.review_version`
-  ).bind(season).all();
+  ).bind(season).all(),env.DB.prepare(
+    `SELECT key,value FROM meta WHERE key LIKE 'gameweek_intelligence_finality_gw_%'`
+  ).all()]);
   const versions = new Map(existing.results.map((row) => [num(row.gw), {
     version: row.review_version,
     stats: num(row.stats_count),
   }]));
-  const missing = checked
-    .filter((gw) => versions.get(gw)?.version !== GAMEWEEK_INTELLIGENCE_VERSION || versions.get(gw)?.stats < required)
+  const storedFinality = new Map(finalityRows.results.map((row) => [
+    num(String(row.key).replace('gameweek_intelligence_finality_gw_','')),
+    String(row.value || ''),
+  ]));
+  const missing = completed
+    .filter((status) => versions.get(status.gw)?.version !== GAMEWEEK_INTELLIGENCE_VERSION
+      || versions.get(status.gw)?.stats < required
+      || (status.official && storedFinality.get(status.gw) !== 'official-data-checked'))
     .slice(0, 2);
-  if (!missing.length) return { ok: true, skipped: true, reason: 'Every checked review is current' };
+  if (!missing.length) return { ok: true, skipped: true, reason: 'Every completed review is current' };
 
   const gameweeks = [];
   let storedPlayers = 0;
-  for (const gw of missing) {
+  const finality = {};
+  for (const status of missing) {
+    const gw = status.gw;
     const live = await fplGet(`/event/${gw}/live/`);
     const rows = normalizeGameweekStats({ season, gw, bootstrap: boot, live, capturedAt: timestamp });
     if (rows.length < required) throw new Error(`GW${gw} intelligence payload has only ${rows.length}/${required} players`);
@@ -883,19 +971,27 @@ async function captureGameweekIntelligence(env, boot, fixtures, timestamp) {
       fixtures,teams:boot.teams || [],
     });
     report.sourceHash = sourceHash;
+    report.finality = {
+      source: status.source,
+      officialDataChecked: status.official,
+      fixtureCount: status.fixtureCount,
+      safetyWindowHours: GAMEWEEK_FINALITY_GRACE_MS / 3600e3,
+    };
     const statements = rows.map((row) => gameweekStatUpsert(env,row));
     statements.push(gameweekReviewUpsert(env,{season,gw,sourceHash,generatedAt:timestamp,report}));
     statements.push(metaUpsert(env,`gameweek_intelligence_gw_${gw}`,timestamp,timestamp));
+    statements.push(metaUpsert(env,`gameweek_intelligence_finality_gw_${gw}`,status.source,timestamp));
     for (let i = 0; i < statements.length; i += 60) await env.DB.batch(statements.slice(i,i+60));
     storedPlayers += rows.length;
     gameweeks.push(gw);
+    finality[gw]=status.source;
   }
   await env.DB.batch([
     metaUpsert(env,'gameweek_intelligence_last_at',timestamp,timestamp),
     metaUpsert(env,'gameweek_intelligence_last_gw',Math.max(...gameweeks),timestamp),
     metaUpsert(env,'gameweek_intelligence_version',GAMEWEEK_INTELLIGENCE_VERSION,timestamp),
   ]);
-  return { ok: true, gameweeks, storedPlayers, version: GAMEWEEK_INTELLIGENCE_VERSION };
+  return { ok: true, gameweeks, storedPlayers, finality, version: GAMEWEEK_INTELLIGENCE_VERSION };
 }
 
 function gameweekIntelligencePlayerIds(url) {
@@ -943,7 +1039,7 @@ async function handleGameweekIntelligence(env, url) {
   if (!review) {
     return json({
       status:'pending',season,gw,version:GAMEWEEK_INTELLIGENCE_VERSION,
-      message:gw ? `GW${gw} intelligence will be generated automatically after FPL marks the Gameweek finished and data-checked.` : 'No data-checked Gameweek review is available yet.',
+      message:gw ? `GW${gw} intelligence will be generated after FPL data-checks the Gameweek or every fixture is final and the safety window has elapsed.` : 'No completed Gameweek review is available yet.',
     },200,{'cache-control':'public, max-age=120'});
   }
   let report;
@@ -1237,17 +1333,26 @@ async function handleEvaluationStatus(env, url) {
        ORDER BY captured_at DESC LIMIT 1`
     ).bind(season,gw).first(),
     env.DB.prepare(
-      `SELECT COUNT(*) AS player_count,MAX(captured_at) AS captured_at
+      `SELECT COUNT(*) AS player_count,MAX(captured_at) AS captured_at,
+              MIN(data_checked) AS data_checked
        FROM evaluation_actuals WHERE season=?1 AND gw=?2`
     ).bind(season,gw).first(),
   ]);
   const projection = snapshots.results.find((r) => r.model_version !== 'BASELINE') || null;
+  const actualCount = num(actual?.player_count);
+  const actualComplete = actualCount >= EVALUATION_MIN_PLAYERS;
   return json({
-    season,gw,generatedAt:now(),deadline:event?.deadline_time || null,finished:Boolean(event?.finished),
+    season,gw,generatedAt:now(),deadline:event?.deadline_time || null,
+    finished:Boolean(event?.finished)||actualComplete,
     captureOpen:Number.isFinite(deadlineMs) && Date.now()<deadlineMs && (deadlineMs-Date.now())<=EVALUATION_CAPTURE_WINDOW_HOURS*3600e3,
     captureClosed:Number.isFinite(deadlineMs) && Date.now()>=deadlineMs,
     baseline,projection,snapshots:snapshots.results,
-    actuals:{player_count:num(actual?.player_count),captured_at:actual?.captured_at || null},
+    actuals:{
+      player_count:actualCount,
+      captured_at:actual?.captured_at || null,
+      officialDataChecked:actualComplete&&num(actual?.data_checked)===1,
+      finality:actualComplete?(num(actual?.data_checked)===1?'official-data-checked':'completed-fixtures-grace'):null,
+    },
     schemaVersion:EVALUATION_SCHEMA_VERSION,
   });
 }
@@ -1479,7 +1584,7 @@ async function poll(env, { sampleTransfers = false } = {}) {
       const evaluationErrors=[];
       try {
         evaluation.baseline=await captureOfficialBaselineIfDue(env,boot,fixtures,hash,startedAt);
-        evaluation.actuals=await captureCheckedActuals(env,boot,startedAt);
+        evaluation.actuals=await captureCheckedActuals(env,boot,fixtures,startedAt);
       } catch(evalErr) {
         evaluationErrors.push(`accountability: ${String(evalErr.message||evalErr)}`);
       }
@@ -1677,7 +1782,7 @@ async function healthData(env) {
   return {
     status,
     service: 'FPL Engine API',
-    release: 'v2.29.1-baseline-selection',
+    release: 'v2.29.2-gameweek-finality',
     season: m.season || configuredSeason(env),
     schemaVersion: WORKER_SCHEMA_VERSION,
     storedSchemaVersion: num(m.schema_version, 0),
@@ -2016,7 +2121,7 @@ export default {
         default:
           return json({
             service: 'FPL Engine API',
-            release: 'v2.29.1-baseline-selection',
+            release: 'v2.29.2-gameweek-finality',
             frontendRoutes: [
               '/bootstrap-static/', '/fixtures/', '/api/news?hours=72',
               '/api/deltas?hours=24', '/api/price-intelligence?hours=24',

@@ -23,8 +23,10 @@ test('published build metadata agrees across the HTML shell and app patch',()=>{
   const htmlBuild=/<html[^>]*data-build="([^"]+)"/.exec(html)?.[1];
   const metaBuild=/<meta name="otb-build" content="([^"]+)"/.exec(html)?.[1];
   const appBuild=/\/\* OTB (\d{4}\.\d{2}\.\d{2}\.\d+)/.exec(app)?.[1];
+  const runtimeBuild=/const BUILD='([^']+)'/.exec(app)?.[1];
   assert.equal(htmlBuild,metaBuild);
   assert.equal(htmlBuild,appBuild);
+  assert.equal(htmlBuild,runtimeBuild);
 });
 
 test('refresh-now always navigates to a unique URL',()=>{

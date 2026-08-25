@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
 import engineWorker from '../src/index-core.js';
+import { GAMEWEEK_INTELLIGENCE_VERSION } from '../src/gameweek-intelligence.js';
 
 const root = new URL('../', import.meta.url);
 const [core, workerSource, intelligence, html, schema, bridge] = await Promise.all([
@@ -43,8 +44,9 @@ class LocalD1 {
   close() { this.database.close(); }
 }
 
-test('data-checked Gameweeks automatically feed the versioned intelligence capture', () => {
-  assert.match(workerSource, /event\.finished\s*&&\s*event\.data_checked/);
+test('completed Gameweeks automatically feed the versioned intelligence capture', () => {
+  assert.match(workerSource, /gameweekCompletionStatus\(event,fixtures,currentMs\)/);
+  assert.match(workerSource, /captureCheckedActuals\(env,boot,fixtures,startedAt\)/);
   assert.match(workerSource, /captureGameweekIntelligence\(env,boot,fixtures,startedAt\)/);
   assert.match(workerSource, /case '\/api\/gameweek-intelligence'/);
   assert.match(workerSource, /GAMEWEEK_INTELLIGENCE_VERSION/);
@@ -82,7 +84,7 @@ test('the public Worker route self-migrates, reports pending safely, and returns
   const report = { status: 'ready', season: '2026/27', gw: 1, generatedAt: '2026-08-24T00:00:00.000Z', sections: {}, teamTrends: [] };
   DB.database.prepare(
     'INSERT INTO gameweek_reviews (season,gw,review_version,source_hash,generated_at,report_json) VALUES (?,?,?,?,?,?)',
-  ).run('2026/27', 1, 'gw-intelligence-v1', 'hash', report.generatedAt, JSON.stringify(report));
+  ).run('2026/27', 1, GAMEWEEK_INTELLIGENCE_VERSION, 'hash', report.generatedAt, JSON.stringify(report));
   const columns = DB.database.prepare('PRAGMA table_info(gameweek_player_stats)').all().map((row) => row.name);
   const text = new Set(['season', 'web_name', 'team_code', 'status', 'captured_at']);
   const values = columns.map((column) => ({
@@ -149,6 +151,6 @@ test('review UI exposes global, personal, process, and team analysis with a fres
   assert.match(intelligence, /ROLE_LOSS/);
   assert.match(core, /Outcome only:/);
   assert.match(core, /before official autosubs/);
-  assert.match(bridge, /app-core\.js\?v=2026\.08\.22\.4-core/);
-  assert.match(html, /app\.js\?v=2026\.08\.22\.8/);
+  assert.match(bridge, /app-core\.js\?v=2026\.08\.25\.1-core/);
+  assert.match(html, /script\.src='app\.js\?v='\+encodeURIComponent\(requested\)/);
 });

@@ -1,4 +1,4 @@
-/* OTB 2026.08.23.7 — a card's bright headline figure is the live GW score
+/* OTB 2026.08.25.1 — a card's bright headline figure is the live GW score
    in every view, including the official current value before that player's
    fixture has kicked off, the live GW score's guaranteed-visible home,
    separating predictive points from actual points, the LiveFPL-style card
@@ -183,6 +183,11 @@
    hardcoded to 2026.08.22.1 inside app-core.js, so even a successful reload
    immediately claimed the newly loaded app was outdated. It now derives the
    current build from the loaded HTML metadata.
+   2026.08.25.1: a stale FPL event-level finished/data_checked flag can no
+   longer block completed-Gameweek intelligence indefinitely. OTB accepts the
+   fixture feed only when every fixture is finished, provisionally final and
+   scored, then waits 14 hours after the last kickoff. Future-GW result sync is
+   disabled instead of falling through to a misleading browser fetch error.
    Nothing is lost to make room: the displaced projection is captured
    verbatim from the markup — its value AND its own label — and written
    onto the secondary line ahead of the fixture text, so the card still
@@ -192,7 +197,7 @@
    selectedGwView() gated nothing after this and was removed. */
 (function loadOtbCore(){
   const script=document.createElement('script');
-  script.src='app-core.js?v=2026.08.23.7-core';
+  script.src='app-core.js?v=2026.08.25.1-core';
   script.async=false;
   script.onload=()=>{
     try{installOtbLivePointsPatch()}
@@ -207,7 +212,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.22.8';
+  const BUILD='2026.08.25.1';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -216,7 +221,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.22.8';badge.title='OTB automatic Gameweek intelligence + LiveFPL-style cards + live GW score everywhere';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.25.1';badge.title='OTB Gameweek finality recovery + automatic intelligence + live GW scoring';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){

@@ -6,7 +6,7 @@
  * functions below turn them into auditable rows and a compact review.
  */
 
-export const GAMEWEEK_INTELLIGENCE_VERSION = 'gw-intelligence-v1';
+export const GAMEWEEK_INTELLIGENCE_VERSION = 'gw-intelligence-v2-finality';
 
 const POSITION = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
 const number = (value, fallback = 0) => {
