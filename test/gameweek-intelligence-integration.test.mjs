@@ -154,6 +154,6 @@ test('review UI exposes global, personal, process, and team analysis with a fres
   assert.match(intelligence, /ROLE_LOSS/);
   assert.match(core, /Outcome only:/);
   assert.match(core, /before official autosubs/);
-  assert.match(bridge, /app-core\.js\?v=2026\.08\.25\.2-core/);
+  assert.match(bridge, /app-core\.js\?v=2026\.08\.25\.3-core/);
   assert.match(html, /script\.src='app\.js\?v='\+encodeURIComponent\(requested\)/);
 });
