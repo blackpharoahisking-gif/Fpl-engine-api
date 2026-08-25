@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
+  applyGameweekFinalityProvenance,
   GAMEWEEK_FINALITY_GRACE_MS,
   gameweekCompletionStatus,
 } from '../src/index-core.js';
@@ -73,6 +74,23 @@ test('fallback actuals remain distinguishable and are upgraded when FPL later da
   assert.match(worker, /gameweek_intelligence_finality_gw_/);
   assert.match(worker, /official-data-checked/);
   assert.match(worker, /completed-fixtures-grace/);
+});
+
+test('review provenance never labels a fixture-final fallback as officially data-checked', () => {
+  const report = applyGameweekFinalityProvenance({
+    dataChecked: true,
+    methodology: { scope: 'Official, data-checked statistics.' },
+  }, {
+    source: 'completed-fixtures-grace',
+    officialDataChecked: false,
+    fixtureCount: 10,
+    safetyWindowHours: 14,
+  });
+  assert.equal(report.dataChecked, false);
+  assert.equal(report.finality.officialDataChecked, false);
+  assert.match(report.methodology.scope, /every fixture was final/i);
+  assert.match(report.methodology.scope, /14-hour safety window/i);
+  assert.doesNotMatch(report.methodology.scope, /Official, data-checked/i);
 });
 
 test('future-Gameweek result sync is disabled and cannot store empty or live rows as final', () => {

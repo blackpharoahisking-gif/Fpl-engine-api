@@ -674,6 +674,24 @@ export function gameweekCompletionStatus(event, fixtures, currentMs = Date.now()
   };
 }
 
+export function applyGameweekFinalityProvenance(report, finality) {
+  if (!report || typeof report !== 'object' || !finality || typeof finality !== 'object') return report;
+  const officialDataChecked = finality.officialDataChecked === true;
+  const safetyWindowHours = num(finality.safetyWindowHours, GAMEWEEK_FINALITY_GRACE_MS / 3600e3);
+  report.finality = {
+    ...finality,
+    officialDataChecked,
+    safetyWindowHours,
+  };
+  report.dataChecked = officialDataChecked;
+  if (report.methodology && typeof report.methodology === 'object') {
+    report.methodology.scope = officialDataChecked
+      ? 'Official, data-checked FPL event-live statistics plus up to four prior completed Gameweeks.'
+      : `FPL event-live statistics captured after every fixture was final and a ${safetyWindowHours}-hour safety window elapsed, plus up to four prior completed Gameweeks.`;
+  }
+  return report;
+}
+
 async function captureOfficialBaselineIfDue(env, boot, fixtures, serverHash, timestamp) {
   await ensureEvaluationSchema(env);
   const season = seasonFromBootstrap(boot);
@@ -971,12 +989,12 @@ async function captureGameweekIntelligence(env, boot, fixtures, timestamp) {
       fixtures,teams:boot.teams || [],
     });
     report.sourceHash = sourceHash;
-    report.finality = {
+    applyGameweekFinalityProvenance(report, {
       source: status.source,
       officialDataChecked: status.official,
       fixtureCount: status.fixtureCount,
       safetyWindowHours: GAMEWEEK_FINALITY_GRACE_MS / 3600e3,
-    };
+    });
     const statements = rows.map((row) => gameweekStatUpsert(env,row));
     statements.push(gameweekReviewUpsert(env,{season,gw,sourceHash,generatedAt:timestamp,report}));
     statements.push(metaUpsert(env,`gameweek_intelligence_gw_${gw}`,timestamp,timestamp));
@@ -1045,6 +1063,7 @@ async function handleGameweekIntelligence(env, url) {
   let report;
   try { report = JSON.parse(review.report_json); }
   catch { return json({ error:`GW${gw} review storage is unreadable` },500); }
+  if (report?.finality) applyGameweekFinalityProvenance(report,report.finality);
   const playerIds = gameweekIntelligencePlayerIds(url);
   let players = [];
   if (playerIds.length) {
@@ -1782,7 +1801,7 @@ async function healthData(env) {
   return {
     status,
     service: 'FPL Engine API',
-    release: 'v2.29.2-gameweek-finality',
+    release: 'v2.29.3-finality-provenance',
     season: m.season || configuredSeason(env),
     schemaVersion: WORKER_SCHEMA_VERSION,
     storedSchemaVersion: num(m.schema_version, 0),
@@ -2121,7 +2140,7 @@ export default {
         default:
           return json({
             service: 'FPL Engine API',
-            release: 'v2.29.2-gameweek-finality',
+            release: 'v2.29.3-finality-provenance',
             frontendRoutes: [
               '/bootstrap-static/', '/fixtures/', '/api/news?hours=72',
               '/api/deltas?hours=24', '/api/price-intelligence?hours=24',
