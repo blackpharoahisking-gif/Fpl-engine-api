@@ -6,7 +6,13 @@
  * functions below turn them into auditable rows and a compact review.
  */
 
-export const GAMEWEEK_INTELLIGENCE_VERSION = 'gw-intelligence-v2-finality';
+import {
+  defensiveContributionProcessPoints,
+  FPL_SCORING_POLICY,
+  repeatableProcessBreakdown,
+} from './fpl-scoring.js';
+
+export const GAMEWEEK_INTELLIGENCE_VERSION = 'gw-intelligence-v3-rule-aware';
 
 const POSITION = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
 const number = (value, fallback = 0) => {
@@ -23,11 +29,10 @@ const median = (values) => {
 const average = (values) => values.length ? values.reduce((sum, value) => sum + number(value), 0) / values.length : 0;
 const sum = (rows, key) => rows.reduce((total, row) => total + number(row[key]), 0);
 
-function confidenceLabel(priorGameweeks, minutes, evidenceStrength = 0) {
-  if (priorGameweeks >= 3 && minutes >= 180 && evidenceStrength >= 1) return 'HIGH';
-  if (priorGameweeks >= 1 && minutes >= 120 && evidenceStrength >= 1) return 'MEDIUM';
-  if (priorGameweeks >= 2 || minutes >= 180) return 'MEDIUM';
-  return 'LOW';
+function evidenceLabel(priorGameweeks) {
+  if (priorGameweeks >= 3) return 'MULTI_WEEK';
+  if (priorGameweeks >= 1) return 'EARLY_SAMPLE';
+  return 'FIRST_WEEK';
 }
 
 function compactPlayer(row, extra = {}) {
@@ -134,12 +139,22 @@ function playerHistoryEvidence(rows) {
 function fixtureScoreByTeam(fixtures, gw, teamIdByCode) {
   const result = new Map();
   const add = (code, goalsFor, goalsAgainst) => {
-    if (!result.has(code)) result.set(code, { fixtures: 0, goalsFor: 0, goalsAgainst: 0, cleanSheets: 0 });
+    if (!result.has(code)) result.set(code, {
+      fixtures: 0,
+      scoredFixtures: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+      cleanSheets: 0,
+    });
     const row = result.get(code);
     row.fixtures += 1;
-    row.goalsFor += number(goalsFor);
-    row.goalsAgainst += number(goalsAgainst);
-    if (number(goalsAgainst) === 0) row.cleanSheets += 1;
+    const parsedFor = goalsFor === null || goalsFor === undefined || goalsFor === '' ? null : Number(goalsFor);
+    const parsedAgainst = goalsAgainst === null || goalsAgainst === undefined || goalsAgainst === '' ? null : Number(goalsAgainst);
+    if (!Number.isFinite(parsedFor) || !Number.isFinite(parsedAgainst)) return;
+    row.scoredFixtures += 1;
+    row.goalsFor += parsedFor;
+    row.goalsAgainst += parsedAgainst;
+    if (parsedAgainst === 0) row.cleanSheets += 1;
   };
   const codeById = new Map([...teamIdByCode.entries()].map(([code, id]) => [id, code]));
   for (const fixture of fixtures || []) {
@@ -167,12 +182,16 @@ function teamMetrics(rows, scores) {
     const result = scores?.get(team) || {};
     const inferredFixtures = Math.max(0, Math.round(sum(players, 'starts') / 11));
     const fixtureCount = result.fixtures === undefined ? inferredFixtures : number(result.fixtures);
+    const scoreComplete = number(result.fixtures) > 0
+      && number(result.scoredFixtures) === number(result.fixtures);
     out.set(team, {
       team,
       fixtures: fixtureCount,
-      goalsFor: number(result.goalsFor, sum(players, 'goals_scored')),
-      goalsAgainst: number(result.goalsAgainst),
-      cleanSheets: number(result.cleanSheets),
+      scoredFixtures: number(result.scoredFixtures),
+      scoreComplete,
+      goalsFor: scoreComplete ? number(result.goalsFor) : null,
+      goalsAgainst: scoreComplete ? number(result.goalsAgainst) : null,
+      cleanSheets: scoreComplete ? number(result.cleanSheets) : null,
       xG: sum(players, 'expected_goals'),
       xA: sum(players, 'expected_assists'),
       xGI: sum(players, 'expected_goal_involvements'),
@@ -204,15 +223,20 @@ function priorTeamMetrics(historyRows, gw) {
 }
 
 function teamReview(current, prior) {
-  const leagueXg = average([...current.values()].filter((row) => row.fixtures > 0).map((row) => row.xG / row.fixtures));
+  const active = [...current.values()].filter((row) => row.fixtures > 0);
+  const leagueXg = average(active.map((row) => row.xG / row.fixtures));
+  const leagueXgc = average(active.map((row) => row.xGC / row.fixtures));
   const rows = [];
   for (const metric of current.values()) {
     const history = prior.get(metric.team) || [];
     if (metric.fixtures <= 0) {
       rows.push({
-        team: metric.team, fixtures: 0, goalsFor: 0, goalsAgainst: 0, cleanSheets: 0,
-        xG: 0, xGC: 0, attackDirection: 'BLANK', defenseDirection: 'BLANK',
-        attackDelta: null, defenseDelta: null, priorGameweeks: history.length, confidence: 'LOW',
+        team: metric.team, fixtures: 0, scoredFixtures: 0, scoreComplete: false,
+        goalsFor: null, goalsAgainst: null, cleanSheets: null,
+        xG: 0, xGC: 0, attackLevel: 'BLANK', defenseLevel: 'BLANK',
+        attackDirection: 'BLANK', defenseDirection: 'BLANK',
+        attackDelta: null, defenseDelta: null, priorGameweeks: history.length,
+        evidenceLabel: evidenceLabel(history.length),
       });
       continue;
     }
@@ -220,26 +244,39 @@ function teamReview(current, prior) {
     const priorXgc = average(history.map((row) => row.xGC / Math.max(1, row.fixtures)));
     const xgPerFixture = metric.xG / Math.max(1, metric.fixtures);
     const xgcPerFixture = metric.xGC / Math.max(1, metric.fixtures);
-    const attackDelta = history.length ? xgPerFixture - priorXg : 0;
-    const defenseDelta = history.length ? priorXgc - xgcPerFixture : 0;
-    const attackDirection = xgPerFixture >= leagueXg + .25 || attackDelta >= .30 ? 'UP' : xgPerFixture <= leagueXg - .25 || attackDelta <= -.30 ? 'DOWN' : 'STEADY';
-    const defenseDirection = xgcPerFixture <= 1.05 || defenseDelta >= .30 ? 'UP' : xgcPerFixture >= 1.75 || defenseDelta <= -.30 ? 'DOWN' : 'STEADY';
+    const trendReady = history.length >= 2;
+    const attackDelta = trendReady ? xgPerFixture - priorXg : null;
+    const defenseDelta = trendReady ? priorXgc - xgcPerFixture : null;
+    const attackLevel = xgPerFixture >= leagueXg + .25
+      ? 'ABOVE'
+      : xgPerFixture <= leagueXg - .25 ? 'BELOW' : 'AVERAGE';
+    const defenseLevel = xgcPerFixture <= leagueXgc - .25
+      ? 'STRONG'
+      : xgcPerFixture >= leagueXgc + .25 ? 'WEAK' : 'AVERAGE';
+    const attackDirection = !trendReady
+      ? 'INSUFFICIENT'
+      : attackDelta >= .30 ? 'UP' : attackDelta <= -.30 ? 'DOWN' : 'STEADY';
+    const defenseDirection = !trendReady
+      ? 'INSUFFICIENT'
+      : defenseDelta >= .30 ? 'UP' : defenseDelta <= -.30 ? 'DOWN' : 'STEADY';
     rows.push({
       team: metric.team,
       fixtures: metric.fixtures,
+      scoredFixtures: metric.scoredFixtures,
+      scoreComplete: metric.scoreComplete,
       goalsFor: metric.goalsFor,
       goalsAgainst: metric.goalsAgainst,
       cleanSheets: metric.cleanSheets,
       xG: round(xgPerFixture, 2),
       xGC: round(xgcPerFixture, 2),
+      attackLevel,
+      defenseLevel,
       attackDirection,
       defenseDirection,
-      attackDelta: history.length ? round(attackDelta, 2) : null,
-      defenseDelta: history.length ? round(defenseDelta, 2) : null,
+      attackDelta: trendReady ? round(attackDelta, 2) : null,
+      defenseDelta: trendReady ? round(defenseDelta, 2) : null,
       priorGameweeks: history.length,
-      confidence: history.length
-        ? confidenceLabel(history.length, metric.fixtures * 90, Math.abs(attackDelta) >= .3 || Math.abs(defenseDelta) >= .3 ? 1 : 0)
-        : 'LOW',
+      evidenceLabel: evidenceLabel(history.length),
     });
   }
   return rows.sort((a, b) => b.xG - a.xG || a.xGC - b.xGC || a.team.localeCompare(b.team));
@@ -247,18 +284,19 @@ function teamReview(current, prior) {
 
 function signalLists(rows, history, currentTeams) {
   const evidence = (row) => playerHistoryEvidence(history.get(row.player_id));
-  const decorate = (row, why, signal, strength = 0) => {
+  const decorate = (row, why, signal, extra = {}) => {
     const prior = evidence(row);
     return compactPlayer(row, {
       signal,
       why,
-      confidence: confidenceLabel(prior.gameweeks, prior.minutes + row.minutes, strength),
+      evidenceLabel: evidenceLabel(prior.gameweeks),
       evidence: {
         currentGameweek: 1,
         priorGameweeks: prior.gameweeks,
         priorAppearances: prior.appearances,
         sampleMinutes: round(prior.minutes + row.minutes, 0),
       },
+      ...extra,
     });
   };
 
@@ -266,60 +304,91 @@ function signalLists(rows, history, currentTeams) {
     .filter((row) => row.minutes > 0)
     .sort((a, b) => b.total_points - a.total_points || b.expected_goal_involvements - a.expected_goal_involvements)
     .slice(0, 10)
-    .map((row) => decorate(row, `${row.total_points} points from ${row.minutes} minutes; ${round(row.expected_goal_involvements, 2)} xGI.`, 'GAMEWEEK_HAUL', 1));
+    .map((row) => decorate(row, `${row.total_points} points from ${row.minutes} minutes; ${round(row.expected_goal_involvements, 2)} xGI.`, 'GAMEWEEK_HAUL'));
 
   const hiddenGems = rows
-    .filter((row) => row.minutes >= 60 && row.ownership <= 12 && (row.total_points >= 6 || row.expected_goal_involvements >= .45 || row.defensive_contribution >= 10))
+    .filter((row) => row.minutes >= 60 && row.ownership <= 12 && (
+      row.expected_goal_involvements >= .45
+      || defensiveContributionProcessPoints(row) > 0
+      || (row.position === 1 && row.saves >= 4)
+    ))
     .map((row) => {
       const prior = evidence(row);
-      const score = row.total_points + row.expected_goal_involvements * 5 + Math.min(3, row.defensive_contribution / 5) - row.ownership * .08 + prior.xGI;
-      return { row, prior, score };
+      return { row, prior, defensivePoints: defensiveContributionProcessPoints(row) };
     })
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => b.row.expected_goal_involvements - a.row.expected_goal_involvements
+      || b.defensivePoints - a.defensivePoints
+      || b.row.saves - a.row.saves
+      || b.row.total_points - a.row.total_points
+      || a.row.ownership - b.row.ownership
+      || a.row.player_id - b.row.player_id)
     .slice(0, 10)
-    .map(({ row, prior }) => decorate(row, `${round(row.ownership, 1)}% owned, ${round(row.expected_goal_involvements, 2)} xGI and ${row.minutes} minutes${prior.gameweeks ? `; ${round(prior.xGI, 2)} xGI across the prior ${prior.gameweeks} GW` : '; first-week evidence only'}.`, 'LOW_OWNED_EMERGING', 1));
+    .map(({ row, prior, defensivePoints }) => decorate(
+      row,
+      `${round(row.ownership, 1)}% owned, ${round(row.expected_goal_involvements, 2)} xGI, ${defensivePoints} DC points and ${row.minutes} minutes${prior.gameweeks ? `; ${round(prior.xGI, 2)} xGI across the prior ${prior.gameweeks} GW` : '; first-week evidence only'}. Ranked by xGI, then DC points, saves, Gameweek points and lower ownership.`,
+      'LOW_OWNED_EMERGING',
+      { rankRule: 'XGI_THEN_DC_THEN_SAVES_THEN_POINTS_THEN_OWNERSHIP' },
+    ));
 
   const underlyingWatch = rows
     .filter((row) => row.minutes >= 60 && row.total_points <= 5 && (row.expected_goal_involvements >= .45 || row.threat >= 45 || row.creativity >= 35))
     .sort((a, b) => b.expected_goal_involvements - a.expected_goal_involvements || b.threat - a.threat)
     .slice(0, 10)
-    .map((row) => decorate(row, `Only ${row.total_points} points, but ${round(row.expected_goal_involvements, 2)} xGI with threat ${round(row.threat, 0)} and creativity ${round(row.creativity, 0)}.`, 'PROCESS_OVER_OUTCOME', 1));
+    .map((row) => decorate(row, `Only ${row.total_points} points, but ${round(row.expected_goal_involvements, 2)} xGI with threat ${round(row.threat, 0)} and creativity ${round(row.creativity, 0)}.`, 'PROCESS_OVER_OUTCOME'));
 
   const roleRisers = rows
     .map((row) => ({ row, prior: evidence(row) }))
-    .filter(({ row, prior }) => row.starts > 0 && row.minutes >= 60 && (prior.gameweeks === 0 ? row.gw > 1 : prior.avgMinutes < 55 || prior.startRate < .6))
+    .filter(({ row, prior }) => prior.gameweeks >= 1 && row.starts > 0 && row.minutes >= 60 && (prior.avgMinutes < 55 || prior.startRate < .6))
     .sort((a, b) => (b.row.minutes - b.prior.avgMinutes) - (a.row.minutes - a.prior.avgMinutes) || b.row.expected_goal_involvements - a.row.expected_goal_involvements)
     .slice(0, 10)
-    .map(({ row, prior }) => decorate(row, prior.gameweeks ? `Started and played ${row.minutes} minutes after averaging ${round(prior.avgMinutes, 0)} minutes and a ${round(prior.startRate * 100, 0)}% start rate over the prior ${prior.gameweeks} GW.` : `Started and played ${row.minutes} minutes; no earlier current-season role sample exists yet.`, 'ROLE_GAIN', 1));
+    .map(({ row, prior }) => decorate(row, `Started and played ${row.minutes} minutes after averaging ${round(prior.avgMinutes, 0)} minutes and a ${round(prior.startRate * 100, 0)}% start rate over the prior ${prior.gameweeks} GW.`, 'ROLE_GAIN'));
 
   const roleFallers = rows
     .map((row) => ({ row, prior: evidence(row) }))
     .filter(({ row, prior }) => currentTeams.get(row.team_code)?.fixtures > 0 && prior.gameweeks >= 1 && prior.avgMinutes >= 60 && prior.startRate >= .6 && row.starts === 0 && row.minutes < 45)
     .sort((a, b) => (b.prior.avgMinutes - b.row.minutes) - (a.prior.avgMinutes - a.row.minutes) || b.prior.startRate - a.prior.startRate)
     .slice(0, 10)
-    .map(({ row, prior }) => decorate(row, `Did not start and played ${row.minutes} minutes after averaging ${round(prior.avgMinutes, 0)} minutes with a ${round(prior.startRate * 100, 0)}% start rate over the prior ${prior.gameweeks} GW. Check injury, suspension, rotation and tactical context before reacting.`, 'ROLE_LOSS', 1));
+    .map(({ row, prior }) => decorate(row, `Did not start and played ${row.minutes} minutes after averaging ${round(prior.avgMinutes, 0)} minutes with a ${round(prior.startRate * 100, 0)}% start rate over the prior ${prior.gameweeks} GW. Check injury, suspension, rotation and tactical context before reacting.`, 'ROLE_LOSS'));
 
   const defensiveWatch = rows
     .filter((row) => row.position <= 2 && row.minutes >= 60 && row.total_points <= 5 && (row.defensive_contribution >= 10 || row.saves >= 4 || row.expected_goals_conceded <= .8))
     .sort((a, b) => b.defensive_contribution + b.saves * 2 - (a.defensive_contribution + a.saves * 2) || a.expected_goals_conceded - b.expected_goals_conceded)
     .slice(0, 10)
-    .map((row) => decorate(row, `${row.total_points} points hid ${round(row.defensive_contribution, 0)} defensive contributions, ${round(row.saves, 0)} saves and ${round(row.expected_goals_conceded, 2)} xGC. Check role security and fixtures before the points arrive.`, 'DEFENSIVE_PROCESS', 1));
+    .map((row) => decorate(row, `${row.total_points} points hid ${round(row.defensive_contribution, 0)} defensive contributions, ${round(row.saves, 0)} saves and ${round(row.expected_goals_conceded, 2)} xGC. Check role security and fixtures before the points arrive.`, 'DEFENSIVE_PROCESS'));
 
   const haulCautions = rows
     .filter((row) => row.total_points >= 8)
     .map((row) => {
-      const repeatable = row.expected_goal_involvements * 5 + row.bonus + ((row.position <= 2) ? row.clean_sheets * 3 + row.saves / 3 : 0);
-      return { row, gap: row.total_points - repeatable };
+      const process = repeatableProcessBreakdown(row);
+      return { row, process, gap: row.total_points - process.repeatable };
     })
     .filter(({ row, gap }) => gap >= 3.5 || row.minutes < 60)
     .sort((a, b) => b.gap - a.gap)
     .slice(0, 10)
-    .map(({ row }) => decorate(row, `${row.total_points} points came with ${round(row.expected_goal_involvements, 2)} xGI and ${row.minutes} minutes. Treat the haul as an outcome to verify, not proof of a new baseline.`, 'HAUL_CAUTION'));
+    .map(({ row, process, gap }) => decorate(
+      row,
+      `${row.total_points} points versus a ${round(process.repeatable, 2)} process-credit baseline: ${round(process.appearance, 1)} appearance, ${round(process.expectedAttack, 2)} expected attack, ${round(process.cleanSheet, 1)} clean sheet, ${round(process.saves, 1)} saves and ${round(process.defensiveContribution, 1)} DC. Actual bonus is excluded; ${round(gap, 2)} points remain outcome-led.`,
+      'HAUL_CAUTION',
+      {
+        processBaseline: round(process.repeatable, 2),
+        outcomeGap: round(gap, 2),
+        processBreakdown: Object.fromEntries(Object.entries(process).map(([key, value]) => [key, typeof value === 'number' ? round(value, 2) : value])),
+      },
+    ));
 
   return { topPerformers, hiddenGems, underlyingWatch, defensiveWatch, roleRisers, roleFallers, haulCautions };
 }
 
-export function buildGameweekIntelligence({ season, gw, generatedAt, rows, historyRows = [], fixtures = [], teams = [] }) {
+export function buildGameweekIntelligence({
+  season,
+  gw,
+  generatedAt,
+  rows,
+  historyRows = [],
+  fixtures = [],
+  teams = [],
+  finality = null,
+}) {
   const history = historyByPlayer(historyRows, gw);
   const teamIdByCode = new Map((teams || []).map((team) => [team.short_name, number(team.id)]));
   const scores = fixtureScoreByTeam(fixtures, gw, teamIdByCode);
@@ -342,9 +411,9 @@ export function buildGameweekIntelligence({ season, gw, generatedAt, rows, histo
     season,
     gw: number(gw),
     generatedAt,
-    final: true,
-    dataChecked: true,
-    confidence: priorGameweeks >= 3 ? 'MEDIUM' : 'LOW',
+    final: finality?.complete === true,
+    dataChecked: finality?.officialDataChecked === true,
+    evidenceLabel: evidenceLabel(priorGameweeks),
     sample: { currentGameweeks: 1, priorGameweeks, players: rows.length, appeared: appeared.length, starters: starters.length },
     headline,
     overview: {
@@ -359,6 +428,10 @@ export function buildGameweekIntelligence({ season, gw, generatedAt, rows, histo
       nature: 'deterministic',
       scope: 'Official, data-checked FPL event-live statistics plus up to four prior completed Gameweeks.',
       warning: 'Signals describe evidence to investigate for future planning; they are not automatic transfer instructions.',
+      evidenceLabels: 'FIRST_WEEK, EARLY_SAMPLE and MULTI_WEEK describe sample volume only; they are not calibrated probabilities.',
+      scoringPolicy: FPL_SCORING_POLICY,
+      haulCaution: 'Appearance, position-specific expected goals, expected assists, all-position clean sheets, save points and defensive-contribution points receive process credit. Actual bonus is excluded.',
+      hiddenGemRanking: 'Eligible low-owned players are ordered lexicographically by xGI, defensive-contribution points, saves, Gameweek points, then lower ownership. No composite score is used.',
     },
     sections: lists,
     teamTrends: teamReview(currentTeams, priorTeams),

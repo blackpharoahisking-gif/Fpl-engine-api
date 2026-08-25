@@ -46,10 +46,13 @@ class LocalD1 {
 
 test('completed Gameweeks automatically feed the versioned intelligence capture', () => {
   assert.match(workerSource, /gameweekCompletionStatus\(event,fixtures,currentMs\)/);
-  assert.match(workerSource, /captureCheckedActuals\(env,boot,fixtures,startedAt\)/);
-  assert.match(workerSource, /captureGameweekIntelligence\(env,boot,fixtures,startedAt\)/);
+  assert.match(workerSource, /captureCheckedActuals\(env,boot,fixtures,startedAt,gameweekLiveCache\)/);
+  assert.match(workerSource, /captureGameweekIntelligence\(env,boot,fixtures,startedAt,gameweekLiveCache\)/);
   assert.match(workerSource, /case '\/api\/gameweek-intelligence'/);
   assert.match(workerSource, /GAMEWEEK_INTELLIGENCE_VERSION/);
+  assert.match(workerSource, /reviews\.source_hash/);
+  assert.match(workerSource, /stored\?\.sourceHash === sourceHash/);
+  assert.match(workerSource, /processGameweekBatch\(candidates/);
   assert.match(workerSource, /gameweekIntelligenceLastError/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS gameweek_player_stats/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS gameweek_reviews/);
@@ -151,6 +154,6 @@ test('review UI exposes global, personal, process, and team analysis with a fres
   assert.match(intelligence, /ROLE_LOSS/);
   assert.match(core, /Outcome only:/);
   assert.match(core, /before official autosubs/);
-  assert.match(bridge, /app-core\.js\?v=2026\.08\.25\.1-core/);
+  assert.match(bridge, /app-core\.js\?v=2026\.08\.25\.2-core/);
   assert.match(html, /script\.src='app\.js\?v='\+encodeURIComponent\(requested\)/);
 });

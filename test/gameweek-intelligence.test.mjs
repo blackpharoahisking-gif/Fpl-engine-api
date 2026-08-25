@@ -6,6 +6,10 @@ import {
   buildGameweekIntelligence,
   normalizeGameweekStats,
 } from '../src/gameweek-intelligence.js';
+import {
+  FPL_SCORING_POLICY,
+  repeatableProcessBreakdown,
+} from '../src/fpl-scoring.js';
 
 const bootstrap = {
   teams: [
@@ -98,10 +102,13 @@ test('first-gameweek reviews declare their limited sample instead of overstating
     season: '2026/27', gw: 1, generatedAt: '2026-08-24T00:00:00.000Z',
     rows, historyRows: [], teams: bootstrap.teams, fixtures: [],
   });
-  assert.equal(report.confidence, 'LOW');
+  assert.equal(report.evidenceLabel, 'FIRST_WEEK');
   assert.equal(report.sample.priorGameweeks, 0);
-  assert.equal(report.sections.hiddenGems[0].confidence, 'LOW');
+  assert.equal(report.sections.hiddenGems[0].evidenceLabel, 'FIRST_WEEK');
   assert.equal(report.sections.roleRisers.length, 0);
+  assert.equal(report.final, false);
+  assert.equal(report.dataChecked, false);
+  assert.equal(report.methodology.scoringPolicy.version, FPL_SCORING_POLICY.version);
   assert.match(report.methodology.warning, /not automatic transfer instructions/i);
 });
 
@@ -121,7 +128,131 @@ test('blank clubs do not distort league attack baselines or create false role-lo
     historyRows: blankHistory, teams: bootstrap.teams,
     fixtures: [{ event: 2, team_h: 1, team_a: 2, team_h_score: 1, team_a_score: 1 }],
   });
-  assert.equal(report.teamTrends.find((row) => row.team === 'AAA').attackDirection, 'STEADY');
+  assert.equal(report.teamTrends.find((row) => row.team === 'AAA').attackDirection, 'INSUFFICIENT');
+  assert.equal(report.teamTrends.find((row) => row.team === 'AAA').attackLevel, 'AVERAGE');
   assert.equal(report.teamTrends.find((row) => row.team === 'CCC').attackDirection, 'BLANK');
   assert.ok(!report.sections.roleFallers.some((row) => row.name === 'Blank'));
+});
+
+test('the versioned 2026/27 scoring table gives process credit by position and excludes bonus', () => {
+  assert.equal(FPL_SCORING_POLICY.goal[1], 10);
+  assert.equal(FPL_SCORING_POLICY.goal[2], 6);
+  assert.equal(FPL_SCORING_POLICY.goal[3], 5);
+  assert.equal(FPL_SCORING_POLICY.goal[4], 4);
+  const goalkeeper = repeatableProcessBreakdown({
+    position: 1, minutes: 90, starts: 1, expected_goals: .2, expected_assists: .1,
+    clean_sheets: 1, saves: 7, defensive_contribution: 30, bonus: 3,
+  });
+  assert.equal(goalkeeper.appearance, 2);
+  assert.equal(goalkeeper.expectedAttack, 2.3);
+  assert.equal(goalkeeper.cleanSheet, 4);
+  assert.equal(goalkeeper.saves, 2);
+  assert.equal(goalkeeper.defensiveContribution, 0);
+  assert.equal(goalkeeper.repeatable, 10.3);
+  assert.equal(goalkeeper.bonusExcluded, 3);
+
+  const midfielder = repeatableProcessBreakdown({
+    position: 3, minutes: 90, starts: 1, expected_goals: .2, expected_assists: .1,
+    clean_sheets: 1, saves: 0, defensive_contribution: 12, bonus: 2,
+  });
+  assert.equal(midfielder.expectedAttack, 1.3);
+  assert.equal(midfielder.cleanSheet, 1);
+  assert.equal(midfielder.defensiveContribution, 2);
+  assert.equal(midfielder.repeatable, 6.3);
+});
+
+test('haul cautions expose their rule-aware baseline and do not use actual bonus as process', () => {
+  const rows = normalizeGameweekStats({
+    season: '2026/27', gw: 1, bootstrap,
+    live: { elements: [liveRow(3, {
+      total_points: 13, expected_goals: '.10', expected_assists: '.05',
+      expected_goal_involvements: '.15', defensive_contribution: 16, bonus: 3,
+    })] },
+    capturedAt: '2026-08-24T00:00:00.000Z',
+  });
+  const report = buildGameweekIntelligence({
+    season: '2026/27', gw: 1, generatedAt: '2026-08-24T00:00:00.000Z',
+    rows, teams: bootstrap.teams,
+  });
+  const caution = report.sections.haulCautions[0];
+  assert.equal(caution.name, 'Haul');
+  assert.equal(caution.processBreakdown.scoringVersion, FPL_SCORING_POLICY.version);
+  assert.equal(caution.processBreakdown.appearance, 2);
+  assert.equal(caution.processBreakdown.expectedAttack, .65);
+  assert.equal(caution.processBreakdown.defensiveContribution, 2);
+  assert.equal(caution.processBreakdown.bonusExcluded, 3);
+  assert.equal(caution.processBaseline, 4.65);
+  assert.equal(caution.outcomeGap, 8.35);
+  assert.match(caution.why, /Actual bonus is excluded/);
+});
+
+test('missing fixture scores remain unknown rather than becoming goals conceded or clean sheets', () => {
+  const rows = normalizeGameweekStats({
+    season: '2026/27', gw: 2, bootstrap,
+    live: { elements: [liveRow(1), liveRow(3)] },
+    capturedAt: '2026-08-31T00:00:00.000Z',
+  });
+  const report = buildGameweekIntelligence({
+    season: '2026/27', gw: 2, generatedAt: '2026-08-31T00:00:00.000Z', rows,
+    teams: bootstrap.teams,
+    fixtures: [{ event: 2, team_h: 1, team_a: 2, team_h_score: null, team_a_score: null }],
+  });
+  for (const team of ['AAA', 'BBB']) {
+    const trend = report.teamTrends.find((row) => row.team === team);
+    assert.equal(trend.scoreComplete, false);
+    assert.equal(trend.goalsFor, null);
+    assert.equal(trend.goalsAgainst, null);
+    assert.equal(trend.cleanSheets, null);
+  }
+});
+
+test('team directions need two prior Gameweeks and are distinct from current levels', () => {
+  const rows = normalizeGameweekStats({
+    season: '2026/27', gw: 3, bootstrap,
+    live: { elements: [liveRow(1, { starts: 1, expected_goals: '1.00' })] },
+    capturedAt: '2026-09-07T00:00:00.000Z',
+  });
+  const priorBase = { ...rows[0], starts: 11, expected_goals: .10 };
+  const historyRows = [{ ...priorBase, gw: 1 }, { ...priorBase, gw: 2 }];
+  const report = buildGameweekIntelligence({
+    season: '2026/27', gw: 3, generatedAt: '2026-09-07T00:00:00.000Z', rows,
+    historyRows, teams: bootstrap.teams,
+    fixtures: [{ event: 3, team_h: 1, team_a: 2, team_h_score: 1, team_a_score: 0 }],
+  });
+  const team = report.teamTrends.find((row) => row.team === 'AAA');
+  assert.equal(team.priorGameweeks, 2);
+  assert.equal(team.attackDirection, 'UP');
+  assert.equal(team.attackDelta, .9);
+  assert.notEqual(team.attackLevel, 'UP');
+});
+
+test('missing prior capture never masquerades as a role gain', () => {
+  const rows = normalizeGameweekStats({
+    season: '2026/27', gw: 2, bootstrap,
+    live: { elements: [liveRow(1, { starts: 1, minutes: 90, expected_goal_involvements: '.70' })] },
+    capturedAt: '2026-08-31T00:00:00.000Z',
+  });
+  const report = buildGameweekIntelligence({
+    season: '2026/27', gw: 2, generatedAt: '2026-08-31T00:00:00.000Z', rows,
+    historyRows: [], teams: bootstrap.teams,
+    fixtures: [{ event: 2, team_h: 1, team_a: 2, team_h_score: 1, team_a_score: 0 }],
+  });
+  assert.equal(report.sections.roleRisers.length, 0);
+});
+
+test('report finality is supplied by the completion gate rather than hardcoded', () => {
+  const rows = normalizeGameweekStats({
+    season: '2026/27', gw: 1, bootstrap, live: { elements: [liveRow(1)] },
+    capturedAt: '2026-08-24T00:00:00.000Z',
+  });
+  const pending = buildGameweekIntelligence({
+    season: '2026/27', gw: 1, generatedAt: '2026-08-24T00:00:00.000Z', rows,
+  });
+  const graceFinal = buildGameweekIntelligence({
+    season: '2026/27', gw: 1, generatedAt: '2026-08-24T00:00:00.000Z', rows,
+    finality: { complete: true, officialDataChecked: false },
+  });
+  assert.equal(pending.final, false);
+  assert.equal(graceFinal.final, true);
+  assert.equal(graceFinal.dataChecked, false);
 });

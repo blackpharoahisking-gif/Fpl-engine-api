@@ -36,6 +36,9 @@ const EVALUATION_BASELINE_WINDOW_MS = 35 * 60 * 1000;
 const EVALUATION_MIN_PLAYERS = 300;
 const EVALUATION_MAX_PLAYERS = 800;
 const GAMEWEEK_INTELLIGENCE_MIN_PLAYERS = 300;
+const GAMEWEEK_BATCH_LIMIT = 2;
+const GAMEWEEK_REVALIDATION_RECENT = 1;
+const GAMEWEEK_SOURCE_HASH_VERSION = 'gw-source-v2-comprehensive';
 export const GAMEWEEK_FINALITY_GRACE_MS = 14 * 60 * 60 * 1000;
 
 function evaluationCaptureCooldownMs(hoursUntil) {
@@ -496,6 +499,120 @@ function stableJson(value) {
   return JSON.stringify(stableValue(value));
 }
 
+export async function processGameweekBatch(statuses, work) {
+  const results = [];
+  const errors = [];
+  for (const status of statuses || []) {
+    try {
+      results.push(await work(status));
+    } catch (error) {
+      errors.push({
+        gw: num(status?.gw, null),
+        error: String(error?.message || error),
+      });
+    }
+  }
+  return { results, errors };
+}
+
+export function selectGameweekCandidates(
+  completed,
+  requiredRefresh,
+  limit = GAMEWEEK_BATCH_LIMIT,
+  checkedAt = new Map(),
+) {
+  const selected = new Map();
+  for (const status of [...(requiredRefresh || [])].sort((a, b) => a.gw - b.gw)) {
+    selected.set(status.gw, status);
+  }
+  const recent = [...(completed || [])]
+    .sort((a, b) => b.gw - a.gw)
+    .slice(0, GAMEWEEK_REVALIDATION_RECENT);
+  for (const status of recent) if (!selected.has(status.gw)) selected.set(status.gw, status);
+  const leastRecentlyChecked = [...(completed || [])].sort((a, b) => {
+    const aMs = Date.parse(checkedAt.get(a.gw) || '') || 0;
+    const bMs = Date.parse(checkedAt.get(b.gw) || '') || 0;
+    return aMs - bMs || a.gw - b.gw;
+  });
+  for (const status of leastRecentlyChecked) {
+    if (!selected.has(status.gw)) selected.set(status.gw, status);
+  }
+  return [...selected.values()].slice(0, Math.max(0, Math.trunc(num(limit))));
+}
+
+async function gameweekLivePayload(gw, liveCache) {
+  if (!liveCache) return fplGet(`/event/${gw}/live/`);
+  if (!liveCache.has(gw)) liveCache.set(gw, fplGet(`/event/${gw}/live/`));
+  return await liveCache.get(gw);
+}
+
+const GAMEWEEK_SOURCE_FIELDS = [
+  'gw','player_id','web_name','team_code','position','price','ownership','status',
+  'total_points','minutes','starts','goals_scored','assists','clean_sheets',
+  'goals_conceded','own_goals','penalties_saved','penalties_missed','yellow_cards',
+  'red_cards','saves','bonus','bps','influence','creativity','threat','ict_index',
+  'clearances_blocks_interceptions','recoveries','tackles','defensive_contribution',
+  'expected_goals','expected_assists','expected_goal_involvements',
+  'expected_goals_conceded','in_dreamteam',
+];
+
+function gameweekSourceRow(row) {
+  return GAMEWEEK_SOURCE_FIELDS.map((field) => row?.[field] ?? null);
+}
+
+export async function gameweekIntelligenceSourceHash({ rows, historyRows = [], fixtures = [], gw }) {
+  const current = [...(rows || [])]
+    .sort((a, b) => num(a.player_id) - num(b.player_id))
+    .map(gameweekSourceRow);
+  const history = [...(historyRows || [])]
+    .sort((a, b) => num(a.gw) - num(b.gw) || num(a.player_id) - num(b.player_id))
+    .map(gameweekSourceRow);
+  const fixtureRows = (fixtures || [])
+    .filter((fixture) => num(fixture?.event ?? fixture?.event_id, -1) === num(gw, -2))
+    .sort((a, b) => num(a.id) - num(b.id))
+    .map((fixture) => [
+      fixture.id ?? null,
+      fixture.team_h ?? fixture.home_code ?? null,
+      fixture.team_a ?? fixture.away_code ?? null,
+      fixture.team_h_score ?? fixture.home_score ?? null,
+      fixture.team_a_score ?? fixture.away_score ?? null,
+      fixture.kickoff_time ?? null,
+      fixture.finished === true,
+      fixture.finished_provisional === true,
+    ]);
+  return sha256(stableJson({
+    version: GAMEWEEK_SOURCE_HASH_VERSION,
+    gw: num(gw),
+    current,
+    history,
+    fixtures: fixtureRows,
+  }));
+}
+
+async function evaluationActualSourceHash(elements) {
+  const rows = [...(elements || [])]
+    .sort((a, b) => num(a?.id) - num(b?.id))
+    .map((item) => {
+      const stats = item?.stats || {};
+      return [
+        item?.id ?? null,
+        stats.total_points ?? null,
+        stats.minutes ?? null,
+        stats.goals_scored ?? null,
+        stats.assists ?? null,
+        stats.clean_sheets ?? null,
+        stats.goals_conceded ?? null,
+        stats.saves ?? null,
+        stats.bonus ?? null,
+        stats.bps ?? null,
+        stats.defensive_contribution ?? stats.defensive_contributions ?? null,
+        stats.yellow_cards ?? null,
+        stats.red_cards ?? null,
+      ];
+    });
+  return sha256(stableJson({ version: 'evaluation-actual-v2', rows }));
+}
+
 function evaluationFixtureContext(fixtures, teamMap, gw) {
   const out = new Map();
   const add = (code, row) => {
@@ -678,11 +795,16 @@ export function applyGameweekFinalityProvenance(report, finality) {
   if (!report || typeof report !== 'object' || !finality || typeof finality !== 'object') return report;
   const officialDataChecked = finality.officialDataChecked === true;
   const safetyWindowHours = num(finality.safetyWindowHours, GAMEWEEK_FINALITY_GRACE_MS / 3600e3);
+  const complete = finality.complete === true
+    || finality.source === 'official-data-checked'
+    || finality.source === 'completed-fixtures-grace';
   report.finality = {
     ...finality,
+    complete,
     officialDataChecked,
     safetyWindowHours,
   };
+  report.final = complete;
   report.dataChecked = officialDataChecked;
   if (report.methodology && typeof report.methodology === 'object') {
     report.methodology.scope = officialDataChecked
@@ -749,7 +871,7 @@ async function captureOfficialBaselineIfDue(env, boot, fixtures, serverHash, tim
   return { ok: true, captured: Math.max(0,statements.length-1), gw: event.id, snapshotId };
 }
 
-async function captureCheckedActuals(env, boot, fixtures, timestamp) {
+async function captureCheckedActuals(env, boot, fixtures, timestamp, liveCache = null) {
   await ensureEvaluationSchema(env);
   const season = seasonFromBootstrap(boot);
   const timestampMs = Date.parse(timestamp);
@@ -759,28 +881,49 @@ async function captureCheckedActuals(env, boot, fixtures, timestamp) {
     .filter((status) => status.complete)
     .sort((a,b) => a.gw - b.gw);
   if (!completed.length) return { ok: true, skipped: true, reason: 'No completed gameweeks' };
-  const existingRows = await env.DB.prepare(
-    `SELECT gw,COUNT(*) AS n,MIN(data_checked) AS data_checked
-     FROM evaluation_actuals WHERE season=?1 GROUP BY gw`
-  ).bind(season).all();
+  const [existingRows,hashRows,checkedRows] = await Promise.all([
+    env.DB.prepare(
+      `SELECT gw,COUNT(*) AS n,MIN(data_checked) AS data_checked
+       FROM evaluation_actuals WHERE season=?1 GROUP BY gw`
+    ).bind(season).all(),
+    env.DB.prepare(
+      `SELECT key,value FROM meta WHERE key LIKE 'evaluation_actual_hash_gw_%'`
+    ).all(),
+    env.DB.prepare(
+      `SELECT key,value FROM meta WHERE key LIKE 'evaluation_actual_checked_gw_%'`
+    ).all(),
+  ]);
   const required = Math.max(EVALUATION_MIN_PLAYERS,Math.floor((boot.elements||[]).length*.9));
   const existing = new Map(existingRows.results.map((row) => [num(row.gw), {
     complete: num(row.n) >= required,
     official: num(row.data_checked) === 1,
   }]));
-  const missing = completed.filter((status) => {
+  const storedHashes = new Map(hashRows.results.map((row) => [
+    num(String(row.key).replace('evaluation_actual_hash_gw_','')),
+    String(row.value || ''),
+  ]));
+  const checkedAt = new Map(checkedRows.results.map((row) => [
+    num(String(row.key).replace('evaluation_actual_checked_gw_','')),
+    String(row.value || ''),
+  ]));
+  const requiredRefresh = completed.filter((status) => {
     const stored = existing.get(status.gw);
     return !stored?.complete || (status.official && !stored.official);
-  }).slice(0,2);
-  if (!missing.length) return { ok: true, skipped: true, reason: 'Completed actuals already captured' };
-  let captured = 0;
-  const gameweeks = [];
-  const finality = {};
-  for (const status of missing) {
+  });
+  const candidates = selectGameweekCandidates(completed,requiredRefresh,GAMEWEEK_BATCH_LIMIT,checkedAt);
+  if (!candidates.length) return { ok: true, skipped: true, reason: 'No completed actuals require checking' };
+
+  const batch = await processGameweekBatch(candidates, async (status) => {
     const gw = status.gw;
-    const live = await fplGet(`/event/${gw}/live/`);
+    const live = await gameweekLivePayload(gw,liveCache);
     const elements = Array.isArray(live?.elements) ? live.elements : [];
     if (elements.length < EVALUATION_MIN_PLAYERS) throw new Error(`GW${gw} live payload has only ${elements.length} players`);
+    const sourceHash = await evaluationActualSourceHash(elements);
+    const stored = existing.get(gw);
+    const mustRefresh = !stored?.complete || (status.official && !stored.official);
+    if (!mustRefresh && storedHashes.get(gw) === sourceHash) {
+      return { gw, skipped: true, revalidated: true, sourceHash };
+    }
     const statements = [];
     for (const item of elements) {
       const st = item?.stats || {};
@@ -794,20 +937,44 @@ async function captureCheckedActuals(env, boot, fixtures, timestamp) {
       }));
     }
     for (let i = 0; i < statements.length; i += 80) await env.DB.batch(statements.slice(i, i + 80));
-    captured += statements.length;
-    gameweeks.push(gw);
-    finality[gw]=status.source;
     await env.DB.batch([
       metaUpsert(env,`evaluation_actual_gw_${gw}`,timestamp,timestamp),
       metaUpsert(env,`evaluation_actual_finality_gw_${gw}`,status.source,timestamp),
+      metaUpsert(env,`evaluation_actual_hash_gw_${gw}`,sourceHash,timestamp),
+    ]);
+    return {
+      gw,
+      skipped: false,
+      captured: statements.length,
+      finality: status.source,
+      sourceHash,
+    };
+  });
+
+  const refreshed = batch.results.filter((row) => !row.skipped);
+  const gameweeks = refreshed.map((row) => row.gw);
+  if (batch.results.length) {
+    await env.DB.batch(batch.results.map((row) =>
+      metaUpsert(env,`evaluation_actual_checked_gw_${row.gw}`,timestamp,timestamp)
+    ));
+  }
+  if (gameweeks.length) {
+    await env.DB.batch([
+      metaUpsert(env,'evaluation_last_actual_at',timestamp,timestamp),
+      metaUpsert(env,'evaluation_last_actual_gw',Math.max(...gameweeks),timestamp),
+      metaUpsert(env,'evaluation_schema_version',EVALUATION_SCHEMA_VERSION,timestamp),
     ]);
   }
-  await env.DB.batch([
-    metaUpsert(env,'evaluation_last_actual_at',timestamp,timestamp),
-    metaUpsert(env,'evaluation_last_actual_gw',Math.max(...gameweeks),timestamp),
-    metaUpsert(env,'evaluation_schema_version',EVALUATION_SCHEMA_VERSION,timestamp),
-  ]);
-  return { ok: true, captured, gameweeks, finality };
+  return {
+    ok: batch.errors.length === 0,
+    skipped: refreshed.length === 0 && batch.errors.length === 0,
+    reason: refreshed.length || batch.errors.length ? null : 'Recent completed actuals are unchanged',
+    captured: refreshed.reduce((total,row) => total + num(row.captured),0),
+    gameweeks,
+    revalidated: batch.results.map((row) => row.gw),
+    finality: Object.fromEntries(refreshed.map((row) => [row.gw,row.finality])),
+    errors: batch.errors,
+  };
 }
 
 let GAMEWEEK_INTELLIGENCE_SCHEMA_READY = false;
@@ -929,7 +1096,7 @@ function gameweekReviewUpsert(env, { season, gw, sourceHash, generatedAt, report
   ).bind(season,gw,GAMEWEEK_INTELLIGENCE_VERSION,sourceHash,generatedAt,JSON.stringify(report));
 }
 
-async function captureGameweekIntelligence(env, boot, fixtures, timestamp) {
+async function captureGameweekIntelligence(env, boot, fixtures, timestamp, liveCache = null) {
   await ensureGameweekIntelligenceSchema(env);
   const season = seasonFromBootstrap(boot);
   const timestampMs = Date.parse(timestamp);
@@ -940,37 +1107,41 @@ async function captureGameweekIntelligence(env, boot, fixtures, timestamp) {
     .sort((a,b) => a.gw - b.gw);
   if (!completed.length) return { ok: true, skipped: true, reason: 'No completed gameweeks' };
   const required = Math.max(GAMEWEEK_INTELLIGENCE_MIN_PLAYERS, Math.floor((boot.elements || []).length * .9));
-  const [existing,finalityRows] = await Promise.all([env.DB.prepare(
-    `SELECT reviews.gw,reviews.review_version,COUNT(stats.player_id) AS stats_count
+  const [existing,finalityRows,checkedRows] = await Promise.all([env.DB.prepare(
+    `SELECT reviews.gw,reviews.review_version,reviews.source_hash,COUNT(stats.player_id) AS stats_count
      FROM gameweek_reviews AS reviews
      LEFT JOIN gameweek_player_stats AS stats
        ON stats.season=reviews.season AND stats.gw=reviews.gw
      WHERE reviews.season=?1
-     GROUP BY reviews.gw,reviews.review_version`
+     GROUP BY reviews.gw,reviews.review_version,reviews.source_hash`
   ).bind(season).all(),env.DB.prepare(
     `SELECT key,value FROM meta WHERE key LIKE 'gameweek_intelligence_finality_gw_%'`
+  ).all(),env.DB.prepare(
+    `SELECT key,value FROM meta WHERE key LIKE 'gameweek_intelligence_checked_gw_%'`
   ).all()]);
   const versions = new Map(existing.results.map((row) => [num(row.gw), {
     version: row.review_version,
     stats: num(row.stats_count),
+    sourceHash: String(row.source_hash || ''),
   }]));
   const storedFinality = new Map(finalityRows.results.map((row) => [
     num(String(row.key).replace('gameweek_intelligence_finality_gw_','')),
     String(row.value || ''),
   ]));
-  const missing = completed
+  const checkedAt = new Map(checkedRows.results.map((row) => [
+    num(String(row.key).replace('gameweek_intelligence_checked_gw_','')),
+    String(row.value || ''),
+  ]));
+  const requiredRefresh = completed
     .filter((status) => versions.get(status.gw)?.version !== GAMEWEEK_INTELLIGENCE_VERSION
       || versions.get(status.gw)?.stats < required
-      || (status.official && storedFinality.get(status.gw) !== 'official-data-checked'))
-    .slice(0, 2);
-  if (!missing.length) return { ok: true, skipped: true, reason: 'Every completed review is current' };
+      || (status.official && storedFinality.get(status.gw) !== 'official-data-checked'));
+  const candidates = selectGameweekCandidates(completed,requiredRefresh,GAMEWEEK_BATCH_LIMIT,checkedAt);
+  if (!candidates.length) return { ok: true, skipped: true, reason: 'No completed review requires checking' };
 
-  const gameweeks = [];
-  let storedPlayers = 0;
-  const finality = {};
-  for (const status of missing) {
+  const batch = await processGameweekBatch(candidates, async (status) => {
     const gw = status.gw;
-    const live = await fplGet(`/event/${gw}/live/`);
+    const live = await gameweekLivePayload(gw,liveCache);
     const rows = normalizeGameweekStats({ season, gw, bootstrap: boot, live, capturedAt: timestamp });
     if (rows.length < required) throw new Error(`GW${gw} intelligence payload has only ${rows.length}/${required} players`);
     const history = await env.DB.prepare(
@@ -978,38 +1149,71 @@ async function captureGameweekIntelligence(env, boot, fixtures, timestamp) {
        WHERE season=?1 AND gw BETWEEN ?2 AND ?3
        ORDER BY gw DESC,player_id`
     ).bind(season,Math.max(1,gw-4),gw-1).all();
-    const sourceHash = await sha256(JSON.stringify(rows.map((row) => [
-      row.player_id,row.total_points,row.minutes,row.starts,row.goals_scored,row.assists,
-      row.clean_sheets,row.saves,row.bonus,row.bps,row.defensive_contribution,
-      row.expected_goals,row.expected_assists,row.expected_goal_involvements,
-      row.expected_goals_conceded,
-    ])));
-    const report = buildGameweekIntelligence({
-      season,gw,generatedAt:timestamp,rows,historyRows:history.results,
-      fixtures,teams:boot.teams || [],
+    const sourceHash = await gameweekIntelligenceSourceHash({
+      rows,
+      historyRows: history.results,
+      fixtures,
+      gw,
     });
-    report.sourceHash = sourceHash;
-    applyGameweekFinalityProvenance(report, {
+    const stored = versions.get(gw);
+    const mustRefresh = stored?.version !== GAMEWEEK_INTELLIGENCE_VERSION
+      || stored?.stats < required
+      || (status.official && storedFinality.get(gw) !== 'official-data-checked');
+    if (!mustRefresh && stored?.sourceHash === sourceHash) {
+      return { gw, skipped: true, revalidated: true, sourceHash };
+    }
+    const reportFinality = {
+      complete: status.complete,
       source: status.source,
       officialDataChecked: status.official,
       fixtureCount: status.fixtureCount,
       safetyWindowHours: GAMEWEEK_FINALITY_GRACE_MS / 3600e3,
+    };
+    const report = buildGameweekIntelligence({
+      season,gw,generatedAt:timestamp,rows,historyRows:history.results,
+      fixtures,teams:boot.teams || [],finality:reportFinality,
     });
+    report.sourceHash = sourceHash;
+    applyGameweekFinalityProvenance(report,reportFinality);
     const statements = rows.map((row) => gameweekStatUpsert(env,row));
     statements.push(gameweekReviewUpsert(env,{season,gw,sourceHash,generatedAt:timestamp,report}));
     statements.push(metaUpsert(env,`gameweek_intelligence_gw_${gw}`,timestamp,timestamp));
     statements.push(metaUpsert(env,`gameweek_intelligence_finality_gw_${gw}`,status.source,timestamp));
     for (let i = 0; i < statements.length; i += 60) await env.DB.batch(statements.slice(i,i+60));
-    storedPlayers += rows.length;
-    gameweeks.push(gw);
-    finality[gw]=status.source;
+    return {
+      gw,
+      skipped: false,
+      storedPlayers: rows.length,
+      finality: status.source,
+      sourceHash,
+    };
+  });
+
+  const refreshed = batch.results.filter((row) => !row.skipped);
+  const gameweeks = refreshed.map((row) => row.gw);
+  if (batch.results.length) {
+    await env.DB.batch(batch.results.map((row) =>
+      metaUpsert(env,`gameweek_intelligence_checked_gw_${row.gw}`,timestamp,timestamp)
+    ));
   }
-  await env.DB.batch([
-    metaUpsert(env,'gameweek_intelligence_last_at',timestamp,timestamp),
-    metaUpsert(env,'gameweek_intelligence_last_gw',Math.max(...gameweeks),timestamp),
-    metaUpsert(env,'gameweek_intelligence_version',GAMEWEEK_INTELLIGENCE_VERSION,timestamp),
-  ]);
-  return { ok: true, gameweeks, storedPlayers, finality, version: GAMEWEEK_INTELLIGENCE_VERSION };
+  if (gameweeks.length) {
+    await env.DB.batch([
+      metaUpsert(env,'gameweek_intelligence_last_at',timestamp,timestamp),
+      metaUpsert(env,'gameweek_intelligence_last_gw',Math.max(...gameweeks),timestamp),
+      metaUpsert(env,'gameweek_intelligence_version',GAMEWEEK_INTELLIGENCE_VERSION,timestamp),
+    ]);
+  }
+  return {
+    ok: batch.errors.length === 0,
+    skipped: refreshed.length === 0 && batch.errors.length === 0,
+    reason: refreshed.length || batch.errors.length ? null : 'Recent completed reviews are unchanged',
+    gameweeks,
+    revalidated: batch.results.map((row) => row.gw),
+    storedPlayers: refreshed.reduce((total,row) => total + num(row.storedPlayers),0),
+    finality: Object.fromEntries(refreshed.map((row) => [row.gw,row.finality])),
+    errors: batch.errors,
+    version: GAMEWEEK_INTELLIGENCE_VERSION,
+  };
 }
 
 function gameweekIntelligencePlayerIds(url) {
@@ -1601,15 +1805,27 @@ async function poll(env, { sampleTransfers = false } = {}) {
       if(sampleTransfers) await saveTransferCheckpoint(env,boot,startedAt);
       let evaluation={baseline:null,actuals:null,intelligence:null,error:null};
       const evaluationErrors=[];
+      const gameweekLiveCache=new Map();
       try {
         evaluation.baseline=await captureOfficialBaselineIfDue(env,boot,fixtures,hash,startedAt);
-        evaluation.actuals=await captureCheckedActuals(env,boot,fixtures,startedAt);
       } catch(evalErr) {
-        evaluationErrors.push(`accountability: ${String(evalErr.message||evalErr)}`);
+        evaluationErrors.push(`baseline accountability: ${String(evalErr.message||evalErr)}`);
       }
       try {
-        evaluation.intelligence=await captureGameweekIntelligence(env,boot,fixtures,startedAt);
-        await metaUpsert(env,'gameweek_intelligence_last_error','',startedAt).run();
+        evaluation.actuals=await captureCheckedActuals(env,boot,fixtures,startedAt,gameweekLiveCache);
+        if(evaluation.actuals?.errors?.length) {
+          evaluationErrors.push(`result accountability: ${evaluation.actuals.errors.map((row)=>`GW${row.gw}: ${row.error}`).join('; ')}`);
+        }
+      } catch(evalErr) {
+        evaluationErrors.push(`result accountability: ${String(evalErr.message||evalErr)}`);
+      }
+      try {
+        evaluation.intelligence=await captureGameweekIntelligence(env,boot,fixtures,startedAt,gameweekLiveCache);
+        const intelligenceMessage=evaluation.intelligence?.errors?.length
+          ? evaluation.intelligence.errors.map((row)=>`GW${row.gw}: ${row.error}`).join('; ')
+          : '';
+        if(intelligenceMessage)evaluationErrors.push(`gameweek intelligence: ${intelligenceMessage}`);
+        await metaUpsert(env,'gameweek_intelligence_last_error',intelligenceMessage,startedAt).run();
       } catch(intelligenceErr) {
         const intelligenceMessage=String(intelligenceErr.message||intelligenceErr);
         evaluationErrors.push(`gameweek intelligence: ${intelligenceMessage}`);
@@ -1801,7 +2017,7 @@ async function healthData(env) {
   return {
     status,
     service: 'FPL Engine API',
-    release: 'v2.29.3-finality-provenance',
+    release: 'v2.30.0-review-integrity',
     season: m.season || configuredSeason(env),
     schemaVersion: WORKER_SCHEMA_VERSION,
     storedSchemaVersion: num(m.schema_version, 0),
@@ -2140,7 +2356,7 @@ export default {
         default:
           return json({
             service: 'FPL Engine API',
-            release: 'v2.29.3-finality-provenance',
+            release: 'v2.30.0-review-integrity',
             frontendRoutes: [
               '/bootstrap-static/', '/fixtures/', '/api/news?hours=72',
               '/api/deltas?hours=24', '/api/price-intelligence?hours=24',

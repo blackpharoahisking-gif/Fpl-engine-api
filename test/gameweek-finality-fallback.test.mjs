@@ -86,6 +86,7 @@ test('review provenance never labels a fixture-final fallback as officially data
     fixtureCount: 10,
     safetyWindowHours: 14,
   });
+  assert.equal(report.final, true);
   assert.equal(report.dataChecked, false);
   assert.equal(report.finality.officialDataChecked, false);
   assert.match(report.methodology.scope, /every fixture was final/i);
