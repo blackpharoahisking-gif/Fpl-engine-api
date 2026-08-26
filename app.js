@@ -1,4 +1,4 @@
-/* OTB 2026.08.25.3 — rolling low-owned signal persistence, rule-aware Review scoring, source-hash revalidation,
+/* OTB 2026.08.26.1 — import-specific official chip availability, rolling low-owned signal persistence, rule-aware Review scoring, source-hash revalidation,
    explicit team level versus trend, transparent low-owned ranking and the
    corrected 2026/27 goalkeeper goal value. A card's bright headline figure is the live GW score
    in every view, including the official current value before that player's
@@ -196,10 +196,16 @@
    shows both numbers and each still says exactly what it is. A player
    whose fixture has not kicked off keeps the projection in the headline,
    per .7, because there is still no real number to put there.
-   selectedGwView() gated nothing after this and was removed. */
+   selectedGwView() gated nothing after this and was removed.
+   2026.08.26.1: every team import now loads that manager ID's official
+   season chip history. Used Wildcards, Free Hits, Triple Captains and Bench
+   Boosts are persisted separately from future plans, locked in the manual
+   selectors and excluded from automated advice. The saved team ID refreshes
+   this ledger on later visits, while importing a different team replaces it
+   so one manager's chip use cannot leak into another manager's plan. */
 (function loadOtbCore(){
   const script=document.createElement('script');
-  script.src='app-core.js?v=2026.08.25.3-core';
+  script.src='app-core.js?v=2026.08.26.1-core';
   script.async=false;
   script.onload=()=>{
     try{installOtbLivePointsPatch()}
@@ -214,7 +220,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.25.3';
+  const BUILD='2026.08.26.1';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -223,11 +229,15 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.25.3';badge.title='OTB rolling signal persistence + rule-aware Gameweek Review + live GW scoring';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.26.1';badge.title='OTB official chip-history availability + rule-aware Gameweek Review + live GW scoring';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){
-    try{const saved=localStorage.getItem(TEAM_ID_KEY);if(saved&&!teamIdInput.value)teamIdInput.value=saved}catch(_){ }
+    try{
+      const saved=localStorage.getItem(TEAM_ID_KEY);if(saved&&!teamIdInput.value)teamIdInput.value=saved;
+      const teamId=Math.trunc(Number(saved));
+      if(teamId>0&&typeof globalThis.syncFplUsedChips==='function')void globalThis.syncFplUsedChips(teamId,{renderUi:true,persist:true}).catch(err=>console.warn('OTB chip-history refresh skipped',err));
+    }catch(_){ }
     const remember=()=>{const v=String(teamIdInput.value||'').trim();try{if(v)localStorage.setItem(TEAM_ID_KEY,v)}catch(_){ }};
     teamIdInput.addEventListener('change',remember);
     document.getElementById('btnImportFplTeam')?.addEventListener('click',remember,{capture:true});

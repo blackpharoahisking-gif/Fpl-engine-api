@@ -6,7 +6,7 @@ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const worker=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 
 test('live score bridge loads the untouched app core and exposes official GW points',()=>{
-  assert.match(app,/app-core\.js\?v=2026\.08\.25\.3-core/);
+  assert.match(app,/app-core\.js\?v=2026\.08\.26\.1-core/);
   assert.match(app,/GW points/);
   assert.match(app,/actualRowsFromPayload\(payload\)/);
   assert.match(app,/const projectedCardHTML=cardHTML/);
@@ -43,9 +43,36 @@ test('a partial GW total says so instead of presenting itself as final',()=>{
 test('Worker proxies only the public FPL reads required by import and live scoring',()=>{
   assert.match(worker,/import core from '\.\/index-core\.js'/);
   assert.match(worker,/path==='\/api\/entry'/);
+  assert.match(worker,/path==='\/api\/entry-history'/);
   assert.match(worker,/path==='\/api\/entry-picks'/);
   assert.match(worker,/path==='\/api\/event-live'/);
   assert.match(worker,/\/entry\/\$\{id\}\/event\/\$\{gw\}\/picks\//);
+  assert.match(worker,/\/entry\/\$\{id\}\/history\//);
   assert.match(worker,/\/event\/\$\{gw\}\/live\//);
   assert.match(worker,/return core\.fetch\(request,env,ctx\)/);
+});
+
+test('entry-history proxy validates the team id and forwards the official chip ledger',async()=>{
+  const originalFetch=globalThis.fetch;
+  let upstream='';
+  globalThis.fetch=async url=>{
+    upstream=String(url);
+    return new Response(JSON.stringify({chips:[{name:'bboost',event:1}]}),{
+      status:200,
+      headers:{'content-type':'application/json'},
+    });
+  };
+  try{
+    const {default:handler}=await import('../src/index.js');
+    const response=await handler.fetch(new Request('https://worker.test/api/entry-history?id=456'),{},{});
+    assert.equal(upstream,'https://fantasy.premierleague.com/api/entry/456/history/');
+    assert.equal(response.status,200);
+    assert.equal(response.headers.get('access-control-allow-origin'),'*');
+    assert.deepEqual(await response.json(),{chips:[{name:'bboost',event:1}]});
+
+    const invalid=await handler.fetch(new Request('https://worker.test/api/entry-history?id=not-a-team'),{},{});
+    assert.equal(invalid.status,400);
+  }finally{
+    globalThis.fetch=originalFetch;
+  }
 });
