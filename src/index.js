@@ -1,4 +1,5 @@
 import core from './index-core.js';
+import { handleBrowserEvaluationRoute } from './evaluation-device.js';
 
 const FPL_ORIGIN='https://fantasy.premierleague.com/api';
 const CORS={
@@ -96,6 +97,23 @@ export default {
     if(typeof core?.scheduled==='function')return core.scheduled(event,env,ctx);
   },
   async fetch(request,env,ctx){
+    try{
+      const evaluation=await handleBrowserEvaluationRoute(request,env);
+      if(evaluation)return evaluation;
+    }catch(err){
+      const origin=request.headers.get('origin')||'';
+      const allowed=String(env.EVALUATION_ALLOWED_ORIGIN||env.ALLOWED_ORIGIN||'').trim();
+      return new Response(JSON.stringify({error:`Canonical evaluation route failed: ${String(err?.message||err)}`}),{
+        status:500,
+        headers:{
+          'content-type':'application/json; charset=utf-8',
+          'cache-control':'no-store',
+          'access-control-allow-origin':allowed||origin||'*',
+          'access-control-allow-methods':'GET, POST, OPTIONS',
+          'access-control-allow-headers':'content-type, authorization, x-admin-key, x-evaluation-key, x-evaluation-device, x-evaluation-timestamp, x-evaluation-signature',
+        },
+      });
+    }
     if(request.method==='OPTIONS'){
       const url=new URL(request.url);
       if(url.pathname.startsWith('/api/entry')||url.pathname.startsWith('/api/event-live')||/^\/event\/\d+\/live\/?$/.test(url.pathname)){
