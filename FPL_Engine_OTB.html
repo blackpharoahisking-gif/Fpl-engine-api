@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-build="2026.08.25.3">
+<html lang="en" data-build="2026.08.26.1">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="otb-build" content="2026.08.25.3"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%2337003C%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2720%27 fill=%27%2300FF87%27/%3E%3Cpath d=%27M32 17l9 7-3 11H26l-3-11zM26 35l-7 7 8 5 5-6 5 6 8-5-7-7%27 fill=%27%23160019%27/%3E%3C/svg%3E"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="OTB"><meta name="theme-color" content="#37003C">
-<title>FPL Engine — OTB 26/27 · RC5.0.28 Review Persistence</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="otb-build" content="2026.08.26.1"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%2337003C%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2720%27 fill=%27%2300FF87%27/%3E%3Cpath d=%27M32 17l9 7-3 11H26l-3-11zM26 35l-7 7 8 5 5-6 5 6 8-5-7-7%27 fill=%27%23160019%27/%3E%3C/svg%3E"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="OTB"><meta name="theme-color" content="#37003C">
+<title>FPL Engine — OTB 26/27 · RC5.0.29 Chip Availability</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ body[data-ux-mode="beginner"] .advanced-divider{display:none}
 </head>
 <body>
 <header>
-  <div class="brand"><h1 class="display">FPL Engine</h1><span class="season mono">OTB &middot; 26/27</span><button type="button" class="build-badge mono" id="buildBadge" title="Check for a newer OTB build">BUILD 08.25.3</button></div>
+  <div class="brand"><h1 class="display">FPL Engine</h1><span class="season mono">OTB &middot; 26/27</span><button type="button" class="build-badge mono" id="buildBadge" title="Check for a newer OTB build">BUILD 08.26.1</button></div>
   <div class="hdr-spacer"></div>
   <div class="chipstat"><span class="k">Data</span><span class="v mono" id="hData" style="font-size:12px">SEED</span></div>
   <div class="chipstat"><span class="k">Squad</span><span class="v mono" id="hSquad">0/15</span></div>
@@ -857,6 +857,11 @@ function benchBoostRecommendation(p,byId,wc){
 function guidance(type){
   return({WC:'Reserve Wildcard 2 for restructuring once confirmed blank and double gameweeks expose major fixture swings.',FH:'Reserve Free Hit 2 for the most damaging confirmed blank gameweek, or a double gameweek where your squad has poor coverage.',TC:'Hold Triple Captain 2 for a confirmed double gameweek featuring a highly projected, secure starter with strong fixtures.',BB:'Plan Bench Boost 2 after Wildcard 2 when all 15 players can be prepared for confirmed double-gameweek fixtures.'})[type];
 }
+function usedChipRecommendation(key,p){
+  const gw=Math.trunc(num(p.usedChips?.[key]));if(gw<1||gw>38)return null;
+  const type=key.slice(0,2),label=({WC:'Wildcard',FH:'Free Hit',TC:'Triple Captain',BB:'Bench Boost'})[type]||type;
+  return{type,gw,score:0,confidence:'USED',qualified:false,used:true,reason:`Official FPL chip history records ${label} as played in GW${gw}. It is no longer available and is excluded from every recommendation and planning action.`};
+}
 function resolveChipCollisions(recs){
   /* FPL permits only ONE chip per gameweek. The four recommendations are produced
      independently, so two can land on the same week - most commonly Wildcard and
@@ -875,7 +880,7 @@ function resolveChipCollisions(recs){
      also the right call on merit, because a Wildcard window is flexible by a week
      either side while Free Hit and Bench Boost target a specific blank or double. */
   const POINTS_BASED=k=>k!=='WC1';
-  const order=keys.filter(k=>recs[k]&&recs[k].gw)
+  const order=keys.filter(k=>recs[k]&&recs[k].gw&&!recs[k].used)
     .sort((a,b)=>{
       const ap=POINTS_BASED(a),bp=POINTS_BASED(b);
       if(ap!==bp)return ap?-1:1;
@@ -901,17 +906,18 @@ function run(p){
   try{
     postMessage({type:'progress',progress:.2,detail:'Reading fixture swings'});
     const byId=new Map(p.players.map(x=>[x.id,x]));
-    const wc=wildcardRecommendation(p,byId);
+    const wcUsed=usedChipRecommendation('WC1',p),wcCandidate=wcUsed?null:wildcardRecommendation(p,byId),wc=wcUsed||wcCandidate;
     postMessage({type:'progress',progress:.45,detail:'Finding weakest squad week'});
-    const fh=freeHitRecommendation(p,byId);
-    const tc=tripleCaptainRecommendation(p,byId);
+    const fh=usedChipRecommendation('FH1',p)||freeHitRecommendation(p,byId);
+    const tc=usedChipRecommendation('TC1',p)||tripleCaptainRecommendation(p,byId);
     postMessage({type:'progress',progress:.7,detail:'Linking Bench Boost to Wildcard'});
-    const bb=benchBoostRecommendation(p,byId,wc);
+    const bb=usedChipRecommendation('BB1',p)||benchBoostRecommendation(p,byId,wc);
     const recs={WC1:wc,FH1:fh,TC1:tc,BB1:bb};
     resolveChipCollisions(recs);
-    for(const t of ['WC','FH','TC','BB'])recs[t+'2']={type:t,gw:null,score:0,confidence:'GUIDANCE',qualified:false,reason:guidance(t),guidance:true};
+    for(const t of ['WC','FH','TC','BB']){const key=t+'2';recs[key]=usedChipRecommendation(key,p)||{type:t,gw:null,score:0,confidence:'GUIDANCE',qualified:false,reason:guidance(t),guidance:true}}
     postMessage({type:'progress',progress:1,detail:'Rule-based plan complete'});
-    postMessage({type:'result',result:{recommendations:recs,firstHalfRecommended:Object.values(recs).filter(r=>r?.gw&&r?.qualified===true).length,firstHalfCandidates:Object.values(recs).filter(r=>r?.gw).length,wildcardTriggered:!!wc,method:'Marcus rule-based chip framework · qualified-action gate'}});
+    const first=['WC1','FH1','TC1','BB1'];
+    postMessage({type:'result',result:{recommendations:recs,firstHalfAvailable:first.filter(k=>!recs[k]?.used).length,firstHalfUsed:first.filter(k=>recs[k]?.used).length,firstHalfRecommended:first.filter(k=>recs[k]?.gw&&!recs[k]?.used&&recs[k]?.qualified===true).length,firstHalfCandidates:first.filter(k=>recs[k]?.gw&&!recs[k]?.used).length,wildcardTriggered:!!wcCandidate,method:'Marcus rule-based chip framework · official availability · qualified-action gate'}});
   }catch(e){postMessage({type:'error',error:e?.message||String(e)})}
 }
 onmessage=e=>{if(e.data?.type==='run')run(e.data.payload)};

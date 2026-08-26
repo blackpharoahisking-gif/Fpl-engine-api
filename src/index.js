@@ -54,6 +54,17 @@ async function publicFplRoute(request){
     return id?proxyFpl(`/entry/${id}/`,60):errorJson('A valid FPL team id is required.');
   }
 
+  if(path==='/api/entry-history'){
+    const id=positiveInt(url.searchParams.get('id'));
+    return id?proxyFpl(`/entry/${id}/history/`,60):errorJson('A valid FPL team id is required.');
+  }
+
+  match=path.match(/^\/api\/entry\/(\d+)\/history$/);
+  if(match){
+    const id=positiveInt(match[1]);
+    return id?proxyFpl(`/entry/${id}/history/`,60):errorJson('A valid FPL team id is required.');
+  }
+
   if(path==='/api/entry-picks'){
     const id=positiveInt(url.searchParams.get('id'));
     const gw=validGw(url.searchParams.get('gw'));
