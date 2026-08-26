@@ -186,7 +186,7 @@ async function sourceHashFor(snapshot){
     const hash=String(health?.dataHash||health?.data_hash||'').trim();
     if(!hash)return'';
     const localAt=Date.parse(toIso(snapshot?.dataUpdatedAt)),serverAt=Date.parse(health?.lastOfficialFetch||health?.pipeline?.lastSuccessAt||'');
-    if(Number.isFinite(localAt)&&Number.isFinite(serverAt)&&Math.abs(localAt-serverAt)>95*60*1000)return'';
+    if(!Number.isFinite(localAt)||!Number.isFinite(serverAt)||Math.abs(localAt-serverAt)>5*60*1000)return'';
     return hash;
   }catch{return''}
 }
@@ -206,7 +206,7 @@ async function snapshotPayload(snapshot){
       playerId:Number(row?.[0]),xpts:x,low,high,sd,
       confidence:Number(row?.[4]),expectedMinutes:Number(row?.[5]),
       pStart:Number(row?.[6]),pAppear:Number(row?.[7]),availability:Number(row?.[8]),
-      fixtureCount:Number(row?.[10]||0),noMarketXPts:Number.isFinite(noMarket)?noMarket:null,
+      fixtureCount:Number(row?.[10]||0),noMarketXpts:Number.isFinite(noMarket)?noMarket:null,
     };
   });
   return{
