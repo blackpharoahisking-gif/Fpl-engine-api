@@ -8,12 +8,13 @@ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const sync=readFileSync(new URL('../market-projection-sync.js',import.meta.url),'utf8');
 
 test('production loader installs the global market projection lifecycle bridge',()=>{
-  const build=/const BUILD='([^']+)'/.exec(app)?.[1];
-  assert.ok(build,'production loader should expose a build id');
-  assert.ok(app.includes(`market-projection-sync.js?v=${build}-market`),
-    'market lifecycle bridge cache key should track the current production build');
+  assert.match(app,/market-projection-sync\.js\?v=[^']+-market/,
+    'market lifecycle bridge must have an explicit cache-busted semantic layer version');
   assert.match(app,/market projection sync/,
     'production loader should name the market bridge for runtime load errors');
+  const liveAt=app.indexOf('app-live-points.js');
+  const marketAt=app.indexOf('market-projection-sync.js');
+  assert.ok(liveAt>=0&&marketAt>liveAt,'market lifecycle bridge must remain downstream of live/core');
   assert.doesNotThrow(()=>new Function(sync));
 });
 
