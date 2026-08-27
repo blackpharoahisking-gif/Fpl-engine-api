@@ -28,11 +28,11 @@ test('production boot appends live/core path first and release helper last',()=>
   context.globalThis=context;
   vm.runInNewContext(loader,context,{filename:'app.js'});
 
-  assert.equal(html.dataset.build,'2026.08.26.7');
-  assert.equal(meta.content,'2026.08.26.7');
-  assert.equal(badge.textContent,'BUILD 08.26.7');
+  assert.equal(html.dataset.build,'2026.08.26.8');
+  assert.equal(meta.content,'2026.08.26.8');
+  assert.equal(badge.textContent,'BUILD 08.26.8');
   assert.equal(appended.length,1,'nothing may run ahead of the live/core loader');
-  assert.equal(appended[0].src,'app-live-points.js?v=2026.08.26.7-live');
+  assert.equal(appended[0].src,'app-live-points.js?v=2026.08.26.8-live');
   assert.equal(typeof appended[0].onload,'function');
 
   appended[0].onload();
@@ -40,10 +40,12 @@ test('production boot appends live/core path first and release helper last',()=>
     appended.slice(1).map(s=>s.src),
     [
       'scoring-integrity.js?v=2026.08.26.4-scoring',
-      'market-projection-sync.js?v=2026.08.26.7-market',
+      'market-projection-sync.js?v=2026.08.26.8-market',
       'market-impact-inspector.js?v=2026.08.26.6-market-impact',
       'cloud-accountability.js?v=2026.08.26.2-cloud',
-      'release-identity.js?v=2026.08.26.7-release',
+      'accountability-v2.js?v=2026.08.26.8-accountability-v2',
+      'accountability-governance.js?v=2026.08.26.8-governance',
+      'release-identity.js?v=2026.08.26.8-release',
     ]
   );
 });
