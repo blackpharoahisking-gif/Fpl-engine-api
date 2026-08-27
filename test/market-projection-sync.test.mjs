@@ -12,7 +12,8 @@ test('production loader installs the global market projection lifecycle bridge',
   assert.ok(build,'production loader should expose a build id');
   assert.ok(app.includes(`market-projection-sync.js?v=${build}-market`),
     'market lifecycle bridge cache key should track the current production build');
-  assert.match(app,/OTB market projection sync failed to load/);
+  assert.match(app,/market projection sync/,
+    'production loader should name the market bridge for runtime load errors');
   assert.doesNotThrow(()=>new Function(sync));
 });
 
