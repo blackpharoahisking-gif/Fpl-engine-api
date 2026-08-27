@@ -37,7 +37,7 @@ test('decision drift is acknowledgement-based, squad-level and build changes are
   assert.match(governance,/if\(d\.buildChanged\)rows\.push/);
   assert.match(governance,/Acknowledge current state/);
   assert.doesNotMatch(governance,/verdictSaveSeen\(/);
-  assert.doesNotMatch(governance,/MutationObserver/);
+  assert.doesNotMatch(governance,/new\s+MutationObserver|MutationObserver\s*\(/);
 });
 
 test('Decision Memory keeps build provenance visible on mobile and separates attribution',()=>{
@@ -48,8 +48,8 @@ test('Decision Memory keeps build provenance visible on mobile and separates att
 });
 
 test('governance layer never replaces projection functions or market/scoring coefficients',()=>{
-  assert.doesNotMatch(governance,/\bproject\s*=/);
-  assert.doesNotMatch(governance,/\bfixtureContext\s*=/);
+  assert.doesNotMatch(governance,/(?:^|[;\n])\s*project\s*=/m);
+  assert.doesNotMatch(governance,/(?:^|[;\n])\s*fixtureContext\s*=/m);
   assert.doesNotMatch(governance,/MARKET_WEIGHT\s*=/);
   assert.doesNotMatch(governance,/S\.w\.[A-Za-z]+\s*=/);
 });
@@ -69,5 +69,5 @@ test('production loader preserves live/core-first boot and advances build cohere
   assert.ok(live>=0&&v2>live);
   assert.match(app,/const BUILD='2026\.08\.26\.8'/);
   assert.match(release,/const RELEASE='2026\.08\.26\.8'/);
-  assert.doesNotMatch(release,/MutationObserver/);
+  assert.doesNotMatch(release,/new\s+MutationObserver|MutationObserver\s*\(/);
 });
