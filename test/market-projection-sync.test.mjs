@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
+import vm from 'node:vm';
 
 const core=readFileSync(new URL('../app-core.js',import.meta.url),'utf8');
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
@@ -29,7 +30,7 @@ test('market lookup and projection propagation remain generic for both fixture s
     'the lifecycle repair must never contain a player- or club-specific exception');
 });
 
-test('runtime audit requires the market path to alter all fixture-context channels',()=>{
+test('runtime audit covers every priced team-side and verifies market-sensitive context changes',()=>{
   assert.match(core,/attackM=clamp\(\(1-w\)\*attackM\+w\*mktAttackM/);
   assert.match(core,/lambdaAgainst=clamp\(\(1-w\)\*lambdaAgainst\+w\*mkt\.xgAgainst/);
   assert.match(core,/pCS=clamp\(\(1-w\)\*pCS\+w\*mkt\.pCS/);
@@ -42,4 +43,55 @@ test('runtime audit requires the market path to alter all fixture-context channe
   assert.match(sync,/blended\.dAtk/);
   assert.match(sync,/blended\.dCS/);
   assert.match(sync,/__OTB_MARKET_PROPAGATION_AUDIT__/);
+});
+
+test('a low-power session hydrates market data immediately, audits both fixture sides, and re-renders projections',async()=>{
+  let loads=0,renders=0;
+  const events=[];
+  const context={
+    console,
+    Date,
+    Math,
+    Number,
+    String,
+    navigator:{onLine:true},
+    document:{visibilityState:'visible',addEventListener(){}},
+    window:{addEventListener(){}},
+    setInterval(){return 1},
+    setTimeout(){return 1},
+    lowPowerMode:()=>true,
+    MARKET_LEAGUE_XG:1.45,
+    MARKET_SUSPEND:false,
+    MARKET:{
+      loading:false,
+      byKey:new Map([
+        ['AAA|BBB|H',{xgFor:1.9,xgAgainst:.8,pCS:.46}],
+        ['BBB|AAA|A',{xgFor:.8,xgAgainst:1.9,pCS:.15}]
+      ])
+    },
+    marketAgeMinutes:()=>null,
+    marketActive:()=>true,
+    loadMarketData:async()=>{loads++;return true},
+    fixtureContext(team,fx){
+      if(context.MARKET_SUSPEND)return{attackM:1,lambdaAgainst:1.3,pCS:.27,dAtk:3.5,dCS:3.4,marketApplied:false};
+      return team==='AAA'
+        ?{attackM:1.15,lambdaAgainst:1.05,pCS:.36,dAtk:3.05,dCS:2.95,marketApplied:true}
+        :{attackM:.78,lambdaAgainst:1.6,pCS:.20,dAtk:4.05,dCS:4.2,marketApplied:true};
+    },
+    render(opts){renders++;context.renderOpts=opts},
+    pipelineEvent(...args){events.push(args)}
+  };
+  context.globalThis=context;
+  vm.runInNewContext(sync,context);
+  await new Promise(resolve=>setImmediate(resolve));
+  await Promise.resolve();
+
+  assert.equal(loads,1,'mobile startup should fetch the market without opening Verdict/Model');
+  assert.equal(renders,1,'successful hydration should invalidate/re-render projections through the core loader');
+  assert.equal(context.renderOpts.deferPool,true);
+  assert.equal(context.__OTB_MARKET_PROPAGATION_AUDIT__.ok,true);
+  assert.equal(context.__OTB_MARKET_PROPAGATION_AUDIT__.checked,2);
+  assert.equal(context.__OTB_MARKET_PROPAGATION_AUDIT__.applied,2);
+  assert.equal(context.__OTB_MARKET_PROPAGATION_AUDIT__.changed,2);
+  assert.ok(events.some(e=>e[0]==='MARKET-PROJECTION'&&e[1]==='ok'));
 });
