@@ -4,10 +4,10 @@ import { readFile } from 'node:fs/promises';
 
 const read = name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
 
-test('production loader preserves live scoring and then loads D1 accountability', async () => {
+test('production loader preserves live scoring and keeps legacy D1 accountability downstream', async () => {
   const [loader, live] = await Promise.all([read('app.js'), read('app-live-points.js')]);
-  assert.match(loader, /OTB 2026\.08\.26\.2/);
-  assert.match(loader, /app-live-points\.js\?v=2026\.08\.26\.2-live/);
+  assert.match(loader, /const BUILD='2026\.08\.26\.8'/);
+  assert.match(loader, /app-live-points\.js\?v=2026\.08\.26\.8-live/);
   assert.match(loader, /cloud-accountability\.js\?v=2026\.08\.26\.2-cloud/);
   assert.ok(loader.indexOf('app-live-points.js') < loader.indexOf('cloud-accountability.js'));
   assert.match(live, /OTB 2026\.08\.26\.1/);
