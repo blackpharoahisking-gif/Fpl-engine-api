@@ -22,7 +22,8 @@
       &&typeof fixtureContext==='function'
       &&typeof render==='function'
       &&typeof MARKET!=='undefined'
-      &&typeof MARKET_SUSPEND!=='undefined';
+      &&typeof MARKET_SUSPEND!=='undefined'
+      &&typeof MARKET_LEAGUE_XG!=='undefined';
   }
 
   function isLowPower(){
@@ -58,7 +59,7 @@
         else failures.push(`${key}:not-applied`);
 
         const marketDifferent=
-          Math.abs(Number(mkt?.xgFor)-Number(base.attackM)*1.45)>1e-6||
+          Math.abs(Number(mkt?.xgFor)-Number(base.attackM)*Number(MARKET_LEAGUE_XG))>1e-6||
           Math.abs(Number(mkt?.xgAgainst)-Number(base.lambdaAgainst))>1e-6||
           Math.abs(Number(mkt?.pCS)-Number(base.pCS))>1e-6;
         if(!marketDifferent)continue;
