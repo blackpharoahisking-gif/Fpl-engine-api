@@ -40,7 +40,7 @@ test('production boot appends live/core path first and release helper last',()=>
     appended.slice(1).map(s=>s.src),
     [
       'scoring-integrity.js?v=2026.08.26.4-scoring',
-      'market-projection-sync.js?v=2026.08.26.4-market',
+      'market-projection-sync.js?v=2026.08.26.7-market',
       'market-impact-inspector.js?v=2026.08.26.6-market-impact',
       'cloud-accountability.js?v=2026.08.26.2-cloud',
       'release-identity.js?v=2026.08.26.7-release',
