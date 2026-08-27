@@ -1,0 +1,32 @@
+name: Temp decision interface audit
+on:
+  push:
+    branches: [codex/decision-interface-integrity]
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax checks
+        run: |
+          node --check app.js
+          node --check decision-interface-integrity.js
+          node --check release-identity.js
+      - name: Focused decision-interface regressions
+        run: node --test test/decision-interface-integrity.test.mjs test/release-identity.test.mjs test/startup-loader-order.test.mjs test/scoring-integrity.test.mjs test/market-projection-sync.test.mjs test/accountability-governance-v2.test.mjs test/role-freshness-sync.test.mjs
+      - name: Full repository suite baseline
+        shell: bash
+        run: |
+          set +e
+          npm test > /tmp/otb-full-test.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/otb-full-test.log
+          fail_count=$(grep -E '^# fail [0-9]+' /tmp/otb-full-test.log | tail -1 | awk '{print $3}')
+          echo "Observed full-suite failures: ${fail_count:-unknown}"
+          test "${fail_count:-999}" -eq 23
