@@ -72,9 +72,9 @@ test('stylesheet defines the new card-top/kit-shirt/corner-badge rules and the C
 });
 
 test('cache-bust queries are bumped together for this content change',()=>{
-  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+  const live=readFileSync(new URL('../app-live-points.js',import.meta.url),'utf8');
   const build=/<html[^>]*data-build="([^"]+)"/.exec(html)?.[1];
   assert.ok(build,'published HTML build is required');
-  assert.ok(app.includes(`app-core.js?v=${build}-core`),'app-core.js changed, so its cache-bust must match the published build');
+  assert.ok(live.includes(`app-core.js?v=${build}-core`),'app-core.js changed, so its cache-bust must match the published build');
   assert.match(html,/script\.src='app\.js\?v='\+encodeURIComponent\(requested\)/,'app.js must use the requested/current HTML build as its cache key');
 });

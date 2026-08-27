@@ -7,7 +7,7 @@ const loader=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const core=fs.readFileSync(new URL('../app-core.js',import.meta.url),'utf8');
 
 test('role freshness remains downstream of the proven live/core startup path',()=>{
-  const live=loader.indexOf('app-live-points.js?v=2026.08.27.1-live');
+  const live=loader.indexOf('app-live-points.js?v=2026.08.27.2-live');
   const role=loader.indexOf('role-freshness-sync.js?v=2026.08.26.9-role-freshness');
   assert.ok(live>=0);
   assert.ok(role>live);
