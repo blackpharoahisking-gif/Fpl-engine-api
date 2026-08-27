@@ -28,7 +28,7 @@
     /* app-live-points appends app-core.js. These bridges wait for core globals
        and therefore cannot block or own initialisation. */
     append('scoring-integrity.js?v=2026.08.26.4-scoring','scoring-integrity layer');
-    append('market-projection-sync.js?v=2026.08.26.4-market','market projection sync');
+    append('market-projection-sync.js?v=2026.08.26.7-market','market projection sync');
     append('market-impact-inspector.js?v=2026.08.26.6-market-impact','player market-impact inspector');
     accountability();
 
