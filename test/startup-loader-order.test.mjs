@@ -28,11 +28,11 @@ test('production boot appends live/core path first and release helper last',()=>
   context.globalThis=context;
   vm.runInNewContext(loader,context,{filename:'app.js'});
 
-  assert.equal(html.dataset.build,'2026.08.26.9');
-  assert.equal(meta.content,'2026.08.26.9');
-  assert.equal(badge.textContent,'BUILD 08.26.9');
+  assert.equal(html.dataset.build,'2026.08.27.1');
+  assert.equal(meta.content,'2026.08.27.1');
+  assert.equal(badge.textContent,'BUILD 08.27.1');
   assert.equal(appended.length,1,'nothing may run ahead of the live/core loader');
-  assert.equal(appended[0].src,'app-live-points.js?v=2026.08.26.9-live');
+  assert.equal(appended[0].src,'app-live-points.js?v=2026.08.27.1-live');
   assert.equal(typeof appended[0].onload,'function');
 
   appended[0].onload();
@@ -46,7 +46,8 @@ test('production boot appends live/core path first and release helper last',()=>
       'cloud-accountability.js?v=2026.08.26.2-cloud',
       'accountability-v2.js?v=2026.08.26.8-accountability-v2',
       'accountability-governance.js?v=2026.08.26.8-governance',
-      'release-identity.js?v=2026.08.26.9-release',
+      'decision-interface-integrity.js?v=2026.08.27.1-decision-integrity',
+      'release-identity.js?v=2026.08.27.1-release',
     ]
   );
 });
