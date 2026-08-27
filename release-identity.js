@@ -1,11 +1,11 @@
-/* OTB release identity helper — 2026.08.26.8
+/* OTB release identity helper — 2026.08.26.9
    ---------------------------------------------------------------
    Non-critical, bounded release metadata repair. It never participates in
    core startup and deliberately uses no MutationObserver, so it cannot create
    a self-triggering microtask loop that starves app initialisation. */
 (function installOtbReleaseIdentity(){
   'use strict';
-  const RELEASE='2026.08.26.8';
+  const RELEASE='2026.08.26.9';
 
   const parts=v=>String(v||'').split('.').map(x=>Number.parseInt(x,10)||0);
   function compare(a,b){
