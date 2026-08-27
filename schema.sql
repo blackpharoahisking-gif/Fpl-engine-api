@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS players (
   bps                 INTEGER DEFAULT 0,
   xg                  REAL DEFAULT 0,
   xa                  REAL DEFAULT 0,
-  xgc                 REAL DEFAULT 0,
+  xgc                  REAL DEFAULT 0,
   dc_per_90           REAL DEFAULT 0,
   form                REAL DEFAULT 0,
   points_per_game     REAL DEFAULT 0,
@@ -188,4 +188,82 @@ CREATE TABLE IF NOT EXISTS gameweek_reviews (
   generated_at TEXT NOT NULL,
   report_json TEXT NOT NULL,
   PRIMARY KEY (season, gw)
+);
+
+-- ---------- immutable browser projection accountability v2 ----------
+-- Raw accepted snapshots are append-only by snapshot_id. The canonical
+-- pre-deadline forecast is selected by query; accepted vectors are never
+-- overwritten by a later build or capture.
+CREATE TABLE IF NOT EXISTS evaluation_v2_capture_events (
+  event_id TEXT PRIMARY KEY,
+  capture_key TEXT,
+  season TEXT,
+  gw INTEGER,
+  app_build TEXT,
+  model_code_hash TEXT,
+  snapshot_checksum TEXT,
+  device_id TEXT,
+  status TEXT NOT NULL,
+  reason TEXT,
+  received_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_eval_v2_events_gw
+  ON evaluation_v2_capture_events (season, gw, received_at DESC);
+
+CREATE TABLE IF NOT EXISTS evaluation_v2_model_semantics (
+  model_code_hash TEXT PRIMARY KEY,
+  app_build TEXT NOT NULL,
+  manifest_json TEXT NOT NULL,
+  first_seen_at TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS evaluation_v2_snapshots (
+  snapshot_id TEXT PRIMARY KEY,
+  capture_key TEXT NOT NULL UNIQUE,
+  season TEXT NOT NULL,
+  gw INTEGER NOT NULL,
+  app_build TEXT NOT NULL,
+  model_code_hash TEXT NOT NULL,
+  weights_hash TEXT NOT NULL,
+  formula_revision TEXT NOT NULL,
+  snapshot_checksum TEXT NOT NULL,
+  selection_fingerprint TEXT,
+  device_id TEXT NOT NULL,
+  body_hash TEXT NOT NULL,
+  player_count INTEGER NOT NULL,
+  source_hash TEXT NOT NULL,
+  source_data_updated_at TEXT NOT NULL,
+  source_data_mode TEXT NOT NULL,
+  local_captured_at TEXT NOT NULL,
+  committed_at TEXT NOT NULL,
+  deadline_time TEXT NOT NULL,
+  selection_json TEXT NOT NULL,
+  settings_json TEXT NOT NULL,
+  model_config_json TEXT NOT NULL,
+  FOREIGN KEY (model_code_hash) REFERENCES evaluation_v2_model_semantics(model_code_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_eval_v2_snapshots_canonical
+  ON evaluation_v2_snapshots (season, gw, local_captured_at DESC, committed_at DESC);
+
+CREATE TABLE IF NOT EXISTS evaluation_v2_predictions (
+  snapshot_id TEXT NOT NULL,
+  player_id INTEGER NOT NULL,
+  web_name TEXT NOT NULL,
+  team_code TEXT NOT NULL,
+  position INTEGER NOT NULL,
+  price INTEGER NOT NULL,
+  xpts REAL NOT NULL,
+  low REAL NOT NULL,
+  high REAL NOT NULL,
+  sd REAL NOT NULL,
+  confidence REAL NOT NULL,
+  expected_minutes REAL NOT NULL,
+  p_start REAL NOT NULL,
+  p_appear REAL NOT NULL,
+  availability REAL NOT NULL,
+  fixture_count INTEGER NOT NULL,
+  no_market_xpts REAL,
+  PRIMARY KEY (snapshot_id, player_id),
+  FOREIGN KEY (snapshot_id) REFERENCES evaluation_v2_snapshots(snapshot_id)
 );
