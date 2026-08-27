@@ -10,10 +10,11 @@
    - Calibration waiting for 3 GWs is structural, not a degraded feed penalty.
    - Market copy distinguishes pre-blend gaps from the 50% applied blend.
    - Captain variance and headline SD labels state the quantity actually shown.
+   - Since-acknowledgement drift closes with an explicit remainder line.
 */
 (function installDecisionInterfaceIntegrity(){
   'use strict';
-  const VERSION='2026.08.27.1',READY_TIMEOUT_MS=20000,startedAt=Date.now();let installed=false;
+  const VERSION='2026.08.27.1',READY_TIMEOUT_MS=20000,startedAt=Date.now(),ACK_KEY='otb-verdict-ack-v2';let installed=false;
   const n=(v,d=0)=>Number.isFinite(Number(v))?Number(v):d;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const sevRank={block:0,act:1,watch:2};
@@ -73,7 +74,19 @@
     for(const band of document.querySelectorAll('.vh-band')){const m=String(band.textContent||'').match(/±\s*([0-9.]+)/);if(m)band.textContent=`projection SD ${m[1]} xP`}
   }
   function patchQueueHeader(){const h=document.querySelector('#verdictActions .vsec-h span');if(h)h.textContent='ranked by expected points at stake · diagnostics live in Evidence'}
-  function postProcess(){patchMarketCopy();patchVarianceCopy();patchQueueHeader()}
+  function patchDriftReconciliation(){
+    const gov=globalThis.__OTB_GOVERNANCE__,box=document.querySelector('#verdictChanges .vchg');if(!gov||!box)return;
+    box.querySelectorAll('.vchg-remainder').forEach(el=>el.remove());
+    let prev;try{prev=JSON.parse(localStorage.getItem(ACK_KEY)||'null')}catch{return}if(!prev)return;
+    let ctx,cur,d;try{ctx=verdictContext();cur=gov.snapshot(ctx);d=gov.diff(prev,cur)}catch{return}
+    if(d?.initial||prev.gw!==cur.gw||Math.abs(n(d.xiDelta))<.01)return;
+    const shown=(d.players||[]).slice(0,5).filter(x=>x.inXi),shownRaw=shown.reduce((s,x)=>s+n(x.dx),0),remainder=n(d.xiDelta)-shownRaw;
+    if(Math.abs(remainder)<.01)return;
+    const row=document.createElement('div');row.className=`vchg-row vchg-remainder ${remainder>=0?'vchg-up':'vchg-down'}`;
+    row.innerHTML=`<span class="vchg-ar">${remainder>=0?'↑':'↓'}</span><span><b>Other XI/captain movement ${remainder>=0?'+':''}${remainder.toFixed(2)} xP</b> — closes the XI-total reconciliation; includes captain multiplier, selection effects and sub-threshold XI changes not itemised above.</span>`;
+    box.appendChild(row);
+  }
+  function postProcess(){patchMarketCopy();patchVarianceCopy();patchQueueHeader();patchDriftReconciliation()}
 
   function install(){
     if(installed||!runtimeReady())return false;installed=true;
