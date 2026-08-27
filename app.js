@@ -1,40 +1,35 @@
-/* OTB 2026.08.26.4 — scoring integrity invariants.
-   Preserves the existing live-points/chip-history, signed D1 accountability
-   and global market-projection hydration layers, then installs a generic
-   scoring-law bridge so every player projection obeys FPL component ceilings. */
+/* OTB 2026.08.26.5 — monotonic release identity.
+   Preserves the existing live-points/chip-history, signed D1 accountability,
+   global market-projection hydration and scoring-integrity layers, while a
+   tiny release guard prevents older compatibility layers or stale build query
+   parameters from downgrading the identity of a newer runtime. */
 (function loadOtbProductionLayers(){
-  const BUILD='2026.08.26.4';
+  const BUILD='2026.08.26.5';
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge)badge.textContent='BUILD 08.26.4';
+  const badge=document.getElementById('buildBadge');if(badge)badge.textContent='BUILD 08.26.5';
 
-  const accountability=()=>{
+  const append=(src,label)=>{
     const script=document.createElement('script');
-    script.src='cloud-accountability.js?v=2026.08.26.2-cloud';
+    script.src=src;
     script.async=false;
-    script.onerror=()=>console.error('OTB canonical-accountability layer failed to load');
+    script.onerror=()=>console.error(`OTB ${label} failed to load`);
     (document.body||document.documentElement).appendChild(script);
+    return script;
   };
 
-  const live=document.createElement('script');
-  live.src='app-live-points.js?v=2026.08.26.4-live';
-  live.async=false;
-  live.onload=()=>{
-    /* app-live-points appends app-core.js. Both bridges below wait for the
-       core globals, so they remain thin, reversible production layers. */
-    const scoring=document.createElement('script');
-    scoring.src='scoring-integrity.js?v=2026.08.26.4-scoring';
-    scoring.async=false;
-    scoring.onerror=()=>console.error('OTB scoring-integrity layer failed to load');
-    (document.body||document.documentElement).appendChild(scoring);
+  /* Install first. It rewrites stale ?build= links to the newest runtime and
+     watches only the release metadata, so old feature layers can never lower
+     the global build identity after they finish booting. */
+  append('release-identity.js?v=2026.08.26.5-release','release-identity guard');
 
-    const market=document.createElement('script');
-    market.src='market-projection-sync.js?v=2026.08.26.4-market';
-    market.async=false;
-    market.onerror=()=>console.error('OTB market projection sync failed to load');
-    (document.body||document.documentElement).appendChild(market);
+  const accountability=()=>append('cloud-accountability.js?v=2026.08.26.2-cloud','canonical-accountability layer');
+  const live=append('app-live-points.js?v=2026.08.26.5-live','live-points layer');
+  live.onload=()=>{
+    /* app-live-points appends app-core.js. Both feature bridges below wait for
+       the core globals, so they remain thin, reversible production layers. */
+    append('scoring-integrity.js?v=2026.08.26.4-scoring','scoring-integrity layer');
+    append('market-projection-sync.js?v=2026.08.26.4-market','market projection sync');
     accountability();
   };
-  live.onerror=()=>console.error('OTB live-points layer failed to load');
-  (document.body||document.documentElement).appendChild(live);
 })();
