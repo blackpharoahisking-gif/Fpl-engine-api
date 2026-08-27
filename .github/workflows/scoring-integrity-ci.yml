@@ -11,4 +11,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node --test test/scoring-integrity.test.mjs test/market-projection-sync.test.mjs
+      - run: node --test test/scoring-integrity.test.mjs test/scoring-integrity-fixture-caps.test.mjs test/market-projection-sync.test.mjs
