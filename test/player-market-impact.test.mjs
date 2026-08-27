@@ -81,3 +81,13 @@ test('market-impact copy states the requested model-only to blended delta explic
   assert.match(html,/50% fixture blend/);
   assert.match(html,/18m old/);
 });
+
+test('null counterfactuals remain unavailable rather than being coerced to zero',()=>{
+  const r=runtime({marketApplied:true});
+  const html=r.context.__OTB_PLAYER_MARKET_IMPACT__.impactMarkup({
+    applied:true,modelOnly:null,blended:5.18,delta:null,ageMinutes:null,weight:.5
+  });
+  assert.match(html,/counterfactual unavailable/);
+  assert.doesNotMatch(html,/Model-only<\/b> 0\.00/);
+  assert.doesNotMatch(html,/0m old/);
+});
