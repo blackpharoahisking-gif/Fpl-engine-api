@@ -65,9 +65,10 @@ test('release freeze blocks semantic changes inside T-6h and all production chan
 
 test('production loader preserves live/core-first boot and advances build coherently',()=>{
   const live=app.indexOf("live.src='app-live-points.js");
+  const role=app.indexOf('role-freshness-sync.js');
   const v2=app.indexOf('accountability-v2.js');
-  assert.ok(live>=0&&v2>live);
-  assert.match(app,/const BUILD='2026\.08\.26\.8'/);
-  assert.match(release,/const RELEASE='2026\.08\.26\.8'/);
+  assert.ok(live>=0&&role>live&&v2>role);
+  assert.match(app,/const BUILD='2026\.08\.26\.9'/);
+  assert.match(release,/const RELEASE='2026\.08\.26\.9'/);
   assert.doesNotMatch(release,/new\s+MutationObserver|MutationObserver\s*\(/);
 });
