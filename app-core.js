@@ -1361,7 +1361,7 @@ function verdictBlockingFeeds(regime){
    The correct advice at T-6 days is not the correct advice at T-40 minutes.
    Previously Verdict gave the same answer at both. */
 function verdictRegime(){
-  const ms=DEADLINE?Date.parse(DEADLINE)-Date.now():NaN;
+  const ms=DEADLINE_VERIFIED&&Number.isFinite(DEADLINE)?DEADLINE-Date.now():NaN;
   if(!Number.isFinite(ms))return{key:'PLAN',minsLeft:null,verified:false,label:'Deadline unknown',note:'No deadline timestamp available — treating this as a planning session.'};
   if(ms<0)return{key:'REVIEW',minsLeft:null,verified:!!DEADLINE_VERIFIED,label:'Deadline passed',note:'The gameweek is under way. Decisions are locked; this is a review view.'};
   const mins=ms/60000;

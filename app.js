@@ -1,12 +1,12 @@
-/* OTB 2026.08.27.1 — decision-interface integrity.
+/* OTB 2026.08.27.2 — verified Verdict deadline regime.
    Preserves the proven live/core-first startup contract and all 08.26.9 role
    freshness behaviour. This release changes decision classification/copy only;
    projection, scoring, DefCon, market weights and minutes maths are untouched. */
 (function loadOtbProductionLayers(){
-  const BUILD='2026.08.27.1';
+  const BUILD='2026.08.27.2';
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge)badge.textContent='BUILD 08.27.1';
+  const badge=document.getElementById('buildBadge');if(badge)badge.textContent='BUILD 08.27.2';
 
   const append=(src,label)=>{
     const script=document.createElement('script');
@@ -21,7 +21,7 @@
 
   /* Last-known-good startup contract: live/core first. */
   const live=document.createElement('script');
-  live.src='app-live-points.js?v=2026.08.27.1-live';
+  live.src='app-live-points.js?v=2026.08.27.2-live';
   live.async=false;
   live.onload=()=>{
     /* Every layer below waits for core globals and therefore cannot block or
@@ -36,7 +36,7 @@
     append('decision-interface-integrity.js?v=2026.08.27.1-decision-integrity','decision-interface integrity');
 
     /* Identity correction remains deliberately last and non-critical. */
-    append('release-identity.js?v=2026.08.27.1-release','release-identity helper');
+    append('release-identity.js?v=2026.08.27.2-release','release-identity helper');
   };
   live.onerror=()=>console.error('OTB live-points layer failed to load');
   (document.body||document.documentElement).appendChild(live);

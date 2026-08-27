@@ -1,4 +1,4 @@
-/* OTB 2026.08.26.1 — import-specific official chip availability, rolling low-owned signal persistence, rule-aware Review scoring, source-hash revalidation,
+/* OTB 2026.08.27.2 — import-specific official chip availability, rolling low-owned signal persistence, rule-aware Review scoring, source-hash revalidation,
    explicit team level versus trend, transparent low-owned ranking and the
    corrected 2026/27 goalkeeper goal value. A card's bright headline figure is the live GW score
    in every view, including the official current value before that player's
@@ -205,7 +205,7 @@
    so one manager's chip use cannot leak into another manager's plan. */
 (function loadOtbCore(){
   const script=document.createElement('script');
-  script.src='app-core.js?v=2026.08.26.1-core';
+  script.src='app-core.js?v=2026.08.27.2-core';
   script.async=false;
   script.onload=()=>{
     try{installOtbLivePointsPatch()}
@@ -220,7 +220,7 @@ function installOtbLivePointsPatch(){
     throw new Error('OTB core runtime was not ready');
   }
 
-  const BUILD='2026.08.26.1';
+  const BUILD='2026.08.27.2';
   const SCORE_KEY='otb-score-view-v1';
   const TEAM_ID_KEY='otb-fpl-team-id-v1';
   const LIVE={gw:0,rows:new Map(),loadedAt:0,loading:false,error:''};
@@ -229,7 +229,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.26.1';badge.title='OTB official chip-history availability + rule-aware Gameweek Review + live GW scoring';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.27.2';badge.title='OTB verified deadline regime + official chip-history availability + rule-aware Gameweek Review + live GW scoring';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){

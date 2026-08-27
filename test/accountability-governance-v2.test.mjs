@@ -69,7 +69,7 @@ test('production loader preserves live/core-first boot and advances build cohere
   const v2=app.indexOf('accountability-v2.js');
   const decision=app.indexOf('decision-interface-integrity.js');
   assert.ok(live>=0&&role>live&&v2>role&&decision>v2);
-  assert.match(app,/const BUILD='2026\.08\.27\.1'/);
-  assert.match(release,/const RELEASE='2026\.08\.27\.1'/);
+  assert.match(app,/const BUILD='2026\.08\.27\.2'/);
+  assert.match(release,/const RELEASE='2026\.08\.27\.2'/);
   assert.doesNotMatch(release,/new\s+MutationObserver|MutationObserver\s*\(/);
 });
