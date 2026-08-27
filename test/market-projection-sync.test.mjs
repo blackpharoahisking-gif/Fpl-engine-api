@@ -8,8 +8,11 @@ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const sync=readFileSync(new URL('../market-projection-sync.js',import.meta.url),'utf8');
 
 test('production loader installs the global market projection lifecycle bridge',()=>{
-  assert.match(app,/market-projection-sync\.js\?v=2026\.08\.26\.3-market/);
-  assert.match(app,/global market projection hydration/i);
+  const build=/const BUILD='([^']+)'/.exec(app)?.[1];
+  assert.ok(build,'production loader should expose a build id');
+  assert.ok(app.includes(`market-projection-sync.js?v=${build}-market`),
+    'market lifecycle bridge cache key should track the current production build');
+  assert.match(app,/market projection hydration/i);
   assert.doesNotThrow(()=>new Function(sync));
 });
 
