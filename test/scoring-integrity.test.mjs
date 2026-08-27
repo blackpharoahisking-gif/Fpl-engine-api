@@ -112,6 +112,6 @@ test('player inspector wording identifies gross CS and the direction of the FPL 
   assert.match(integrity,/CS \(gross\)/);
   assert.match(integrity,/Other \/ calibration/);
   assert.match(integrity,/OTB \$\{m\[1\]\} vs FPL/);
-  assert.doesNotMatch(integrity,/vs ours/,
-    'new UI copy must not retain the backwards comparison label except in the compatibility matcher');
+  assert.equal((integrity.match(/vs ours/g)||[]).length,1,
+    'the backwards phrase should survive only in the compatibility matcher for old modal copy');
 });
