@@ -26,6 +26,14 @@
   }
   function loadAck(){try{return JSON.parse(localStorage.getItem(ACK_KEY)||'null')}catch{return null}}
   function saveAck(s){try{localStorage.setItem(ACK_KEY,JSON.stringify(s));return true}catch{return false}}
+  function referenceFromJournal(cur){
+    try{
+      const rows=(typeof verdictLoadJournal==='function'?verdictLoadJournal()?.entries:[])||[];
+      const e=[...rows].reverse().find(x=>Number(x?.gw)===cur.gw&&x?.build&&Number(x?.at)<=cur.at);
+      if(!e)return null;
+      return{at:Number(e.at)||cur.at,gw:cur.gw,build:String(e.build||''),xiTotal:n(e.state?.projectedXI),captain:null,vice:null,players:{},journalBootstrap:true};
+    }catch{return null}
+  }
   function diff(prev,cur){
     if(!prev||prev.gw!==cur.gw)return{initial:true,buildChanged:false,xiDelta:0,players:[]};
     const player=[];for(const [id,b] of Object.entries(cur.players||{})){const a=prev.players?.[id];if(!a)continue;const dx=b.x-a.x,ds=b.pStart-a.pStart,da=b.avail-a.avail;if(Math.abs(dx)>=.10||Math.abs(ds)>=.02||Math.abs(da)>=.05)player.push({id:Number(id),dx,ds,da,inXi:b.inXi})}
@@ -35,7 +43,7 @@
 
   function renderDrift(ctx){
     const host=document.getElementById('verdictChanges');if(!host)return;
-    const cur=snapshot(ctx);let prev=loadAck();if(!prev||prev.gw!==cur.gw){saveAck(cur);prev=cur}
+    const cur=snapshot(ctx);let prev=loadAck();if(!prev||prev.gw!==cur.gw){const journalRef=referenceFromJournal(cur);if(journalRef&&journalRef.build&&journalRef.build!==cur.build)prev=journalRef;else{saveAck(cur);prev=cur}}
     const d=diff(prev,cur),rows=[];
     if(d.buildChanged)rows.push(`<div class="vchg-row vchg-new"><span class="vchg-ar">◆</span><span><b>Build changed ${esc(shortBuild(d.fromBuild))} → ${esc(shortBuild(d.toBuild))}</b> — unconditional provenance event; re-check projections regardless of threshold.</span></div>`);
     if(Math.abs(d.xiDelta)>=.05)rows.push(`<div class="vchg-row ${d.xiDelta>=0?'vchg-up':'vchg-down'}"><span class="vchg-ar">${d.xiDelta>=0?'↑':'↓'}</span><span><b>Scoring XI projection ${d.xiDelta>=0?'+':''}${d.xiDelta.toFixed(2)} xP</b> since acknowledgement (${n(prev.xiTotal).toFixed(1)} → ${cur.xiTotal.toFixed(1)}).</span></div>`);
@@ -65,9 +73,9 @@
   }
   function patchHealthSemantics(){
     const cells=[...document.querySelectorAll('#verdictHealth .vfeed-cell')];
-    for(const cell of cells){const label=String(cell.querySelector('.vf-label')?.textContent||'').trim(),age=cell.querySelector('.vf-age');if(!age)continue;if(label==='Role intel'&&/never/i.test(age.textContent||'')){let active=0;try{active=typeof roleIntelEvents==='function'?roleIntelEvents().length:0}catch(_){}if(active){age.textContent=`${active} saved active`;cell.title='Saved role evidence is active; no fresh role-intel scan has completed in this browser session.'}else{age.textContent='not scanned';cell.title='No active saved role evidence and no role-intel scan completed in this session.'}}else if(label==='Calibration'&&/never/i.test(age.textContent||'')){let gws=0;try{gws=typeof accuracyCompletedGws==='function'?accuracyCompletedGws().length:0}catch(_){}age.textContent=gws<3?`awaiting ${3-gws} GW`:'not run';cell.title='Outcome calibration is separate from role-slot calibration and is withheld until at least three completed Gameweeks.'}else if(label==='Chip plan'&&/never/i.test(age.textContent||'')){age.textContent='state known';cell.title='Chip-plan state is available; this tile does not currently maintain a refresh timestamp.'}}
+    for(const cell of cells){const label=String(cell.querySelector('.vf-label')?.textContent||'').trim(),age=cell.querySelector('.vf-age');if(!age)continue;if(label==='Role intel'&&/never/i.test(age.textContent||'')){let active=0;try{const raw=typeof roleIntelEvents==='function'?roleIntelEvents():[];active=typeof resolveRoleIntelEvents==='function'?resolveRoleIntelEvents(raw).length:raw.length}catch(_){}if(active){age.textContent=`${active} saved active`;cell.title='Saved role evidence is active; no fresh role-intel scan has completed in this browser session.'}else{age.textContent='not scanned';cell.title='No active saved role evidence and no role-intel scan completed in this session.'}}else if(label==='Calibration'&&/never/i.test(age.textContent||'')){let gws=0;try{gws=typeof accuracyCompletedGws==='function'?accuracyCompletedGws().length:0}catch(_){}age.textContent=gws<3?`awaiting ${3-gws} GW`:'not run';cell.title='Outcome calibration is separate from role-slot calibration and is withheld until at least three completed Gameweeks.'}else if(label==='Chip plan'&&/never/i.test(age.textContent||'')){age.textContent='state known';cell.title='Chip-plan state is available; this tile does not currently maintain a refresh timestamp.'}}
   }
-  function patchFixtureRevisionLabel(){for(const el of document.querySelectorAll('h1,h2,h3,.sechead,.note,.help,summary')){if(/Fixture Influence Diagnostic\s*·\s*RC4\.5\.8/i.test(el.textContent||''))el.textContent=(el.textContent||'').replace(/\s*·\s*RC4\.5\.8/i,'')}}
+  function patchFixtureRevisionLabel(){try{const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let node;while((node=walker.nextNode()))if(/Fixture Influence Diagnostic\s*·\s*RC4\.5\.8/i.test(node.nodeValue||''))node.nodeValue=(node.nodeValue||'').replace(/\s*·\s*RC4\.5\.8/i,'')}catch(_){ }}
   function markOverlappingQueueSignals(){const seen=new Map;for(const link of document.querySelectorAll('#verdictActions [data-vqplayer]')){const id=String(link.getAttribute('data-vqplayer')||''),item=link.closest('.vq-item');if(!id||!item)continue;if(seen.has(id)){let note=item.querySelector('.vq-overlap-note');if(!note){note=document.createElement('div');note.className='vq-overlap-note';note.style.cssText='margin-top:4px;color:var(--muted);font-size:9px';note.textContent='Related signal for the same player · exposure is not added again.';item.appendChild(note)}}else seen.set(id,item)}}
 
   function postRender(ctx){try{renderDrift(ctx)}catch(e){console.warn('OTB governance drift render skipped',e)}try{patchDecisionMemory()}catch(e){console.warn('OTB governance Decision Memory patch skipped',e)}try{patchHealthSemantics();patchFixtureRevisionLabel();markOverlappingQueueSignals()}catch(e){console.warn('OTB governance semantic patch skipped',e)}}
