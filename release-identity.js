@@ -1,4 +1,4 @@
-/* OTB release identity guard — 2026.08.26.5
+/* OTB release identity guard — 2026.08.26.6
    ---------------------------------------------------------------
    A production build may include compatibility layers whose own feature
    revision is older than the top-level app release. Those layers must never
@@ -7,7 +7,7 @@
    successful upgrade remains upgraded on the next reload. */
 (function installOtbReleaseIdentity(){
   'use strict';
-  const RELEASE='2026.08.26.5';
+  const RELEASE='2026.08.26.6';
   let applying=false;
 
   const parts=v=>String(v||'').split('.').map(x=>Number.parseInt(x,10)||0);
