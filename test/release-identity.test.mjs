@@ -33,9 +33,9 @@ function runGuard({htmlBuild='2026.08.26.2',metaBuild='2026.08.26.2',badge='BUIL
 }
 
 test('production loader installs the release guard before legacy live/core layers',()=>{
-  assert.match(loader,/const BUILD='2026\.08\.26\.5'/);
-  const releaseAt=loader.indexOf("release-identity.js?v=2026.08.26.5-release");
-  const liveAt=loader.indexOf("app-live-points.js?v=2026.08.26.5-live");
+  assert.match(loader,/const BUILD='2026\.08\.26\.6'/);
+  const releaseAt=loader.indexOf("release-identity.js?v=2026.08.26.6-release");
+  const liveAt=loader.indexOf("app-live-points.js?v=2026.08.26.6-live");
   assert.ok(releaseAt>=0,'release guard must be loaded');
   assert.ok(liveAt>releaseAt,'release guard must be inserted before the legacy live layer');
   assert.match(live,/const BUILD='2026\.08\.26\.1'/,'regression fixture: the legacy layer still demonstrates the old downgrade write');
@@ -43,25 +43,25 @@ test('production loader installs the release guard before legacy live/core layer
 
 test('an older runtime identity and bookmarked build query are upgraded monotonically',()=>{
   const r=runGuard();
-  assert.equal(r.html.dataset.build,'2026.08.26.5');
-  assert.equal(r.meta.content,'2026.08.26.5');
-  assert.equal(r.badgeNode.textContent,'BUILD 08.26.5');
-  assert.equal(new URL(r.href).searchParams.get('build'),'2026.08.26.5');
-  assert.equal(r.context.__OTB_RELEASE_IDENTITY__.current,'2026.08.26.5');
-});
-
-test('the guard never downgrades a future build',()=>{
-  const r=runGuard({
-    htmlBuild:'2026.08.26.6',
-    metaBuild:'2026.08.26.6',
-    badge:'BUILD 08.26.6',
-    url:'https://example.test/FPL_Engine_OTB.html?build=2026.08.26.6&reload=123',
-  });
   assert.equal(r.html.dataset.build,'2026.08.26.6');
   assert.equal(r.meta.content,'2026.08.26.6');
   assert.equal(r.badgeNode.textContent,'BUILD 08.26.6');
   assert.equal(new URL(r.href).searchParams.get('build'),'2026.08.26.6');
   assert.equal(r.context.__OTB_RELEASE_IDENTITY__.current,'2026.08.26.6');
+});
+
+test('the guard never downgrades a future build',()=>{
+  const r=runGuard({
+    htmlBuild:'2026.08.26.7',
+    metaBuild:'2026.08.26.7',
+    badge:'BUILD 08.26.7',
+    url:'https://example.test/FPL_Engine_OTB.html?build=2026.08.26.7&reload=123',
+  });
+  assert.equal(r.html.dataset.build,'2026.08.26.7');
+  assert.equal(r.meta.content,'2026.08.26.7');
+  assert.equal(r.badgeNode.textContent,'BUILD 08.26.7');
+  assert.equal(new URL(r.href).searchParams.get('build'),'2026.08.26.7');
+  assert.equal(r.context.__OTB_RELEASE_IDENTITY__.current,'2026.08.26.7');
 });
 
 test('a late legacy metadata write is repaired without depending on badge mutation',()=>{
@@ -70,7 +70,7 @@ test('a late legacy metadata write is repaired without depending on badge mutati
   r.meta.content='2026.08.26.1';
   r.badgeNode.textContent='BUILD 08.26.1';
   r.context.__OTB_RELEASE_IDENTITY__.apply();
-  assert.equal(r.html.dataset.build,'2026.08.26.5');
-  assert.equal(r.meta.content,'2026.08.26.5');
-  assert.equal(r.badgeNode.textContent,'BUILD 08.26.5');
+  assert.equal(r.html.dataset.build,'2026.08.26.6');
+  assert.equal(r.meta.content,'2026.08.26.6');
+  assert.equal(r.badgeNode.textContent,'BUILD 08.26.6');
 });
