@@ -12,6 +12,8 @@
   const startedAt=Date.now();
   let installed=false;
 
+  const finiteValue=value=>value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value));
+
   function runtimeReady(){
     return typeof inspectPlayer==='function'
       &&typeof project==='function'
@@ -34,8 +36,13 @@
 
   function marketMeta(){
     let age=null,weight=null;
-    try{if(typeof marketAgeMinutes==='function'){const n=Number(marketAgeMinutes());if(Number.isFinite(n))age=n}}catch(_){}
-    try{if(typeof MARKET_WEIGHT!=='undefined'){const n=Number(MARKET_WEIGHT);if(Number.isFinite(n))weight=n}}catch(_){}
+    try{
+      if(typeof marketAgeMinutes==='function'){
+        const raw=marketAgeMinutes();
+        if(finiteValue(raw))age=Number(raw);
+      }
+    }catch(_){}
+    try{if(typeof MARKET_WEIGHT!=='undefined'&&finiteValue(MARKET_WEIGHT))weight=Number(MARKET_WEIGHT)}catch(_){}
     return{ageMinutes:age,weight};
   }
 
@@ -63,9 +70,10 @@
 
   function finalizeImpact(impact,pl,gw){
     if(!impact)return null;
-    const blended=Number(project(pl,gw)?.x);
-    if(!Number.isFinite(blended))return{...impact,blended:null,delta:null};
-    if(!impact.applied||!Number.isFinite(Number(impact.modelOnly))){
+    const blendedRaw=project(pl,gw)?.x;
+    const blended=finiteValue(blendedRaw)?Number(blendedRaw):null;
+    if(blended===null)return{...impact,blended:null,delta:null};
+    if(!impact.applied||!finiteValue(impact.modelOnly)){
       return{...impact,blended,delta:impact.applied?null:0};
     }
     return{...impact,blended,delta:blended-Number(impact.modelOnly)};
@@ -73,13 +81,14 @@
 
   function impactMarkup(impact){
     if(!impact)return'';
-    const blended=Number(impact.blended),modelOnly=Number(impact.modelOnly),delta=Number(impact.delta);
-    const age=Number.isFinite(Number(impact.ageMinutes))?` · ${Math.max(0,Math.round(Number(impact.ageMinutes)))}m old`:'';
-    const weight=Number.isFinite(Number(impact.weight))?` · ${(100*Number(impact.weight)).toFixed(0)}% fixture blend`:'';
+    const hasBlended=finiteValue(impact.blended),hasModel=finiteValue(impact.modelOnly),hasDelta=finiteValue(impact.delta);
+    const blended=hasBlended?Number(impact.blended):null,modelOnly=hasModel?Number(impact.modelOnly):null,delta=hasDelta?Number(impact.delta):null;
+    const age=finiteValue(impact.ageMinutes)?` · ${Math.max(0,Math.round(Number(impact.ageMinutes)))}m old`:'';
+    const weight=finiteValue(impact.weight)?` · ${(100*Number(impact.weight)).toFixed(0)}% fixture blend`:'';
     if(!impact.applied){
-      return `<b>Market impact</b><br><span style="color:var(--muted)">Not applied${age}</span>${Number.isFinite(blended)?`<br><b>Current xPts</b> ${blended.toFixed(2)}`:''}<div style="font-size:9px;color:var(--muted);margin-top:3px;line-height:1.35">No fresh matched market record is affecting this player’s selected-GW fixture context.</div>`;
+      return `<b>Market impact</b><br><span style="color:var(--muted)">Not applied${age}</span>${hasBlended?`<br><b>Current xPts</b> ${blended.toFixed(2)}`:''}<div style="font-size:9px;color:var(--muted);margin-top:3px;line-height:1.35">No fresh matched market record is affecting this player’s selected-GW fixture context.</div>`;
     }
-    if(!Number.isFinite(modelOnly)||!Number.isFinite(blended)||!Number.isFinite(delta)){
+    if(!hasModel||!hasBlended||!hasDelta){
       return `<b>Market impact</b><br><span style="color:#FFC107">Applied, but counterfactual unavailable</span>${age}${weight}`;
     }
     const sign=delta>0?'+':'';
