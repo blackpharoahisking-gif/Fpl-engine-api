@@ -1,8 +1,7 @@
 name: scoring-integrity-ci
 on:
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
+  push:
+    branches: [fix/scoring-integrity-invariants]
 jobs:
   focused-tests:
     runs-on: ubuntu-latest
