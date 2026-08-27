@@ -43,6 +43,15 @@ let SCHEMA_READY=false;
 async function ensureSchema(env){
   if(SCHEMA_READY)return;
   await env.DB.batch([
+    /* v2 is dispatched before the legacy handler, so a fresh database must
+       still be able to verify an already-enrolled/shared device safely. */
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS evaluation_devices (
+      device_id TEXT PRIMARY KEY,
+      public_jwk TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL,
+      revoked INTEGER NOT NULL DEFAULT 0
+    )`),
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS evaluation_v2_capture_events (
       event_id TEXT PRIMARY KEY,
       capture_key TEXT,
