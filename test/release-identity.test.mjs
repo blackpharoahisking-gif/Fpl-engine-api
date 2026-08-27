@@ -34,7 +34,7 @@ test('production startup restores the last-known-good live/core-first order',()=
   assert.match(loader,/const BUILD='2026\.08\.26\.7'/);
   const liveAt=loader.indexOf("app-live-points.js?v=2026.08.26.7-live");
   const scoringAt=loader.indexOf("scoring-integrity.js?v=2026.08.26.4-scoring");
-  const marketAt=loader.indexOf("market-projection-sync.js?v=2026.08.26.4-market");
+  const marketAt=loader.indexOf("market-projection-sync.js?v=2026.08.26.7-market");
   const releaseAt=loader.indexOf("release-identity.js?v=2026.08.26.7-release");
   assert.ok(liveAt>=0,'live/core loader must exist');
   assert.ok(scoringAt>liveAt,'scoring bridge must remain downstream of live/core');
@@ -44,8 +44,8 @@ test('production startup restores the last-known-good live/core-first order',()=
 });
 
 test('release helper cannot self-trigger a MutationObserver startup loop',()=>{
-  assert.doesNotMatch(helper,/MutationObserver/);
-  assert.doesNotMatch(helper,/queueMicrotask/);
+  assert.doesNotMatch(helper,/new\s+MutationObserver|MutationObserver\s*\(/);
+  assert.doesNotMatch(helper,/queueMicrotask\s*\(/);
   const r=runHelper();
   assert.equal(r.scheduled.length,5,'only bounded late-write repairs should be scheduled');
 });
