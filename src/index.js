@@ -1,4 +1,5 @@
 import core from './index-core.js';
+import { handleBrowserEvaluationV2Route } from './evaluation-ledger-v2.js';
 import { handleBrowserEvaluationRoute } from './evaluation-device.js';
 
 const FPL_ORIGIN='https://fantasy.premierleague.com/api';
@@ -98,6 +99,8 @@ export default {
   },
   async fetch(request,env,ctx){
     try{
+      const evaluationV2=await handleBrowserEvaluationV2Route(request,env);
+      if(evaluationV2)return evaluationV2;
       const evaluation=await handleBrowserEvaluationRoute(request,env);
       if(evaluation)return evaluation;
     }catch(err){
