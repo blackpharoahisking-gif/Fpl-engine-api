@@ -1,14 +1,11 @@
-/* OTB release identity guard — 2026.08.26.6
+/* OTB release identity helper — 2026.08.26.7
    ---------------------------------------------------------------
-   A production build may include compatibility layers whose own feature
-   revision is older than the top-level app release. Those layers must never
-   be allowed to overwrite the release identity of the runtime that loaded
-   them. This guard also repairs stale bookmarked ?build= cache keys so a
-   successful upgrade remains upgraded on the next reload. */
+   Non-critical, bounded release metadata repair. It never participates in
+   core startup and deliberately uses no MutationObserver, so it cannot create
+   a self-triggering microtask loop that starves app initialisation. */
 (function installOtbReleaseIdentity(){
   'use strict';
-  const RELEASE='2026.08.26.6';
-  let applying=false;
+  const RELEASE='2026.08.26.7';
 
   const parts=v=>String(v||'').split('.').map(x=>Number.parseInt(x,10)||0);
   function compare(a,b){
@@ -47,35 +44,21 @@
   }
 
   function applyIdentity(){
-    if(applying)return currentIdentity();
-    applying=true;
-    try{
-      const build=currentIdentity();
-      if(document.documentElement?.dataset)document.documentElement.dataset.build=build;
-      const meta=document.querySelector?.('meta[name="otb-build"]');if(meta&&compare(meta.content,build)<0)meta.content=build;
-      const badge=document.getElementById?.('buildBadge');
-      if(badge&&compare(String(badge.textContent||'').replace(/^BUILD\s+/i,'2026.'),build)<0)badge.textContent=`BUILD ${short(build)}`;
-      normalizeUrl(build);
-      globalThis.__OTB_RELEASE_IDENTITY__={release:RELEASE,current:build,compare,newer,apply:applyIdentity};
-      return build;
-    }finally{applying=false}
+    const build=currentIdentity();
+    const html=String(document.documentElement?.dataset?.build||'');
+    if(document.documentElement?.dataset&&compare(html,build)<0)document.documentElement.dataset.build=build;
+    const meta=document.querySelector?.('meta[name="otb-build"]');
+    if(meta&&compare(String(meta.content||''),build)<0)meta.content=build;
+    const badge=document.getElementById?.('buildBadge');
+    if(badge&&compare(String(badge.textContent||'').replace(/^BUILD\s+/i,'2026.'),build)<0)badge.textContent=`BUILD ${short(build)}`;
+    normalizeUrl(build);
+    globalThis.__OTB_RELEASE_IDENTITY__={release:RELEASE,current:build,compare,newer,apply:applyIdentity};
+    return build;
   }
 
   applyIdentity();
 
-  /* Legacy layers currently mutate data-build/meta during late boot. Observe
-     those two authoritative metadata locations only; do not watch badge text,
-     so the normal "checking for update" UI remains free to use the badge. */
-  try{
-    const observer=new MutationObserver(()=>queueMicrotask(applyIdentity));
-    observer.observe(document.documentElement,{attributes:true,attributeFilter:['data-build']});
-    const meta=document.querySelector('meta[name="otb-build"]');
-    if(meta)observer.observe(meta,{attributes:true,attributeFilter:['content']});
-    globalThis.__OTB_RELEASE_IDENTITY_OBSERVER__=observer;
-  }catch(_){ }
-
-  /* Reassert through the asynchronous core/live boot window. These are cheap,
-     bounded checks and catch a late legacy write even where MutationObserver
-     is unavailable or throttled. */
-  for(const delay of [50,250,1000,3000,8000])setTimeout(applyIdentity,delay);
+  /* Bounded late-write repair only. No observers, intervals or recursive
+     scheduling. Older compatibility layers finish during this boot window. */
+  for(const delay of [100,500,1500,4000,8000])setTimeout(applyIdentity,delay);
 })();
