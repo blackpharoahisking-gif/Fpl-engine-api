@@ -791,9 +791,10 @@ function autoXI(){const ps=squadPlayers().map(p=>({p,x:project(p,S.gw).x})).sort
 /* A viewed-GW change is a lineup decision, never a squad-construction run.
    Reuse the Builder's legal-XI and expected-autosub selectors against the
    owned 15, then update only XI/captain/bench state. */
-function optimiseViewedLineup(){
+function optimiseViewedLineup(options=null){
   const gwEl=document.getElementById('gwSel');if(gwEl)gwEl.value=String(S.gw);
-  const list=squadPlayers(),forced=document.getElementById('oForm')?.value||null;
+  const hasFormOverride=!!options&&Object.prototype.hasOwnProperty.call(options,'form');
+  const list=squadPlayers(),forced=hasFormOverride?options.form:(document.getElementById('oForm')?.value||null);
   if(list.length!==15){autoXI();return null}
   const plan=bestXIForGw(list,forced,S.gw);if(!plan){autoXI();return null}
   S.start=new Set(plan.xi.map(o=>o.p.id));
@@ -803,6 +804,20 @@ function optimiseViewedLineup(){
   if(!S.capManual||!S.start.has(S.cap))S.cap=rank[0]?.p.id??null;
   if(!S.viceManual||!S.start.has(S.vice)||S.vice===S.cap)S.vice=rank.find(o=>o.p.id!==S.cap)?.p.id??null;
   return plan;
+}
+/* Squad-page quick action: optimize decisions inside the owned 15 only.
+   It deliberately ignores Builder formation preferences and changes no squad,
+   transfer, chip, budget, lock, block, projection or model state. */
+function optimiseCurrentXI(){
+  const list=squadPlayers();
+  if(list.length!==15||!legal(list)){flash('Complete a legal 15-player squad before optimizing the XI.');return false}
+  S.capManual=false;S.viceManual=false;
+  const plan=optimiseViewedLineup({form:null});
+  if(!plan){flash(`OTB could not form a legal XI for GW${S.gw}.`);return false}
+  render();saveUserState();scheduleAccuracyCapture();
+  const captain=byId(S.cap)?.n||'—',vice=byId(S.vice)?.n||'—';
+  flash(`GW${S.gw} XI optimized — ${captain} captain · ${vice} vice.`);
+  return true;
 }
 const XI_MIN={GK:1,DEF:3,MID:2,FWD:1},XI_MAX={GK:1,DEF:5,MID:5,FWD:3};
 function xiCounts(ids){const c={GK:0,DEF:0,MID:0,FWD:0};ids.forEach(id=>{const p=byId(id);if(p&&c[p.p]!==undefined)c[p.p]++});return c}
@@ -822,6 +837,7 @@ function xiLegality(ids){
 function ensureCaptainValid(){const xi=[...S.start];if(!xi.length){return}if(!S.capManual||!S.start.has(S.cap)){const ranked=xi.map(id=>({id,x:project(byId(id),S.gw).x})).sort((a,b)=>b.x-a.x);S.cap=ranked[0]?.id??null}if(!S.viceManual||!S.start.has(S.vice)||S.vice===S.cap){const ranked=xi.filter(id=>id!==S.cap).map(id=>({id,x:project(byId(id),S.gw).x})).sort((a,b)=>b.x-a.x);S.vice=ranked[0]?.id??null}}
 function clearCurrentSquad(){if(!S.squad.length){flash('Squad is already empty.');return false}if(!confirm('Clear all players and start a new squad? Saved squads, budget, model settings and live data will be kept.'))return false;S.squad=[];S.start.clear();S.locks.clear();S.cap=S.vice=null;S.benchOrder=[];S.transfer.purchase={};S.transfer.last=null;bumpCache();render();saveUserState();flash('Squad cleared. Add players manually or use Auto-complete.');return true}
 document.getElementById('btnClearSquad').onclick=clearCurrentSquad;
+document.getElementById('btnOptimizeXI').onclick=optimiseCurrentXI;
 document.getElementById('btnJumpAuto').onclick=()=>{document.querySelector('[data-m="pool"]')?.click();const acEl=document.getElementById('acBudget');if(acEl)acEl.focus();flash('Auto-complete is right here in the Player Pool — set a budget and tap it.')};
 document.getElementById('btnJumpNews').onclick=()=>{document.querySelector('[data-m="rail"]')?.click();document.querySelector('[data-t="news"]')?.click()};
 function applyShotMode(){const on=!!S.shotMode;const shotBtn=document.getElementById('btnShotMode');shotBtn.classList.toggle('on',on);const shotLabel=shotBtn.querySelector('.qf-label');if(shotLabel)shotLabel.textContent=on?'Exit compact':'Compact XI';else shotBtn.textContent=on?'Exit compact':'Compact XI';document.getElementById('pitchBox').classList.toggle('compact',on);const bench=document.getElementById('benchBox');bench.classList.remove('compact-hidden');bench.classList.toggle('compact-bench',on);document.getElementById('spineWrap').classList.toggle('compact-mode',on);document.getElementById('squadStructureNote')?.classList.toggle('compact-hidden',on);const note=document.getElementById('shotNote');note.textContent=on?'XI and all four substitutes are included in the screenshot view':'';}
@@ -3383,7 +3399,7 @@ catch(e){add('Readiness decomposes into inspectable components',false,e.message,
 }catch(e){add('Fixture attack multiplier uses the player club attacking strength',false,e.message,'model')}finally{S.w.fix=savedFix;MARKET_SUSPEND=savedSuspend;bumpCache()}}
 try{const a=teamRatingStats('atk'),b=teamRatingStats('atk');bumpCache();const c=teamRatingStats('atk');add('Team rating statistics are cached and invalidated safely',a===b&&a!==c&&Number.isFinite(c.avg),`${Object.keys(TEAMS).length*2} venue ratings per cache fill`,'engineering')}catch(e){add('Team rating statistics are cached and invalidated safely',false,e.message,'engineering')}
 try{const buttons=[...document.querySelectorAll('button')],bad=buttons.filter(b=>(b.getAttribute('type')||'').toLowerCase()!=='button');add('Every rendered button has an explicit non-submit type',bad.length===0,`${buttons.length} buttons checked`,'engineering')}catch(e){add('Every rendered button has an explicit non-submit type',false,e.message,'engineering')}
-try{const ids=['uxBeginner','uxExpert','btnAutoComplete','btnDiscoveryReset','btnShotMode','btnJumpAuto','btnClearSquad','btnJumpNews','btnRefresh','btnBuild','btnUnlock','btnCompareBuilderStyles','btnUseBuilderBank','btnResetPurchasePrices','btnPlanTransfers','btnPriceSync','btnPriceRefresh','verdictOpenTransfers','verdictOpenFixtures','btnRoleScan','btnRoleForceRefresh','btnRoleLocalScan','btnRoleApply','btnRoleClear','btnIntelligenceRefresh','btnAccuracySnapshot','btnAccuracySync','btnAccuracyImportActual','btnAccuracyExport','btnAccuracyImportLedger','btnAccuracyClear','btnRunSelfTests','modalClose'],unwired=ids.filter(id=>!document.getElementById(id)?.onclick);add('Core persistent action buttons have live handlers',unwired.length===0,unwired.length?unwired.join(', '):`${ids.length} actions checked`,'engineering')}catch(e){add('Core persistent action buttons have live handlers',false,e.message,'engineering')}
+try{const ids=['uxBeginner','uxExpert','btnAutoComplete','btnDiscoveryReset','btnShotMode','btnOptimizeXI','btnJumpAuto','btnClearSquad','btnJumpNews','btnRefresh','btnBuild','btnUnlock','btnCompareBuilderStyles','btnUseBuilderBank','btnResetPurchasePrices','btnPlanTransfers','btnPriceSync','btnPriceRefresh','verdictOpenTransfers','verdictOpenFixtures','btnRoleScan','btnRoleForceRefresh','btnRoleLocalScan','btnRoleApply','btnRoleClear','btnIntelligenceRefresh','btnAccuracySnapshot','btnAccuracySync','btnAccuracyImportActual','btnAccuracyExport','btnAccuracyImportLedger','btnAccuracyClear','btnRunSelfTests','modalClose'],unwired=ids.filter(id=>!document.getElementById(id)?.onclick);add('Core persistent action buttons have live handlers',unwired.length===0,unwired.length?unwired.join(', '):`${ids.length} actions checked`,'engineering')}catch(e){add('Core persistent action buttons have live handlers',false,e.message,'engineering')}
 try{const skipText=transferStressSummary({stressSkipped:'Time budget reached.'});add('Transfer signs and stress status render unambiguously',signed(-.04,2)==='-0.04'&&!skipText.includes('not run')&&skipText.includes('skipped'),`${signed(-.04,2)} · ${skipText.replace(/<[^>]+>/g,'').trim()}`,'engineering')}catch(e){add('Transfer signs and stress status render unambiguously',false,e.message,'engineering')}
 
 const pass=tests.filter(t=>t.status==='PASS').length,fail=tests.filter(t=>t.status==='FAIL').length,skipped=tests.filter(t=>t.status==='SKIP').length,total=tests.length;document.getElementById('hTests').textContent=skipped?`${pass}P · ${skipped}S`:`${pass}/${total}`;document.getElementById('hTests').className='v mono '+(fail===0?'good':'bad');const testRow=t=>{const icon=t.status==='PASS'?'✓':t.status==='SKIP'?'○':'✕',cls=t.status==='FAIL'?'test-bad':t.status==='SKIP'?'unverified':'test-ok';return`<div class="lrow"><span>${icon} ${esc(String(t.name||''))}</span><span class="mono ${cls}">${esc(String(t.detail||t.status))}</span></div>`};const catLabel={data:'DATA HEALTH — is the input data complete and structurally sound',model:'MODEL CONSISTENCY — internal math checks only, NOT proof of predictive accuracy. '+'These confirm the projection doesn’t contradict itself; they cannot confirm it’s RIGHT. '+'That requires backtesting against real results, not yet possible before a ball is kicked.',engineering:'ENGINEERING — application logic, security, structural correctness'};document.getElementById('testNote').innerHTML=['data','model','engineering'].map(cat=>{const inCat=tests.filter(t=>(t.cat||'engineering')===cat);if(!inCat.length)return '';return `<div class="test-cat-lab">${catLabel[cat]}</div>`+inCat.map(testRow).join('')}).join('');window.__FPL_TESTS__={pass,fail,skipped,total,tests,dataMode:DATA.mode};return window.__FPL_TESTS__}

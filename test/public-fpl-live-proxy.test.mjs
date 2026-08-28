@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 
-const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const app=readFileSync(new URL('../app-live-points.js',import.meta.url),'utf8');
 const worker=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 
 test('live score bridge loads the untouched app core and exposes official GW points',()=>{
-  assert.match(app,/app-core\.js\?v=2026\.08\.26\.1-core/);
+  assert.match(app,/app-core\.js\?v=\d{4}\.\d{2}\.\d{2}\.\d+-core/);
   assert.match(app,/GW points/);
   assert.match(app,/actualRowsFromPayload\(payload\)/);
   assert.match(app,/const projectedCardHTML=cardHTML/);

@@ -10,12 +10,12 @@ import vm from 'node:vm';
    This builds a real sandbox: the actual selectAutosubs()/orderedOutfieldBench()
    from app-core.js (the same functions the projection engine already uses
    for expected autosub value), plus the actual resolveActualLineup()/
-   finalizeCaptain() from app.js, wired together with a synthetic squad,
+   finalizeCaptain() from app-live-points.js, wired together with a synthetic squad,
    fixtures and live rows — not a regex pin on source text, because this
    logic is worth exercising for real. */
 
 const core=readFileSync(new URL('../app-core.js',import.meta.url),'utf8');
-const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const app=readFileSync(new URL('../app-live-points.js',import.meta.url),'utf8');
 
 function slice(src,startMarker,endMarker){
   const start=src.indexOf(startMarker);

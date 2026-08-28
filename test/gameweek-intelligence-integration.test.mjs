@@ -12,7 +12,7 @@ const [core, workerSource, intelligence, html, schema, bridge] = await Promise.a
   readFile(new URL('src/gameweek-intelligence.js', root), 'utf8'),
   readFile(new URL('FPL_Engine_OTB.html', root), 'utf8'),
   readFile(new URL('schema.sql', root), 'utf8'),
-  readFile(new URL('app.js', root), 'utf8'),
+  readFile(new URL('app-live-points.js', root), 'utf8'),
 ]);
 
 class LocalD1Statement {
@@ -154,6 +154,8 @@ test('review UI exposes global, personal, process, and team analysis with a fres
   assert.match(intelligence, /ROLE_LOSS/);
   assert.match(core, /Outcome only:/);
   assert.match(core, /before official autosubs/);
-  assert.match(bridge, /app-core\.js\?v=2026\.08\.26\.1-core/);
+  const build = /<html[^>]*data-build="([^"]+)"/.exec(html)?.[1];
+  assert.ok(build, 'the HTML must expose its release build');
+  assert.ok(bridge.includes(`app-core.js?v=${build}-core`), 'the live bridge must load the matching core build');
   assert.match(html, /script\.src='app\.js\?v='\+encodeURIComponent\(requested\)/);
 });
