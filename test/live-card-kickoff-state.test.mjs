@@ -10,12 +10,12 @@ import vm from 'node:vm';
    visible on the secondary line and remain primary before the GW deadline.
 
    These are behavioural, not regex pins: the real cardHTML from
-   app-core.js and the real patch layer from app.js are stitched into a vm
+   app-core.js and the real patch layer from app-live-points.js are stitched into a vm
    with a synthetic mid-gameweek — one fixture finished, one still being
    played, one not started — and the rendered HTML is inspected. */
 
 const core=readFileSync(new URL('../app-core.js',import.meta.url),'utf8');
-const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const app=readFileSync(new URL('../app-live-points.js',import.meta.url),'utf8');
 
 function slice(src,startMarker,endMarker){
   const start=src.indexOf(startMarker);

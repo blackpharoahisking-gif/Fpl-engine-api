@@ -30,7 +30,7 @@ import test from 'node:test';
    the live score also gets a callout bar (#liveGwBar) in the normal
    page flow under the Squad tab's spine, which nothing truncates. */
 
-const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const app=readFileSync(new URL('../app-live-points.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../FPL_Engine_OTB.html',import.meta.url),'utf8');
 
 test('live data availability no longer depends on the predictive display scope',()=>{

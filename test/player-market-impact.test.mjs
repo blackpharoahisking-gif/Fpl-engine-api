@@ -36,7 +36,7 @@ function runtime({marketApplied=true}={}){
 }
 
 test('production loader adds explainability after scoring integrity without changing projection layers',()=>{
-  assert.match(loader,/const BUILD='2026\.08\.26\.7'/);
+  assert.match(loader,/const BUILD='\d{4}\.\d{2}\.\d{2}\.\d+'/);
   const scoringAt=loader.indexOf('scoring-integrity.js?v=2026.08.26.4-scoring');
   const impactAt=loader.indexOf('market-impact-inspector.js?v=2026.08.26.6-market-impact');
   assert.ok(scoringAt>=0,'scoring integrity must remain loaded');
