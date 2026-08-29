@@ -24,6 +24,8 @@ jobs:
 
           old='2026.08.28.1'
           new='2026.08.29.1'
+          old_rx=r'2026\.08\.28\.1'
+          new_rx=r'2026\.08\.29\.1'
 
           # The core bytes are intentionally unchanged, but every deployed cache
           # identity must move together so the browser cannot mix 08.28 and 08.29.
@@ -48,11 +50,15 @@ jobs:
               'test/canonical-accountability.test.mjs',
               'test/scoring-integrity.test.mjs',
           ]:
-              p=Path(name); text=p.read_text(); p.write_text(text.replace(old,new))
+              p=Path(name); text=p.read_text(); p.write_text(text.replace(old,new).replace(old_rx,new_rx))
+
+          p=Path('test/role-freshness-sync.test.mjs')
+          text=p.read_text().replace('app-live-points.js?v=2026.08.28.1-live','app-live-points.js?v=2026.08.29.1-live')
+          p.write_text(text)
 
           p=Path('test/release-identity.test.mjs')
-          text=p.read_text().replace(old,new).replace('08.28.1','08.29.1')
-          text=text.replace('2026.08.28.2','2026.08.29.2').replace('08.28.2','08.29.2')
+          text=p.read_text().replace(old,new).replace(old_rx,new_rx).replace('08.28.1','08.29.1')
+          text=text.replace('2026.08.28.2','2026.08.29.2').replace(r'2026\.08\.28\.2',r'2026\.08\.29\.2').replace('08.28.2','08.29.2')
           p.write_text(text)
 
           p=Path('test/startup-loader-order.test.mjs')
@@ -61,9 +67,10 @@ jobs:
           new_tail=(old_tail+
               "      'variance-propagation.js?v=2026.08.29.1-variance',\n"+
               "      'belief-capture.js?v=belief-capture-v0.1',\n")
-          if old_tail not in text:
-              raise SystemExit('startup expected release tail not found')
-          text=text.replace(old_tail,new_tail)
+          if "variance-propagation.js?v=2026.08.29.1-variance" not in text:
+              if old_tail not in text:
+                  raise SystemExit('startup expected release tail not found')
+              text=text.replace(old_tail,new_tail)
           p.write_text(text)
       - name: Verify bounded repair
         run: |
