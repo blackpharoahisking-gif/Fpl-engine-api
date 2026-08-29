@@ -1,4 +1,4 @@
-/* OTB 2026.08.29.2 — frozen-input variance propagation repair.
+/* OTB 2026.08.29.3 — frozen-input variance propagation repair.
    Preserves the proven live/core-first startup contract and every existing
    decision/model layer. The repair is a bounded post-core layer: it fixes
    predictive-mixture variance propagation, shared horizon uncertainty,
@@ -6,10 +6,10 @@
    while recording the 2026.08.28.1 legacy-vs-repaired probe on identical
    frozen inputs before the XI fallback changes can affect the comparison. */
 (function loadOtbProductionLayers(){
-  const BUILD='2026.08.29.2';
+  const BUILD='2026.08.29.3';
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge)badge.textContent='BUILD 08.29.2';
+  const badge=document.getElementById('buildBadge');if(badge)badge.textContent='BUILD 08.29.3';
 
   const append=(src,label)=>{
     const script=document.createElement('script');
@@ -24,7 +24,7 @@
 
   /* Last-known-good startup contract: live/core first. */
   const live=document.createElement('script');
-  live.src='app-live-points.js?v=2026.08.29.2-live';
+  live.src='app-live-points.js?v=2026.08.29.3-live';
   live.async=false;
   live.onload=()=>{
     /* Every layer below waits for core globals and therefore cannot block or
@@ -39,13 +39,13 @@
     append('decision-interface-integrity.js?v=2026.08.27.1-decision-integrity','decision-interface integrity');
 
     /* Identity correction remains deliberately late and non-critical. */
-    append('release-identity.js?v=2026.08.29.2-release','release-identity helper');
+    append('release-identity.js?v=2026.08.29.3-release','release-identity helper');
 
     /* Bounded live-season variance repair. It retains direct references to the
        loaded 08.28.1 core functions, so its frozen probe executes the actual
        old and new consumers against one pinned state rather than reconstructing
        a historical number from memory or from later market data. */
-    append('variance-propagation.js?v=2026.08.29.2-variance','variance propagation repair');
+    append('variance-propagation.js?v=2026.08.29.3-variance','variance propagation repair');
 
     /* Belief Capture v0 is a passive sidecar. It only observes already-produced
        decision state and fails open: a recorder failure cannot block OTB-live. */

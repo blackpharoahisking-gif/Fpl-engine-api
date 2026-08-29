@@ -31,15 +31,15 @@ function runHelper({htmlBuild='2026.08.26.2',metaBuild='2026.08.26.2',badge='BUI
 }
 
 test('production startup preserves live/core first and decision integrity downstream of governance',()=>{
-  assert.match(loader,/const BUILD='2026\.08\.29\.2'/);
-  const liveAt=loader.indexOf("app-live-points.js?v=2026.08.29.2-live");
+  assert.match(loader,/const BUILD='2026\.08\.29\.3'/);
+  const liveAt=loader.indexOf("app-live-points.js?v=2026.08.29.3-live");
   const scoringAt=loader.indexOf("scoring-integrity.js?v=2026.08.26.4-scoring");
   const marketAt=loader.indexOf("market-projection-sync.js?v=2026.08.26.8-market");
   const roleAt=loader.indexOf("role-freshness-sync.js?v=2026.08.26.9-role-freshness");
   const v2At=loader.indexOf("accountability-v2.js?v=2026.08.26.8-accountability-v2");
   const governanceAt=loader.indexOf("accountability-governance.js?v=2026.08.26.8-governance");
   const decisionAt=loader.indexOf("decision-interface-integrity.js?v=2026.08.27.1-decision-integrity");
-  const releaseAt=loader.indexOf("release-identity.js?v=2026.08.29.2-release");
+  const releaseAt=loader.indexOf("release-identity.js?v=2026.08.29.3-release");
   assert.ok(liveAt>=0,'live/core loader must exist');
   assert.ok(scoringAt>liveAt,'scoring bridge must remain downstream of live/core');
   assert.ok(marketAt>liveAt,'market bridge must remain downstream of live/core');
@@ -48,7 +48,7 @@ test('production startup preserves live/core first and decision integrity downst
   assert.ok(governanceAt>v2At,'governance must remain downstream of accountability');
   assert.ok(decisionAt>governanceAt,'decision integrity must augment governance without owning startup');
   assert.ok(releaseAt>decisionAt,'release metadata helper must be last and non-critical');
-  assert.match(live,/script\.src='app-core\.js\?v=2026\.08\.29\.2-core'/,'live layer must still own the established core append path');
+  assert.match(live,/script\.src='app-core\.js\?v=2026\.08\.29\.3-core'/,'live layer must still own the established core append path');
 });
 
 test('release helper cannot self-trigger a MutationObserver startup loop',()=>{
@@ -58,27 +58,27 @@ test('release helper cannot self-trigger a MutationObserver startup loop',()=>{
   assert.equal(r.scheduled.length,5,'only bounded late-write repairs should be scheduled');
 });
 
-test('an older runtime identity and bookmarked build query are upgraded to 08.29.2',()=>{
+test('an older runtime identity and bookmarked build query are upgraded to 08.29.3',()=>{
   const r=runHelper();
-  assert.equal(r.html.dataset.build,'2026.08.29.2');
-  assert.equal(r.meta.content,'2026.08.29.2');
-  assert.equal(r.badgeNode.textContent,'BUILD 08.29.2');
-  assert.equal(new URL(r.href).searchParams.get('build'),'2026.08.29.2');
-  assert.equal(r.context.__OTB_RELEASE_IDENTITY__.current,'2026.08.29.2');
+  assert.equal(r.html.dataset.build,'2026.08.29.3');
+  assert.equal(r.meta.content,'2026.08.29.3');
+  assert.equal(r.badgeNode.textContent,'BUILD 08.29.3');
+  assert.equal(new URL(r.href).searchParams.get('build'),'2026.08.29.3');
+  assert.equal(r.context.__OTB_RELEASE_IDENTITY__.current,'2026.08.29.3');
 });
 
 test('the helper never downgrades a future build',()=>{
   const r=runHelper({
-    htmlBuild:'2026.08.29.2',
-    metaBuild:'2026.08.29.2',
-    badge:'BUILD 08.29.2',
-    url:'https://example.test/FPL_Engine_OTB.html?build=2026.08.29.2&reload=123',
+    htmlBuild:'2026.08.29.3',
+    metaBuild:'2026.08.29.3',
+    badge:'BUILD 08.29.3',
+    url:'https://example.test/FPL_Engine_OTB.html?build=2026.08.29.3&reload=123',
   });
-  assert.equal(r.html.dataset.build,'2026.08.29.2');
-  assert.equal(r.meta.content,'2026.08.29.2');
-  assert.equal(r.badgeNode.textContent,'BUILD 08.29.2');
-  assert.equal(new URL(r.href).searchParams.get('build'),'2026.08.29.2');
-  assert.equal(r.context.__OTB_RELEASE_IDENTITY__.current,'2026.08.29.2');
+  assert.equal(r.html.dataset.build,'2026.08.29.3');
+  assert.equal(r.meta.content,'2026.08.29.3');
+  assert.equal(r.badgeNode.textContent,'BUILD 08.29.3');
+  assert.equal(new URL(r.href).searchParams.get('build'),'2026.08.29.3');
+  assert.equal(r.context.__OTB_RELEASE_IDENTITY__.current,'2026.08.29.3');
 });
 
 test('a late legacy metadata write is repaired by an explicit bounded apply',()=>{
@@ -87,7 +87,7 @@ test('a late legacy metadata write is repaired by an explicit bounded apply',()=
   r.meta.content='2026.08.26.1';
   r.badgeNode.textContent='BUILD 08.26.1';
   r.context.__OTB_RELEASE_IDENTITY__.apply();
-  assert.equal(r.html.dataset.build,'2026.08.29.2');
-  assert.equal(r.meta.content,'2026.08.29.2');
-  assert.equal(r.badgeNode.textContent,'BUILD 08.29.2');
+  assert.equal(r.html.dataset.build,'2026.08.29.3');
+  assert.equal(r.meta.content,'2026.08.29.3');
+  assert.equal(r.badgeNode.textContent,'BUILD 08.29.3');
 });

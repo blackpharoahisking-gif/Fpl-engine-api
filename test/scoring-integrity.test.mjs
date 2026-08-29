@@ -14,7 +14,7 @@ function poissonTail(lambda,k){let term=Math.exp(-lambda),cdf=term;for(let i=1;i
 function gcDeduction(lambda){let p=Math.exp(-lambda),sum=0;for(let k=1;k<12;k++){p*=lambda/k;sum+=Math.floor(k/2)*p}return-sum}
 
 test('production build loads the scoring-integrity bridge globally',()=>{
-  assert.match(app,/const BUILD='2026\.08\.29\.2'/);
+  assert.match(app,/const BUILD='2026\.08\.29\.3'/);
   assert.match(app,/scoring-integrity\.js\?v=2026\.08\.26\.4-scoring/);
   assert.doesNotThrow(()=>new Function(integrity));
   assert.doesNotMatch(integrity,/Gabriel|Arsenal|Aston Villa|ARS\|AVL|AVL\|ARS/,
