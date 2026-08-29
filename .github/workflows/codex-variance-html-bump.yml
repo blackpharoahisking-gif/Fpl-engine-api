@@ -1,0 +1,45 @@
+name: One-shot variance shell bump
+
+on:
+  push:
+    branches:
+      - codex/variance-propagation-v1
+
+permissions:
+  contents: write
+
+jobs:
+  bump-shell:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/variance-propagation-v1
+          fetch-depth: 0
+      - name: Bump published shell identity
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('FPL_Engine_OTB.html')
+          text=p.read_text()
+          old='2026.08.28.1'
+          new='2026.08.29.1'
+          if old not in text and new not in text:
+              raise SystemExit('expected OTB build identity not found')
+          p.write_text(text.replace(old,new))
+      - name: Verify bounded repair
+        run: |
+          node --check variance-propagation.js
+          npm test
+      - name: Commit shell bump
+        run: |
+          if git diff --quiet -- FPL_Engine_OTB.html; then
+            echo 'Shell already current.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add FPL_Engine_OTB.html
+          git commit -m 'Bump OTB shell for variance propagation'
+          git push origin HEAD:codex/variance-propagation-v1
