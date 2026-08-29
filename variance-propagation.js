@@ -17,9 +17,9 @@
 (function installOtbVariancePropagation(){
   'use strict';
 
-  const VERSION='variance-propagation-v1.0';
+  const VERSION='variance-propagation-v1.1';
   const BASELINE_CORE_BUILD='2026.08.28.1';
-  const BUILD='2026.08.29.1';
+  const BUILD='2026.08.29.2';
   const INTERVAL_Z=1.2816;
   const PROBE_KEY='otb-variance-probe-v1';
   const API_BASE_FALLBACK='https://otb-belief-capture.blackpharoahisking.workers.dev';
@@ -233,7 +233,7 @@
       probeDone=true;void archiveReport(report).then(ok=>{if(!ok&&!archiveRetry)archiveRetry=setTimeout(()=>{archiveRetry=null;void archiveReport(report)},5*60*1000)});
       return true;
     }catch(error){console.error('OTB variance frozen probe failed',error);return false}
-    finally{setMode('repaired');restoreUserState(saved);installRiskAwareAutoXi();probeBusy=false}
+    finally{setMode('repaired');restoreUserState(saved);if(probeDone)installRiskAwareAutoXi();probeBusy=false}
   }
   function scheduleFrozenProbe(){
     clearInterval(probeTimer);probeTimer=setInterval(()=>{if(probeDone){clearInterval(probeTimer);return}void runFrozenProbe()},1500);

@@ -66,6 +66,7 @@ test('autoXI risk-aware fallback is installed only after the frozen comparison',
   assert.ok(probe>0&&install>probe);
   assert.match(layer,/if\(list\.length!==15\|\|!legal\(list\)\)return legacy\.autoXI\(\)/);
   assert.match(layer,/const plan=bestXIForGw\(list,null,S\.gw\)/);
+  assert.match(layer,/if\(probeDone\)installRiskAwareAutoXi\(\);probeBusy=false/);
 });
 
 test('Planner is explicitly left at per-GW sd in this repair',()=>{
@@ -75,7 +76,7 @@ test('Planner is explicitly left at per-GW sd in this repair',()=>{
 });
 
 test('startup loads the variance repair before the belief recorder',()=>{
-  const variance=app.indexOf("append('variance-propagation.js?v=2026.08.29.1-variance'");
+  const variance=app.indexOf("append('variance-propagation.js?v=2026.08.29.2-variance'");
   const belief=app.indexOf("append('belief-capture.js?v=belief-capture-v0.1'");
   assert.ok(variance>0&&belief>variance);
 });
