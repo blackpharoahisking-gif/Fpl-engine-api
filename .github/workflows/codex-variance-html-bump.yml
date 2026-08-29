@@ -17,29 +17,66 @@ jobs:
         with:
           ref: codex/variance-propagation-v1
           fetch-depth: 0
-      - name: Bump published shell identity
+      - name: Synchronize published release identity
         shell: python
         run: |
           from pathlib import Path
-          p=Path('FPL_Engine_OTB.html')
-          text=p.read_text()
+
           old='2026.08.28.1'
           new='2026.08.29.1'
-          if old not in text and new not in text:
-              raise SystemExit('expected OTB build identity not found')
-          p.write_text(text.replace(old,new))
+
+          # The core bytes are intentionally unchanged, but every deployed cache
+          # identity must move together so the browser cannot mix 08.28 and 08.29.
+          for name in ['FPL_Engine_OTB.html','app-live-points.js','release-identity.js']:
+              p=Path(name)
+              text=p.read_text()
+              if old not in text and new not in text:
+                  raise SystemExit(f'expected release identity missing in {name}')
+              p.write_text(text.replace(old,new))
+
+          p=Path('app.js')
+          text=p.read_text()
+          text=text.replace("app-live-points.js?v=2026.08.28.1-live","app-live-points.js?v=2026.08.29.1-live")
+          text=text.replace("release-identity.js?v=2026.08.28.1-release","release-identity.js?v=2026.08.29.1-release")
+          p.write_text(text)
+
+          # These assertions govern the current published release identity; update
+          # only that identity, not the variance layer's deliberate 08.28.1
+          # semantic-baseline marker.
+          for name in [
+              'test/accountability-governance-v2.test.mjs',
+              'test/canonical-accountability.test.mjs',
+              'test/scoring-integrity.test.mjs',
+          ]:
+              p=Path(name); text=p.read_text(); p.write_text(text.replace(old,new))
+
+          p=Path('test/release-identity.test.mjs')
+          text=p.read_text().replace(old,new).replace('08.28.1','08.29.1')
+          text=text.replace('2026.08.28.2','2026.08.29.2').replace('08.28.2','08.29.2')
+          p.write_text(text)
+
+          p=Path('test/startup-loader-order.test.mjs')
+          text=p.read_text().replace(old,new).replace('08.28.1','08.29.1')
+          old_tail="      'release-identity.js?v=2026.08.29.1-release',\n"
+          new_tail=(old_tail+
+              "      'variance-propagation.js?v=2026.08.29.1-variance',\n"+
+              "      'belief-capture.js?v=belief-capture-v0.1',\n")
+          if old_tail not in text:
+              raise SystemExit('startup expected release tail not found')
+          text=text.replace(old_tail,new_tail)
+          p.write_text(text)
       - name: Verify bounded repair
         run: |
           node --check variance-propagation.js
           npm test
-      - name: Commit shell bump
+      - name: Commit synchronized release
         run: |
-          if git diff --quiet -- FPL_Engine_OTB.html; then
-            echo 'Shell already current.'
+          if git diff --quiet; then
+            echo 'Release identities already current.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add FPL_Engine_OTB.html
-          git commit -m 'Bump OTB shell for variance propagation'
+          git add FPL_Engine_OTB.html app.js app-live-points.js release-identity.js test/
+          git commit -m 'Synchronize OTB variance release identity'
           git push origin HEAD:codex/variance-propagation-v1
