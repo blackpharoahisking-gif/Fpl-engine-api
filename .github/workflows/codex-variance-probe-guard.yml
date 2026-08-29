@@ -37,15 +37,19 @@ jobs:
           newver='2026.08.29.2'
           oldshort='08.29.1'
           newshort='08.29.2'
+          oldrx=r'2026\.08\.29\.1'
+          newrx=r'2026\.08\.29\.2'
           for name in ['FPL_Engine_OTB.html','app.js','app-live-points.js','release-identity.js']:
               p=Path(name); text=p.read_text(); text=text.replace(oldver,newver).replace(oldshort,newshort); p.write_text(text)
 
-          # Preserve the deliberate semantic baseline marker in the variance layer.
-          # Current-release tests must move with the deployed shell/cache identity.
+          # Preserve the deliberate 08.28.1 semantic-baseline marker in the
+          # variance layer. Current-release tests, including regex source checks,
+          # must move with the deployed shell/cache identity.
           for p in Path('test').glob('*.mjs'):
               text=p.read_text()
-              if oldver in text or oldshort in text:
-                  p.write_text(text.replace(oldver,newver).replace(oldshort,newshort))
+              updated=text.replace(oldver,newver).replace(oldshort,newshort).replace(oldrx,newrx)
+              if updated!=text:
+                  p.write_text(updated)
 
           # Add the failure guard to the focused test so a failed probe can never
           # alter XI selection before a valid frozen comparison exists.
