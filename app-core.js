@@ -989,7 +989,24 @@ function transferPlanIsStale(last=S.transfer?.last){
   if(!last.verdictFingerprint)return true;
   return last.verdictFingerprint!==verdictPlannerFingerprint();
 }
-function transferPlannerPayload(){syncTransferSettings();const gws=transferGameweeks(),profile=transferStrategyProfile(),styleRisk=profile.risk||'mean',styleUtility=r=>styleRisk==='safe'?r.x-.25*r.sd:styleRisk==='upside'?r.x+.20*r.sd:r.x,players=transferCandidatePool(gws).map(p=>{const signal=builderStyleSignal(p,profile,gws);let decay=1;const gwMap=Object.fromEntries(gws.map(g=>{const r=project(p,g),md=minuteDetail(p),adj=signal*decay;decay*=(profile.horizonScale||1);return[g,{mean:r.x,utility:styleUtility(r)+adj,pAppear:md.pAppear,sd:r.sd,confidence:r.confidence}]}));return{id:p.id,n:p.n,p:p.p,t:p.t,c:p.c,gw:gwMap}}),current=squadPlayers(),purchase=Object.fromEntries(current.map(p=>[p.id,transferBoughtPrice(p)])),chips={wc:[S.chips.WC1,S.chips.WC2].filter(Boolean).map(Number),fh:[S.chips.FH1,S.chips.FH2].filter(Boolean).map(Number),bb:[S.chips.BB1,S.chips.BB2].filter(Boolean).map(Number),tc:[S.chips.TC1,S.chips.TC2].filter(Boolean).map(Number)},hybrid={decay:S.transfer.decay,beamWidth:8,actionsPerState:6,bufferGws:gws.length>=5?2:1,useFriction:S.transfer.useFriction,itbValue:S.transfer.itbValue,ftScale:S.transfer.ftScale,stressCandidateLimit:12},sensitivity=S.transfer.sensitivityRuns>1?{runs:S.transfer.sensitivityRuns,strength:S.transfer.sensitivityStrength,seed:20262027}:null;return{players,gws,squadIds:current.map(p=>p.id),purchase,bank:S.transfer.bank,free:S.transfer.free,maxMoves:S.transfer.maxMoves,maxHit:S.transfer.maxHit,threshold:S.transfer.threshold,lockedIds:current.filter(p=>S.locks.has(p.id)).map(p=>p.id),chips,hybrid,sensitivity}}
+function transferPlannerPayload(){
+  syncTransferSettings();
+  const gws=transferGameweeks(),profile=transferStrategyProfile(),styleRisk=profile.risk||'mean',riskCoeff=styleRisk==='safe'?-.25:styleRisk==='upside'?.20:0,
+    styleUtility=r=>r.x+riskCoeff*r.sd,
+    players=transferCandidatePool(gws).map(p=>{
+      const signal=builderStyleSignal(p,profile,gws);let decay=1;
+      const gwMap=Object.fromEntries(gws.map(g=>{
+        const r=project(p,g),md=minuteDetail(p),adj=signal*decay;decay*=(profile.horizonScale||1);
+        return[g,{mean:r.x,baseUtility:r.x+adj,utility:styleUtility(r)+adj,pAppear:md.pAppear,sd:r.sd,confidence:r.confidence}]
+      }));
+      return{id:p.id,n:p.n,p:p.p,t:p.t,c:p.c,gw:gwMap}
+    }),
+    current=squadPlayers(),purchase=Object.fromEntries(current.map(p=>[p.id,transferBoughtPrice(p)])),
+    chips={wc:[S.chips.WC1,S.chips.WC2].filter(Boolean).map(Number),fh:[S.chips.FH1,S.chips.FH2].filter(Boolean).map(Number),bb:[S.chips.BB1,S.chips.BB2].filter(Boolean).map(Number),tc:[S.chips.TC1,S.chips.TC2].filter(Boolean).map(Number)},
+    hybrid={decay:S.transfer.decay,beamWidth:8,actionsPerState:6,bufferGws:gws.length>=5?2:1,useFriction:S.transfer.useFriction,itbValue:S.transfer.itbValue,ftScale:S.transfer.ftScale,stressCandidateLimit:12,riskMode:styleRisk,riskCoeff,routeRho:(typeof HORIZON_CORRELATION!=='undefined'&&HORIZON_CORRELATION)?clamp(num(HORIZON_RHO),0,1):0},
+    sensitivity=S.transfer.sensitivityRuns>1?{runs:S.transfer.sensitivityRuns,strength:S.transfer.sensitivityStrength,seed:20262027}:null;
+  return{players,gws,squadIds:current.map(p=>p.id),purchase,bank:S.transfer.bank,free:S.transfer.free,maxMoves:S.transfer.maxMoves,maxHit:S.transfer.maxHit,threshold:S.transfer.threshold,lockedIds:current.filter(p=>S.locks.has(p.id)).map(p=>p.id),chips,hybrid,sensitivity}
+}
 function combinedWorkerSource(id){const common=document.getElementById('workerCommonSource')?.textContent||'',specific=document.getElementById(id)?.textContent||'';return common&&specific?common+'\n'+specific:''}
 function createTransferWorker(){const source=combinedWorkerSource('transferWorkerSource');if(!source||typeof Worker!=='function')return null;const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'})),w=new Worker(url);w.__url=url;return w}
 let ACTIVE_TRANSFER_WORKER=null,TRANSFER_RUN=0;

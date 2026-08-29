@@ -28,11 +28,11 @@ test('production boot appends live/core path first and release helper last',()=>
   context.globalThis=context;
   vm.runInNewContext(loader,context,{filename:'app.js'});
 
-  assert.equal(html.dataset.build,'2026.08.29.2');
-  assert.equal(meta.content,'2026.08.29.2');
-  assert.equal(badge.textContent,'BUILD 08.29.2');
+  assert.equal(html.dataset.build,'2026.08.29.3');
+  assert.equal(meta.content,'2026.08.29.3');
+  assert.equal(badge.textContent,'BUILD 08.29.3');
   assert.equal(appended.length,1,'nothing may run ahead of the live/core loader');
-  assert.equal(appended[0].src,'app-live-points.js?v=2026.08.29.2-live');
+  assert.equal(appended[0].src,'app-live-points.js?v=2026.08.29.3-live');
   assert.equal(typeof appended[0].onload,'function');
 
   appended[0].onload();
@@ -47,8 +47,8 @@ test('production boot appends live/core path first and release helper last',()=>
       'accountability-v2.js?v=2026.08.26.8-accountability-v2',
       'accountability-governance.js?v=2026.08.26.8-governance',
       'decision-interface-integrity.js?v=2026.08.27.1-decision-integrity',
-      'release-identity.js?v=2026.08.29.2-release',
-      'variance-propagation.js?v=2026.08.29.2-variance',
+      'release-identity.js?v=2026.08.29.3-release',
+      'variance-propagation.js?v=2026.08.29.3-variance',
       'belief-capture.js?v=belief-capture-v0.1',
     ]
   );
