@@ -19,7 +19,7 @@
 
   const VERSION='variance-propagation-v1.1';
   const BASELINE_CORE_BUILD='2026.08.28.1';
-  const BUILD='2026.08.29.3';
+  const BUILD='2026.08.29.4';
   const INTERVAL_Z=1.2816;
   const PROBE_KEY='otb-variance-probe-v1';
   const API_BASE_FALLBACK='https://otb-belief-capture.blackpharoahisking.workers.dev';

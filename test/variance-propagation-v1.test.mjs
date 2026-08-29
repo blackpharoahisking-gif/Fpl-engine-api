@@ -76,7 +76,7 @@ test('Planner is explicitly left at per-GW sd in this repair',()=>{
 });
 
 test('startup loads the variance repair before the belief recorder',()=>{
-  const variance=app.indexOf("append('variance-propagation.js?v=2026.08.29.3-variance'");
+  const variance=app.indexOf("append('variance-propagation.js?v=2026.08.29.4-variance'");
   const belief=app.indexOf("append('belief-capture.js?v=belief-capture-v0.1'");
   assert.ok(variance>0&&belief>variance);
 });
