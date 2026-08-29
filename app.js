@@ -24,7 +24,7 @@
 
   /* Last-known-good startup contract: live/core first. */
   const live=document.createElement('script');
-  live.src='app-live-points.js?v=2026.08.28.1-live';
+  live.src='app-live-points.js?v=2026.08.29.1-live';
   live.async=false;
   live.onload=()=>{
     /* Every layer below waits for core globals and therefore cannot block or
@@ -39,7 +39,7 @@
     append('decision-interface-integrity.js?v=2026.08.27.1-decision-integrity','decision-interface integrity');
 
     /* Identity correction remains deliberately late and non-critical. */
-    append('release-identity.js?v=2026.08.28.1-release','release-identity helper');
+    append('release-identity.js?v=2026.08.29.1-release','release-identity helper');
 
     /* Bounded live-season variance repair. It retains direct references to the
        loaded 08.28.1 core functions, so its frozen probe executes the actual
