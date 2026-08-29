@@ -1,0 +1,57 @@
+name: Retry Planner route variance patch
+
+on:
+  push:
+    branches:
+      - codex/planner-route-variance-v1
+    paths:
+      - .github/workflows/codex-planner-route-variance-retry.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/planner-route-variance-v1
+          fetch-depth: 0
+      - name: Reuse bounded patch and repair release assertions
+        shell: python
+        run: |
+          from pathlib import Path
+          import textwrap
+
+          workflow=Path('.github/workflows/codex-planner-route-variance.yml').read_text()
+          marker='      - name: Patch route-level Planner variance\n'
+          start=workflow.index(marker)+len(marker)
+          run_at=workflow.index('        run: |\n',start)+len('        run: |\n')
+          end=workflow.index('      - name: Verify route-level Planner variance\n',run_at)
+          script=textwrap.dedent(workflow[run_at:end])
+          exec(compile(script,'planner-route-variance-patch','exec'),globals(),globals())
+
+          # The first run proved the product patch and its five focused tests,
+          # but four existing tests still carried escaped .2 release literals.
+          # Match the literal backslash-dot form used in JS regex source.
+          old=r'2026\.08\.29\.2'
+          new=r'2026\.08\.29\.3'
+          changed=0
+          for p in Path('test').glob('*.mjs'):
+              text=p.read_text(); updated=text.replace(old,new)
+              if updated!=text:
+                  p.write_text(updated); changed+=1
+          print(f'Updated escaped release assertions in {changed} test files')
+      - name: Verify full repository
+        run: |
+          node --check app-core.js
+          node --check variance-propagation.js
+          npm test
+      - name: Commit bounded repair
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add FPL_Engine_OTB.html app-core.js app.js app-live-points.js release-identity.js variance-propagation.js test/
+          git commit -m 'Use route-level variance in Transfer Planner'
+          git push origin HEAD:codex/planner-route-variance-v1
