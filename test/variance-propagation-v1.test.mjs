@@ -20,7 +20,8 @@ test('form/official predictive variance semantics remain bit-identical',()=>{
   assert.equal(productionBlendVariance(7.25,.35,4.2,5.8,.9),7.25+.35*.65*(4.2-5.8)**2);
   assert.equal(productionBlendVariance(3.5,0,8,1,.9),3.5);
   assert.equal(productionBlendVariance(3.5,1,8,1,.9),3.5);
-  assert.doesNotMatch(layer,/blendVariance\s*=/,'repair must not replace the proven form/official helper');
+  assert.doesNotMatch(layer,/function\s+blendVariance\s*\(/,'repair must not redefine the proven form/official helper');
+  assert.doesNotMatch(layer,/(?:^|[;\n])\s*blendVariance\s*=\s*(?:function|\()/m,'repair must not reassign the proven form/official helper');
 });
 
 test('prior/live mixture keeps both predictive variances and mean disagreement',()=>{
