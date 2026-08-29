@@ -35,8 +35,12 @@
     append('accountability-governance.js?v=2026.08.26.8-governance','decision/accountability governance');
     append('decision-interface-integrity.js?v=2026.08.27.1-decision-integrity','decision-interface integrity');
 
-    /* Identity correction remains deliberately last and non-critical. */
+    /* Identity correction remains deliberately late and non-critical. */
     append('release-identity.js?v=2026.08.28.1-release','release-identity helper');
+
+    /* Belief Capture v0 is a passive sidecar. It only observes already-produced
+       decision state and fails open: a recorder failure cannot block OTB-live. */
+    append('belief-capture.js?v=belief-capture-v0.1','belief capture recorder');
   };
   live.onerror=()=>console.error('OTB live-points layer failed to load');
   (document.body||document.documentElement).appendChild(live);
