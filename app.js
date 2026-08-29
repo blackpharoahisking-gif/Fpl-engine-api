@@ -1,12 +1,15 @@
-/* OTB 2026.08.28.1 — Squad-page Optimize XI quick action.
+/* OTB 2026.08.29.1 — frozen-input variance propagation repair.
    Preserves the proven live/core-first startup contract and every existing
-   decision/model layer. This release only exposes the owned-15 lineup selector;
-   projection, scoring, DefCon, market weights and minutes maths are untouched. */
+   decision/model layer. The repair is a bounded post-core layer: it fixes
+   predictive-mixture variance propagation, shared horizon uncertainty,
+   Schedule captain risk consumption and OTB-generated full-XI fallbacks,
+   while recording the 2026.08.28.1 legacy-vs-repaired probe on identical
+   frozen inputs before the XI fallback changes can affect the comparison. */
 (function loadOtbProductionLayers(){
-  const BUILD='2026.08.28.1';
+  const BUILD='2026.08.29.1';
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge)badge.textContent='BUILD 08.28.1';
+  const badge=document.getElementById('buildBadge');if(badge)badge.textContent='BUILD 08.29.1';
 
   const append=(src,label)=>{
     const script=document.createElement('script');
@@ -37,6 +40,12 @@
 
     /* Identity correction remains deliberately late and non-critical. */
     append('release-identity.js?v=2026.08.28.1-release','release-identity helper');
+
+    /* Bounded live-season variance repair. It retains direct references to the
+       loaded 08.28.1 core functions, so its frozen probe executes the actual
+       old and new consumers against one pinned state rather than reconstructing
+       a historical number from memory or from later market data. */
+    append('variance-propagation.js?v=2026.08.29.1-variance','variance propagation repair');
 
     /* Belief Capture v0 is a passive sidecar. It only observes already-produced
        decision state and fails open: a recorder failure cannot block OTB-live. */
