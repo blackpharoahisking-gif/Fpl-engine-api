@@ -229,7 +229,7 @@ function installOtbLivePointsPatch(){
 
   document.documentElement.dataset.build=BUILD;
   const meta=document.querySelector('meta[name="otb-build"]');if(meta)meta.content=BUILD;
-  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.28.1';badge.title='OTB Optimize XI + verified deadline regime + official chip-history availability + rule-aware Gameweek Review + live GW scoring';}
+  const badge=document.getElementById('buildBadge');if(badge){badge.textContent='BUILD 08.29.1';badge.title='OTB Optimize XI + verified deadline regime + official chip-history availability + rule-aware Gameweek Review + live GW scoring';}
 
   const teamIdInput=document.getElementById('fplTeamId');
   if(teamIdInput){
