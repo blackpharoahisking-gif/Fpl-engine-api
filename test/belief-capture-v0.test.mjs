@@ -43,3 +43,41 @@ test('loader keeps belief capture after decision layers and non-critical',()=>{
   assert.match(loader,/belief-capture\.js/);
   assert.ok(loader.indexOf('decision-interface-integrity.js')<loader.indexOf('belief-capture.js'));
 });
+
+class FakeR2{
+  constructor(){this.objects=new Map()}
+  async head(key){return this.objects.has(key)?{key}:null}
+  async put(key,value,opts={}){this.objects.set(key,{value:String(value),opts});return{key}}
+}
+async function hashStable(value){
+  const stable=v=>Array.isArray(v)?v.map(stable):v&&typeof v==='object'?Object.keys(v).sort().reduce((o,k)=>(o[k]=stable(v[k]),o),{}):v;
+  const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(stable(value))));
+  return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+test('writer records degraded evidence instead of rejecting a hash mismatch',async()=>{
+  const {handleRequest}=await import('../belief-capture-worker.js');
+  const bucket=new FakeR2(),snapshot={schemaVersion:'otb-belief-event-v0',gw:3,runtime:{decisionRuntimeHash:'abc'},x:1};
+  const row={id:'row-1',snapshotHash:'wrong',snapshot,event:{gw:3,capturedAt:'2026-08-28T20:00:00.000Z',trigger:'test'}};
+  const response=await handleRequest(new Request('https://writer.test/api/belief-capture/v0/events',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(row)}),{OTB_IRRECOVERABLE:bucket});
+  assert.equal(response.status,201);
+  const body=await response.json();
+  assert.equal(body.reproducible,false);
+  assert.equal(body.checks.snapshotHash,false);
+  assert.equal(body.snapshotHash,await hashStable(snapshot));
+  assert.ok([...bucket.objects.keys()].some(k=>k.startsWith('belief/events/gw-03/')));
+  assert.ok(bucket.objects.has(`belief/snapshots/sha256/${body.snapshotHash}.json`));
+});
+
+test('writer retries are idempotent and do not overwrite an existing event key',async()=>{
+  const {handleRequest}=await import('../belief-capture-worker.js');
+  const bucket=new FakeR2(),snapshot={schemaVersion:'otb-belief-event-v0',gw:4,runtime:{decisionRuntimeHash:'def'},x:2},snapshotHash=await hashStable(snapshot);
+  const row={id:'row-2',snapshotHash,snapshot,event:{gw:4,capturedAt:'2026-08-28T21:00:00.000Z',trigger:'test'}};
+  const req=()=>new Request('https://writer.test/api/belief-capture/v0/events',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(row)});
+  const first=await handleRequest(req(),{OTB_IRRECOVERABLE:bucket});
+  const second=await handleRequest(req(),{OTB_IRRECOVERABLE:bucket});
+  assert.equal(first.status,201);
+  assert.equal(second.status,200);
+  assert.equal((await second.json()).duplicate,true);
+  assert.equal([...bucket.objects.keys()].filter(k=>k.startsWith('belief/events/gw-04/')).length,1);
+});
