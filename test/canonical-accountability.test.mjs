@@ -6,12 +6,12 @@ const read = name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
 
 test('production loader preserves live scoring and keeps legacy D1 accountability available downstream', async () => {
   const [loader, live] = await Promise.all([read('app.js'), read('app-live-points.js')]);
-  assert.match(loader, /const BUILD='2026\.08\.29\.4'/);
-  assert.match(loader, /app-live-points\.js\?v=2026\.08\.29\.4-live/);
+  assert.match(loader, /const BUILD='2026\.09\.03\.1'/);
+  assert.match(loader, /app-live-points\.js\?v=2026\.09\.03\.1-live/);
   assert.match(loader, /cloud-accountability\.js\?v=2026\.08\.26\.2-cloud/);
   assert.match(loader, /live\.onload=\(\)=>\{/,'downstream layers must still be gated by successful live/core startup');
-  assert.match(live, /OTB 2026\.08\.29\.4/);
-  assert.match(live, /script\.src='app-core\.js\?v=2026\.08\.29\.4-core'/);
+  assert.match(live, /OTB 2026\.09\.03\.1/);
+  assert.match(live, /script\.src='app-core\.js\?v=2026\.09\.03\.1-core'/);
 });
 
 test('browser accountability uses a non-exportable signing credential and no persisted owner secret', async () => {
