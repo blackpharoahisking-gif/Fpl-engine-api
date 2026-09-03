@@ -7,6 +7,7 @@ const core = readFileSync(new URL('../app-core.js', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../FPL_Engine_OTB.html', import.meta.url), 'utf8');
 const cardSource = core.match(/function intelligenceCard\(row\)\{[\s\S]*?\nfunction intelligenceSignalSections/)?.[0]
   ?.replace(/\nfunction intelligenceSignalSections[\s\S]*$/, '') || '';
+const snapshotRowSanitizerSource = core.match(/function sanitizeAccuracySnapshotRow\(row\)\{[^\n]+/)?.[0] || '';
 
 function renderCard(row) {
   const context = {
@@ -58,4 +59,27 @@ test('Review stylesheet distinguishes new, repeated and established persistence'
   assert.match(html, /\.gw-intel-persistence\.repeated/);
   assert.match(html, /\.gw-intel-persistence\.established/);
   assert.match(html, /rolling five-Gameweek sample/i);
+});
+
+test('accountability reload preserves uncertainty and no-market diagnostics', () => {
+  const context = {
+    Math,
+    Number,
+    clamp(value, min, max) { return Math.min(max, Math.max(min, value)); },
+    accuracyNumber(value, min = -Infinity, max = Infinity, fallback = null) {
+      if (value === null || value === undefined || value === '') return fallback;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
+    },
+    accuracyRound(value, digits = 3) {
+      return value === null || value === undefined || value === ''
+        ? null
+        : Number.isFinite(Number(value)) ? Number(Number(value).toFixed(digits)) : null;
+    },
+  };
+  vm.createContext(context);
+  const raw = [1, 5.125, 1.25, 9, 82.4, 78.5, .81, .94, 1, 5.2, 1, 3.1416, 4.875];
+  vm.runInContext(`${snapshotRowSanitizerSource};this.cleaned=sanitizeAccuracySnapshotRow(${JSON.stringify(raw)});`, context);
+  assert.deepEqual(Array.from(context.cleaned), raw);
+  assert.equal(context.cleaned.length, 13);
 });

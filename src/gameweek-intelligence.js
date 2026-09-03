@@ -12,7 +12,7 @@ import {
   repeatableProcessBreakdown,
 } from './fpl-scoring.js';
 
-export const GAMEWEEK_INTELLIGENCE_VERSION = 'gw-intelligence-v4-persistence';
+export const GAMEWEEK_INTELLIGENCE_VERSION = 'gw-intelligence-v5-role-continuity';
 
 const POSITION = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
 const number = (value, fallback = 0) => {
@@ -333,8 +333,11 @@ function teamReview(current, prior) {
 
 function signalLists(rows, history, currentTeams) {
   const evidence = (row) => playerHistoryEvidence(history.get(row.player_id));
-  const decorate = (row, why, signal, extra = {}) => {
-    const prior = evidence(row);
+  const roleEvidence = (row) => playerHistoryEvidence(
+    (history.get(row.player_id) || []).filter((priorRow) => priorRow.team_code === row.team_code),
+  );
+  const decorate = (row, why, signal, extra = {}, priorOverride = null) => {
+    const prior = priorOverride || evidence(row);
     return compactPlayer(row, {
       signal,
       why,
@@ -391,18 +394,18 @@ function signalLists(rows, history, currentTeams) {
     .map((row) => decorate(row, `Only ${row.total_points} points, but ${round(row.expected_goal_involvements, 2)} xGI with threat ${round(row.threat, 0)} and creativity ${round(row.creativity, 0)}.`, 'PROCESS_OVER_OUTCOME'));
 
   const roleRisers = rows
-    .map((row) => ({ row, prior: evidence(row) }))
+    .map((row) => ({ row, prior: roleEvidence(row) }))
     .filter(({ row, prior }) => prior.gameweeks >= 1 && row.starts > 0 && row.minutes >= 60 && (prior.avgMinutes < 55 || prior.startRate < .6))
     .sort((a, b) => (b.row.minutes - b.prior.avgMinutes) - (a.row.minutes - a.prior.avgMinutes) || b.row.expected_goal_involvements - a.row.expected_goal_involvements)
     .slice(0, 10)
-    .map(({ row, prior }) => decorate(row, `Started and played ${row.minutes} minutes after averaging ${round(prior.avgMinutes, 0)} minutes and a ${round(prior.startRate * 100, 0)}% start rate over the prior ${prior.gameweeks} GW.`, 'ROLE_GAIN'));
+    .map(({ row, prior }) => decorate(row, `Started and played ${row.minutes} minutes after averaging ${round(prior.avgMinutes, 0)} minutes and a ${round(prior.startRate * 100, 0)}% start rate over the prior ${prior.gameweeks} GW at the same club.`, 'ROLE_GAIN', {}, prior));
 
   const roleFallers = rows
-    .map((row) => ({ row, prior: evidence(row) }))
+    .map((row) => ({ row, prior: roleEvidence(row) }))
     .filter(({ row, prior }) => currentTeams.get(row.team_code)?.fixtures > 0 && prior.gameweeks >= 1 && prior.avgMinutes >= 60 && prior.startRate >= .6 && row.starts === 0 && row.minutes < 45)
     .sort((a, b) => (b.prior.avgMinutes - b.row.minutes) - (a.prior.avgMinutes - a.row.minutes) || b.prior.startRate - a.prior.startRate)
     .slice(0, 10)
-    .map(({ row, prior }) => decorate(row, `Did not start and played ${row.minutes} minutes after averaging ${round(prior.avgMinutes, 0)} minutes with a ${round(prior.startRate * 100, 0)}% start rate over the prior ${prior.gameweeks} GW. Check injury, suspension, rotation and tactical context before reacting.`, 'ROLE_LOSS'));
+    .map(({ row, prior }) => decorate(row, `Did not start and played ${row.minutes} minutes after averaging ${round(prior.avgMinutes, 0)} minutes with a ${round(prior.startRate * 100, 0)}% start rate over the prior ${prior.gameweeks} GW at the same club. Check injury, suspension, rotation and tactical context before reacting.`, 'ROLE_LOSS', {}, prior));
 
   const defensiveWatch = rows
     .filter((row) => row.position <= 2 && row.minutes >= 60 && row.total_points <= 5 && (row.defensive_contribution >= 10 || row.saves >= 4 || row.expected_goals_conceded <= .8))
@@ -487,6 +490,7 @@ export function buildGameweekIntelligence({
       haulCaution: 'Appearance, position-specific expected goals, expected assists, all-position clean sheets, save points and defensive-contribution points receive process credit. Actual bonus is excluded.',
       hiddenGemPersistence: 'NEW has no qualifying hit in the prior two sampled Gameweeks. REPEATED has at least one. ESTABLISHED has at least three qualifying hits in the rolling five-Gameweek sample and at least one in the prior two. Club blanks are excluded from the sample.',
       hiddenGemRanking: 'Eligible low-owned players are ranked lexicographically by current-GW xGI, defensive-contribution points, saves, Gameweek points, then lower ownership. The visible six reserve up to three places for repeated or established signals and up to three for new signals, with unused places filled by current-GW rank. No composite score is used.',
+      roleContinuity: 'Role and minute changes compare only prior completed Gameweeks recorded at the same club. Cross-club minutes are not treated as evidence of a role gain or loss.',
     },
     sections: lists,
     teamTrends: teamReview(currentTeams, priorTeams),

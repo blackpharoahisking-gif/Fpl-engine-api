@@ -359,6 +359,29 @@ test('missing prior capture never masquerades as a role gain', () => {
   assert.equal(report.sections.roleRisers.length, 0);
 });
 
+test('role changes require a same-club baseline', () => {
+  const rows = normalizeGameweekStats({
+    season: '2026/27', gw: 2, bootstrap,
+    live: { elements: [
+      liveRow(1, { starts: 1, minutes: 90, expected_goal_involvements: '.70' }),
+      liveRow(4, { starts: 0, minutes: 0 }),
+    ] },
+    capturedAt: '2026-08-31T00:00:00.000Z',
+  });
+  const historyRows = [
+    { ...rows.find((row) => row.player_id === 1), gw: 1, team_code: 'BBB', starts: 0, minutes: 0 },
+    { ...rows.find((row) => row.player_id === 4), gw: 1, team_code: 'AAA', starts: 1, minutes: 90 },
+  ];
+  const report = buildGameweekIntelligence({
+    season: '2026/27', gw: 2, generatedAt: '2026-08-31T00:00:00.000Z', rows,
+    historyRows, teams: bootstrap.teams,
+    fixtures: [{ event: 2, team_h: 1, team_a: 2, team_h_score: 1, team_a_score: 0 }],
+  });
+  assert.equal(report.sections.roleRisers.length, 0);
+  assert.equal(report.sections.roleFallers.length, 0);
+  assert.match(report.methodology.roleContinuity, /same club/i);
+});
+
 test('report finality is supplied by the completion gate rather than hardcoded', () => {
   const rows = normalizeGameweekStats({
     season: '2026/27', gw: 1, bootstrap, live: { elements: [liveRow(1)] },
