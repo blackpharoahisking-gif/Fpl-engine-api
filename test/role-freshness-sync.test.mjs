@@ -7,8 +7,8 @@ const loader=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const core=fs.readFileSync(new URL('../app-core.js',import.meta.url),'utf8');
 
 test('role freshness remains downstream of the proven live/core startup path',()=>{
-  const live=loader.indexOf('app-live-points.js?v=2026.09.03.1-live');
-  const role=loader.indexOf('role-freshness-sync.js?v=2026.08.26.9-role-freshness');
+  const live=loader.indexOf('app-live-points.js?v=2026.09.07.1-live');
+  const role=loader.indexOf('role-freshness-sync.js?v=2026.09.07.1-role-freshness');
   assert.ok(live>=0);
   assert.ok(role>live);
   assert.match(sync,/runtimeReady\(\).*applyScoutReport/s);
@@ -29,8 +29,8 @@ test('planner requests league-wide freshness while squad views prioritise owned 
 });
 
 test('automatic hydration reads cached role reports without forcing expensive scans',()=>{
-  const hydrateStart=sync.indexOf('async function hydrateTeam');
-  const hydrateEnd=sync.indexOf('async function hydrateNewer',hydrateStart);
+  const hydrateStart=sync.indexOf('function hydrateTeam');
+  const hydrateEnd=sync.indexOf('function hydrateNewer',hydrateStart);
   const hydrate=sync.slice(hydrateStart,hydrateEnd);
   assert.match(hydrate,/\/api\/role-intelligence\?team=/);
   assert.doesNotMatch(hydrate,/force=1/);
@@ -44,7 +44,8 @@ test('existing applyScoutReport remains the single downstream invalidation path'
   assert.match(fn,/S\.roleIntel\.events=\[\.\.\.manual,\.\.\.applied\]/);
   assert.match(fn,/bumpCache\(\)/);
   assert.match(fn,/saveUserState\(\)/);
-  assert.match(fn,/renderRoleIntelligence\(\)/);
+  assert.doesNotMatch(fn,/renderRoleIntelligence\(\)/,'hidden Roles counterfactuals must not run during automatic hydration');
+  assert.match(fn,/commitScoutReportUpdate\(\)/);
   assert.match(fn,/render\(\)/);
 });
 
